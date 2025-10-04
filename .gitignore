@@ -39,3 +39,22 @@
 
 # debug information files
 *.dwo
+Chip8_Emulation/x64/Debug/Chip8_Emulation.exe.recipe
+Chip8_Emulation/x64/Debug/Chip8_Emulation.log
+Chip8_Emulation/x64/Debug/Chip8_Emulation.tlog/Chip8_Emulation.lastbuildstate
+Chip8_Emulation/x64/Debug/Chip8_Emulation.tlog/CL.command.1.tlog
+Chip8_Emulation/x64/Debug/Chip8_Emulation.tlog/Cl.items.tlog
+Chip8_Emulation/x64/Debug/Chip8_Emulation.tlog/CL.read.1.tlog
+Chip8_Emulation/x64/Debug/Chip8_Emulation.tlog/CL.write.1.tlog
+Chip8_Emulation/x64/Debug/Chip8_Emulation.tlog/link.command.1.tlog
+Chip8_Emulation/x64/Debug/Chip8_Emulation.tlog/link.read.1.tlog
+Chip8_Emulation/x64/Debug/Chip8_Emulation.tlog/link.write.1.tlog
+Chip8_Emulation/x64/Debug/Chip8_Emulation.vcxproj.FileListAbsolute.txt
+Chip8_Emulation/x64/Debug/vc143.idb
+Chip8_Emulation/.vs/Chip8_Emulation/v17/ipch/AutoPCH/651558ffa867c22d/CHIP8_EMULATION.ipch
+Chip8_Emulation/.vs/Chip8_Emulation/v17/Browse.VC.opendb
+Chip8_Emulation/.vs/Chip8_Emulation/v17/Browse.VC.db-wal
+Chip8_Emulation/.vs/Chip8_Emulation/v17/Browse.VC.db-shm
+Chip8_Emulation/.vs/Chip8_Emulation/v17/Browse.VC.db
+Chip8_Emulation/.vs/Chip8_Emulation/v17/.suo
+Chip8_Emulation/.vs/Chip8_Emulation/FileContentIndex/4696f19c-df06-4774-93e4-dd539042c4a0.vsidx
