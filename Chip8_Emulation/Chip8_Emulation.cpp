@@ -8,8 +8,13 @@ int main( int argc, char* argv[] )
 	if( argc >= 1 )
 		sROMToLoad = argv[1];
 
-	if( sROMToLoad != nullptr )
-		m_oChip8.Init( sROMToLoad );
+	if( sROMToLoad == nullptr )
+		return -1;
+
+	m_oChip8.Init( sROMToLoad );
+
+	//Loop
+	m_oChip8.EmulateCycle();
 
 	return 0;
 }

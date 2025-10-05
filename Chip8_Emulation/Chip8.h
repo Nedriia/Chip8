@@ -10,7 +10,13 @@ public:
 	void LoadFont();
 	void LoadROM( const char* sROMToLoad );
 
+	void EmulateCycle();
+
 private:
+	void FetchOpcode( uint16_t& opcode );
+	void DecodeOpcode( const uint16_t opcode );
+	void ExecuteOpcode();
+
 	uint8_t memory[4096] = { 0 };
 	uint8_t registers[16] = { 0 };
 	uint16_t I; //Address register
