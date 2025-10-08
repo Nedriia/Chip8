@@ -1,6 +1,7 @@
 #include "Chip8.h"
 #include <iostream>
 #include <fstream>
+#include <chrono>
 
 #define START_FONT_MEMORY_ADDRESS 0x050
 #define START_ROM_MEMORY_ADDRESS 0x200
@@ -10,11 +11,16 @@
 Chip8::Chip8() :
 	I( 0 ),
 	SP( 0 ),
-	PC( 0 )
+	PC( 0 ),
+	delay_timer( 0 ),
+	sound_timer( 0 )
 {}
 
 void Chip8::Init( const char* sROMToLoad)
 {
+	unsigned timeSeed = std::chrono::steady_clock::now().time_since_epoch().count();
+	rng.seed( timeSeed );
+
 	LoadFont();
 	LoadROM( sROMToLoad );
 
@@ -72,6 +78,7 @@ void Chip8::EmulateCycle()
 	FetchOpcode( opcode );
 	DecodeOpcode( opcode );
 	ExecuteOpcode();
+	UpdateTimers();
 }
 
 void Chip8::FetchOpcode( uint16_t& opcode )
@@ -251,7 +258,11 @@ void Chip8::DecodeOpcode( const uint16_t opcode)
 		}
 		break;
 		case 0xC000:
-			//Sets VX to the result of a bitwise and operation on a random number (Typically: 0 to 255) and NN
+		//Sets VX to the result of a bitwise and operation on a random number (Typically: 0 to 255) and NN
+		{
+			std::uniform_int_distribution<std::mt19937::result_type> dist(0, 255);
+			registers[X] = dist(rng) & NN;
+		}
 			break;
 		case 0xD000:
 			/*Draws a sprite at coordinate(VX, VY) that has a width of 8 pixels and a height of N pixels.
@@ -278,9 +289,8 @@ void Chip8::DecodeOpcode( const uint16_t opcode)
 			switch( opcode & 0x00FF )
 			{
 				case 7:
-				{
 					//Sets VX to the value of the delay timer.
-				}
+					registers[X] = delay_timer;
 				break;
 				case 0x0A:
 				{
@@ -288,20 +298,17 @@ void Chip8::DecodeOpcode( const uint16_t opcode)
 				}
 				break;
 				case 0x15:
-				{
 					//Sets the delay timer to VX
-				}
+					delay_timer = registers[X];
 				break;
 				case 0x18:
-				{
 					//Sets the sound timer to VX
-				}
+					sound_timer = registers[X];
 				break;
 				case 0x1E:
-				{
 					//Adds VX to I. VF is not affected
-				}
-				break;
+					I += registers[X];
+					break;
 				case 0x29:
 				{
 					//Sets I to the location of the sprite for the character in VX(only consider the lowest nibble). Characters 0-F (in hexadecimal) are represented by a 4x5 font.
@@ -310,16 +317,27 @@ void Chip8::DecodeOpcode( const uint16_t opcode)
 				case 0x33:
 				{
 					//Stores the binary-coded decimal representation of VX, with the hundreds digit in memory at location in I, the tens digit at location I+1, and the ones digit at location I+2
+					memory[I] = registers[X] / 100;
+					memory[I + 1] = ( registers[X] / 10 ) % 10;
+					memory[I + 2] = ( registers[X] % 100 ) % 10;
 				}
 				break;
 				case 0x55:
 				{
 					//Stores from V0 to VX (including VX) in memory, starting at address I. The offset from I is increased by 1 for each value written, but I itself is left unmodified
+					for( int i = 0; i < 16; ++i )
+					{
+						memory[I + i] = registers[i];
+					}
 				}
 				break;
 				case 0x65:
 				{
 					//Fills from V0 to VX (including VX) with values from memory, starting at address I. The offset from I is increased by 1 for each value read, but I itself is left unmodified
+					for( int i = 0; i < 16; ++i )
+					{
+						registers[i] = memory[I + i];
+					}
 				}
 				break;
 				default:
@@ -335,4 +353,13 @@ void Chip8::DecodeOpcode( const uint16_t opcode)
 
 void Chip8::ExecuteOpcode()
 {
+}
+
+void Chip8::UpdateTimers()
+{
+	if( delay_timer > 0 )
+		--delay_timer;
+
+	if(sound_timer > 0)
+		--sound_timer;
 }
