@@ -19,19 +19,19 @@ private:
 	void ExecuteOpcode();
 	void UpdateTimers();
 
-	uint8_t memory[4096] = { 0 };
-	uint8_t registers[16] = { 0 };
+	uint8_t memory[ 4096 ] = { 0 };
+	uint8_t registers[ 16 ] = { 0 };
 	uint16_t I; //Address register
-	uint16_t stack[16] = { 0 };
+	uint16_t stack[ 16 ] = { 0 };
 	uint8_t SP; //Stack pointer
 	uint16_t PC; //Program counter
-	
+
 	uint8_t delay_timer;
 	uint8_t sound_timer;
 
 	std::mt19937 rng;
 
-	uint8_t fontset[80] =
+	uint8_t fontset[ 80 ] =
 	{
 		0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
 		0x20, 0x60, 0x20, 0x20, 0x70, // 1

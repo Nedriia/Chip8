@@ -14,9 +14,10 @@ Chip8::Chip8() :
 	PC( 0 ),
 	delay_timer( 0 ),
 	sound_timer( 0 )
-{}
+{
+}
 
-void Chip8::Init( const char* sROMToLoad)
+void Chip8::Init( const char* sROMToLoad )
 {
 	unsigned timeSeed = std::chrono::steady_clock::now().time_since_epoch().count();
 	rng.seed( timeSeed );
@@ -32,7 +33,7 @@ void Chip8::LoadFont()
 {
 	for( uint8_t i = 0; i < 80; ++i )
 	{
-		memory[ START_FONT_MEMORY_ADDRESS + i ] = fontset[i];
+		memory[ START_FONT_MEMORY_ADDRESS + i ] = fontset[ i ];
 	}
 }
 
@@ -50,7 +51,7 @@ void Chip8::LoadROM( const char* sROMToLoad )
 			return;
 		}
 
-		char* memblock = new char [ size ];
+		char* memblock = new char[ size ];
 		file.seekg( 0, std::ios::beg );
 		file.read( memblock, size );
 		file.close();
@@ -65,7 +66,7 @@ void Chip8::LoadROM( const char* sROMToLoad )
 
 		for( uint16_t i = 0; i < bytesRead; ++i )
 		{
-			memory[START_ROM_MEMORY_ADDRESS + i] = static_cast<uint8_t>( memblock[i] );
+			memory[ START_ROM_MEMORY_ADDRESS + i ] = static_cast< uint8_t >( memblock[ i ] );
 		}
 
 		delete[] memblock;
@@ -83,8 +84,8 @@ void Chip8::EmulateCycle()
 
 void Chip8::FetchOpcode( uint16_t& opcode )
 {
-	opcode = memory[PC];
-	uint8_t byte2 = memory[PC + 1];
+	opcode = memory[ PC ];
+	uint8_t byte2 = memory[ PC + 1 ];
 
 	opcode = opcode << 8;
 	opcode |= byte2;
@@ -92,261 +93,261 @@ void Chip8::FetchOpcode( uint16_t& opcode )
 	PC += 2;
 }
 
-void Chip8::DecodeOpcode( const uint16_t opcode)
+void Chip8::DecodeOpcode( const uint16_t opcode )
 {
-	uint16_t NNN	= opcode & 0x0FFF;
-	uint8_t NN		= opcode & 0x00FF;
-	uint8_t N		= opcode & 0x000F;
-	uint8_t X		= ( opcode & 0x0F00 ) >> 8;
-	uint8_t Y		= ( opcode & 0x00F0 ) >> 4;
+	uint16_t NNN = opcode & 0x0FFF;
+	uint8_t NN = opcode & 0x00FF;
+	uint8_t N = opcode & 0x000F;
+	uint8_t X = ( opcode & 0x0F00 ) >> 8;
+	uint8_t Y = ( opcode & 0x00F0 ) >> 4;
 
 	uint16_t opcodeNibble = opcode & 0xF000;
-	switch (opcodeNibble )
+	switch( opcodeNibble )
 	{
-		case 0x0000:
+	case 0x0000:
+	{
+		uint16_t check = opcode & 0x00FF;
+		if( check == 0xE0 )
 		{
-			uint16_t check = opcode & 0x00FF;
-			if( check == 0xE0 )
-			{
-				//Clears the screen
-			}
-			else if( check == 0xEE )
-			{
-				//Returns from a subroutine
-				PC = stack[SP];
-				stack[SP] = 0;
-				--SP;
-			}
-			else
-			{
-				//Calls machine code routine (RCA 1802 for COSMAC VIP) at address NNN. Not necessary for most ROMs.
-			}
+			//Clears the screen
 		}
-		break;
-		case 0x1000 :
+		else if( check == 0xEE )
+		{
+			//Returns from a subroutine
+			PC = stack[ SP ];
+			stack[ SP ] = 0;
+			--SP;
+		}
+		else
+		{
+			//Calls machine code routine (RCA 1802 for COSMAC VIP) at address NNN. Not necessary for most ROMs.
+		}
+	}
+	break;
+	case 0x1000:
 		//Jumps to address NNN
-		{
-			PC = NNN;
-		}
-		break;
-		case 0x2000:
+	{
+		PC = NNN;
+	}
+	break;
+	case 0x2000:
 		//Calls subroutine at NNN
-		{
-			stack[SP] = PC;
-			++SP;
-			PC = NNN;
-		}
-		break;
-		case 0x3000:
+	{
+		stack[ SP ] = PC;
+		++SP;
+		PC = NNN;
+	}
+	break;
+	case 0x3000:
 		//Skips the next instruction if VX equals NN (usually the next instruction is a jump to skip a code block)
-		{
-			if( registers[X] == NN )
-				PC += 2;
-		}
-		break;
-		case 0x4000:
+	{
+		if( registers[ X ] == NN )
+			PC += 2;
+	}
+	break;
+	case 0x4000:
 		//Skips the next instruction if VX does not equal NN (usually the next instruction is a jump to skip a code block).
-		{
-			if( registers[X] != NN )
-				PC += 2;
-		}
-		break;
-		case 0x5000:
+	{
+		if( registers[ X ] != NN )
+			PC += 2;
+	}
+	break;
+	case 0x5000:
 		//Skips the next instruction if VX equals VY (usually the next instruction is a jump to skip a code block).
-		{
-			if( registers[X] == registers[Y] )
-				PC += 2;
-		}
-		break;
-		case 0x6000:
+	{
+		if( registers[ X ] == registers[ Y ] )
+			PC += 2;
+	}
+	break;
+	case 0x6000:
 		//Sets NN To VX
-		{
-			registers[X] = NN;
-		}
-		break;
-		case 0x7000:
+	{
+		registers[ X ] = NN;
+	}
+	break;
+	case 0x7000:
 		//Adds NN to VX (carry flag is not changed).
+	{
+		registers[ X ] += NN;
+	}
+	break;
+	case 0x8000:
+	{
+		switch( opcode & 0x000F )
 		{
-			registers[X] += NN;
+		case 0:
+			//Sets VX to the value of VY.
+		{
+			registers[ X ] = registers[ Y ];
 		}
 		break;
-		case 0x8000:
+		case 1:
+			//Sets VX to VX or VY. (bitwise OR operation).
 		{
-			switch( opcode & 0x000F )
-			{
-				case 0:
-				//Sets VX to the value of VY.
-				{
-					registers[X] = registers[Y];
-				}
-				break;
-				case 1:
-				//Sets VX to VX or VY. (bitwise OR operation).
-				{
-					registers[X] |= registers[Y];
-				}
-				break;
-				case 2:
-				//Sets VX to VX and VY. (bitwise AND operation).
-				{
-					registers[X] &= registers[Y];
-				}
-				break;
-				case 3:
-				//Sets VX to VX xor VY.
-				{
-					registers[X] ^= registers[Y];
-				}
-				break;
-				case 4:
-				//Adds VY to VX.
-				{
-					registers[Y] += registers[X];
-					//VF is set to 1 when there's an overflow, and to 0 when there is not.
-				}
-				break;
-				case 5:
-				//VY is subtracted from VX.
-				{
-					registers[X] -= registers[Y];
-					// VF is set to 0 when there's an underflow, and 1 when there is not. (i.e. VF set to 1 if VX >= VY and 0 if not)
-				}
-				break;
-				case 6:
-				//Shifts VX to the right by 1,
-				{
-					registers[X] >>= 1;
-					//then stores the least significant bit of VX prior to the shift into VF
-				}
-				break;
-				case 7:
-				//Sets VX equals to VY minus VX.
-				{
-					registers[X] = registers[Y] - registers[X];
-					// VF is set to 0 when there's an underflow, and 1 when there is not. (i.e. VF set to 1 if VY >= VX).
-				}
-				break;
-				case 0xE:
-				//Shifts VX to the left by 1,
-				{
-					registers[X] <<= 1;
-					//then sets VF to 1 if the most significant bit of VX prior to that shift was set, or to 0 if it was unset
-				}
-				break;
-				default:
-					break;
-			}
+			registers[ X ] |= registers[ Y ];
 		}
 		break;
-		case 0x9000:
-		//Skips the next instruction if VX does not equal VY. (Usually the next instruction is a jump to skip a code block)
+		case 2:
+			//Sets VX to VX and VY. (bitwise AND operation).
 		{
-			if( registers[X] != registers[Y] )
-				PC += 2;
+			registers[ X ] &= registers[ Y ];
 		}
 		break;
-		case 0xA000:
-		//Sets I to the address NNN
+		case 3:
+			//Sets VX to VX xor VY.
 		{
-			I = NNN;
+			registers[ X ] ^= registers[ Y ];
 		}
 		break;
-		case 0xB000:
-		//Jumps to the address NNN plus V0
+		case 4:
+			//Adds VY to VX.
 		{
-			PC = NNN + registers[0];
+			registers[ Y ] += registers[ X ];
+			//VF is set to 1 when there's an overflow, and to 0 when there is not.
 		}
 		break;
-		case 0xC000:
-		//Sets VX to the result of a bitwise and operation on a random number (Typically: 0 to 255) and NN
+		case 5:
+			//VY is subtracted from VX.
 		{
-			std::uniform_int_distribution<std::mt19937::result_type> dist(0, 255);
-			registers[X] = dist(rng) & NN;
-		}
-			break;
-		case 0xD000:
-			/*Draws a sprite at coordinate(VX, VY) that has a width of 8 pixels and a height of N pixels.
-			Each row of 8 pixels is read as bit - coded starting from memory location I; 
-			I value does not change after the execution of this instruction.As described above, 
-			VF is set to 1 if any screen pixels are flipped from set to unset when the sprite is drawn, 
-			and to 0 if that does not happen.*/
-			break;
-		case 0xE000:
-		{
-			uint16_t check = opcode & 0x00FF;
-			if( check == 0x9E )
-			{
-				//Skips the next instruction if the key stored in VX(only consider the lowest nibble) is pressed (usually the next instruction is a jump to skip a code block).
-			}
-			else if( check == 0xA1 )
-			{
-				//Skips the next instruction if the key stored in VX(only consider the lowest nibble) is not pressed (usually the next instruction is a jump to skip a code block).
-			}
+			registers[ X ] -= registers[ Y ];
+			// VF is set to 0 when there's an underflow, and 1 when there is not. (i.e. VF set to 1 if VX >= VY and 0 if not)
 		}
 		break;
-		case 0xF000:
+		case 6:
+			//Shifts VX to the right by 1,
 		{
-			switch( opcode & 0x00FF )
-			{
-				case 7:
-					//Sets VX to the value of the delay timer.
-					registers[X] = delay_timer;
-				break;
-				case 0x0A:
-				{
-					//A key press is awaited, and then stored in VX (blocking operation, all instruction halted until next key event, delay and sound timers should continue processing)
-				}
-				break;
-				case 0x15:
-					//Sets the delay timer to VX
-					delay_timer = registers[X];
-				break;
-				case 0x18:
-					//Sets the sound timer to VX
-					sound_timer = registers[X];
-				break;
-				case 0x1E:
-					//Adds VX to I. VF is not affected
-					I += registers[X];
-					break;
-				case 0x29:
-				{
-					//Sets I to the location of the sprite for the character in VX(only consider the lowest nibble). Characters 0-F (in hexadecimal) are represented by a 4x5 font.
-				}
-				break;
-				case 0x33:
-				{
-					//Stores the binary-coded decimal representation of VX, with the hundreds digit in memory at location in I, the tens digit at location I+1, and the ones digit at location I+2
-					memory[I] = registers[X] / 100;
-					memory[I + 1] = ( registers[X] / 10 ) % 10;
-					memory[I + 2] = ( registers[X] % 100 ) % 10;
-				}
-				break;
-				case 0x55:
-				{
-					//Stores from V0 to VX (including VX) in memory, starting at address I. The offset from I is increased by 1 for each value written, but I itself is left unmodified
-					for( int i = 0; i < 16; ++i )
-					{
-						memory[I + i] = registers[i];
-					}
-				}
-				break;
-				case 0x65:
-				{
-					//Fills from V0 to VX (including VX) with values from memory, starting at address I. The offset from I is increased by 1 for each value read, but I itself is left unmodified
-					for( int i = 0; i < 16; ++i )
-					{
-						registers[i] = memory[I + i];
-					}
-				}
-				break;
-				default:
-					break;
-			}
+			registers[ X ] >>= 1;
+			//then stores the least significant bit of VX prior to the shift into VF
 		}
 		break;
-
+		case 7:
+			//Sets VX equals to VY minus VX.
+		{
+			registers[ X ] = registers[ Y ] - registers[ X ];
+			// VF is set to 0 when there's an underflow, and 1 when there is not. (i.e. VF set to 1 if VY >= VX).
+		}
+		break;
+		case 0xE:
+			//Shifts VX to the left by 1,
+		{
+			registers[ X ] <<= 1;
+			//then sets VF to 1 if the most significant bit of VX prior to that shift was set, or to 0 if it was unset
+		}
+		break;
 		default:
+			break;
+		}
+	}
+	break;
+	case 0x9000:
+		//Skips the next instruction if VX does not equal VY. (Usually the next instruction is a jump to skip a code block)
+	{
+		if( registers[ X ] != registers[ Y ] )
+			PC += 2;
+	}
+	break;
+	case 0xA000:
+		//Sets I to the address NNN
+	{
+		I = NNN;
+	}
+	break;
+	case 0xB000:
+		//Jumps to the address NNN plus V0
+	{
+		PC = NNN + registers[ 0 ];
+	}
+	break;
+	case 0xC000:
+		//Sets VX to the result of a bitwise and operation on a random number (Typically: 0 to 255) and NN
+	{
+		std::uniform_int_distribution<std::mt19937::result_type> dist( 0, 255 );
+		registers[ X ] = dist( rng ) & NN;
+	}
+	break;
+	case 0xD000:
+		/*Draws a sprite at coordinate(VX, VY) that has a width of 8 pixels and a height of N pixels.
+		Each row of 8 pixels is read as bit - coded starting from memory location I;
+		I value does not change after the execution of this instruction.As described above,
+		VF is set to 1 if any screen pixels are flipped from set to unset when the sprite is drawn,
+		and to 0 if that does not happen.*/
+		break;
+	case 0xE000:
+	{
+		uint16_t check = opcode & 0x00FF;
+		if( check == 0x9E )
+		{
+			//Skips the next instruction if the key stored in VX(only consider the lowest nibble) is pressed (usually the next instruction is a jump to skip a code block).
+		}
+		else if( check == 0xA1 )
+		{
+			//Skips the next instruction if the key stored in VX(only consider the lowest nibble) is not pressed (usually the next instruction is a jump to skip a code block).
+		}
+	}
+	break;
+	case 0xF000:
+	{
+		switch( opcode & 0x00FF )
+		{
+		case 7:
+			//Sets VX to the value of the delay timer.
+			registers[ X ] = delay_timer;
+			break;
+		case 0x0A:
+		{
+			//A key press is awaited, and then stored in VX (blocking operation, all instruction halted until next key event, delay and sound timers should continue processing)
+		}
+		break;
+		case 0x15:
+			//Sets the delay timer to VX
+			delay_timer = registers[ X ];
+			break;
+		case 0x18:
+			//Sets the sound timer to VX
+			sound_timer = registers[ X ];
+			break;
+		case 0x1E:
+			//Adds VX to I. VF is not affected
+			I += registers[ X ];
+			break;
+		case 0x29:
+		{
+			//Sets I to the location of the sprite for the character in VX(only consider the lowest nibble). Characters 0-F (in hexadecimal) are represented by a 4x5 font.
+		}
+		break;
+		case 0x33:
+		{
+			//Stores the binary-coded decimal representation of VX, with the hundreds digit in memory at location in I, the tens digit at location I+1, and the ones digit at location I+2
+			memory[ I ] = registers[ X ] / 100;
+			memory[ I + 1 ] = ( registers[ X ] / 10 ) % 10;
+			memory[ I + 2 ] = ( registers[ X ] % 100 ) % 10;
+		}
+		break;
+		case 0x55:
+		{
+			//Stores from V0 to VX (including VX) in memory, starting at address I. The offset from I is increased by 1 for each value written, but I itself is left unmodified
+			for( int i = 0; i < 16; ++i )
+			{
+				memory[ I + i ] = registers[ i ];
+			}
+		}
+		break;
+		case 0x65:
+		{
+			//Fills from V0 to VX (including VX) with values from memory, starting at address I. The offset from I is increased by 1 for each value read, but I itself is left unmodified
+			for( int i = 0; i < 16; ++i )
+			{
+				registers[ i ] = memory[ I + i ];
+			}
+		}
+		break;
+		default:
+			break;
+		}
+	}
+	break;
+
+	default:
 		break;
 	}
 }
@@ -360,6 +361,6 @@ void Chip8::UpdateTimers()
 	if( delay_timer > 0 )
 		--delay_timer;
 
-	if(sound_timer > 0)
+	if( sound_timer > 0 )
 		--sound_timer;
 }
