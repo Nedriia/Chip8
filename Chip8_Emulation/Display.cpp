@@ -11,7 +11,10 @@ void processInput( GLFWwindow* window );
 const unsigned int WINDOW_WIDTH = 800;
 const unsigned int WINDOW_HEIGHT = 600;
 
-Display::Display() {};
+Display::Display() :
+	window( nullptr )
+{
+}
 
 int Display::Init()
 {
@@ -63,7 +66,7 @@ void Display::DestroyWindow()
 	glfwTerminate();
 }
 
-void Display::Update()
+void Display::Update( bool& quit )
 {
 	// render loop
 		// -----------
@@ -83,6 +86,8 @@ void Display::Update()
 		glfwSwapBuffers( window );
 		glfwPollEvents();
 	}
+
+	quit = true;
 }
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly

@@ -10,7 +10,7 @@ public:
 	int Init();
 	int CreateWindowChip();
 	void DestroyWindow();
-	void Update();
+	void Update( bool& quit );
 
 private:
 	GLFWwindow* window;
