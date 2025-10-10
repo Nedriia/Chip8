@@ -1,5 +1,7 @@
 #pragma once
 
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
 class Display
 {
 
@@ -8,7 +10,8 @@ public:
 	int Init();
 	int CreateWindowChip();
 	void DestroyWindow();
-	void Update( bool& quit );
+	void Update();
 
 private:
+	GLFWwindow* window;
 };
