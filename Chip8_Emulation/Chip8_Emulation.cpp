@@ -1,7 +1,7 @@
 #include "Chip8.h"
 #include <windows.h>
 #include "Display.h"
-#include <SDL3/SDL.h>
+
 Chip8 m_oChip8;
 Display m_oDisplay;
 
