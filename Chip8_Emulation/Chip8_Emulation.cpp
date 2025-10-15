@@ -29,8 +29,9 @@ int main( int argc, char* argv[] )
 	bool quit = false;
 	while( !quit )
 	{
-		m_oDisplay.Update( quit );
 		m_oChip8.EmulateCycle();
+
+		m_oDisplay.Update( quit );
 	}
 	
 	Quit();

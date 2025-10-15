@@ -14,10 +14,9 @@ public:
 	void EmulateCycle();
 
 private:
-	void FetchOpcode( uint16_t& opcode );
-	void DecodeOpcode( const uint16_t opcode );
-	void ExecuteOpcode();
-	void UpdateTimers();
+	void _FetchOpcode( uint16_t& opcode );
+	void _DecodeExecute_Opcode( const uint16_t opcode );
+	void _UpdateTimers();
 
 	uint8_t memory[ 4096 ] = { 0 };
 	uint8_t registers[ 16 ] = { 0 };

@@ -27,6 +27,9 @@
     <ClCompile Include="glad.c">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
+    <ClCompile Include="Shader.cpp">
+      <Filter>Fichiers sources</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Chip8.h">
@@ -35,5 +38,16 @@
     <ClInclude Include="Display.h">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
+    <ClInclude Include="Shader.h">
+      <Filter>Fichiers d%27en-tête</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="vertexShader.glsl">
+      <Filter>Fichiers sources</Filter>
+    </None>
+    <None Include="fragmentShader.glsl">
+      <Filter>Fichiers sources</Filter>
+    </None>
   </ItemGroup>
 </Project>

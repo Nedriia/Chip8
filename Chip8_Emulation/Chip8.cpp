@@ -39,6 +39,7 @@ void Chip8::LoadFont()
 
 void Chip8::LoadROM( const char* sROMToLoad )
 {
+	//TODO : Add Check here if command not empty
 	std::string sPath = DEFAULT_PARENT_ROM_FOLDER;
 	std::ifstream file( sPath + sROMToLoad, std::ios::binary | std::ios::in | std::ios::ate );
 
@@ -76,13 +77,12 @@ void Chip8::LoadROM( const char* sROMToLoad )
 void Chip8::EmulateCycle()
 {
 	uint16_t opcode = 0;
-	FetchOpcode( opcode );
-	DecodeOpcode( opcode );
-	ExecuteOpcode();
-	UpdateTimers();
+	_FetchOpcode( opcode );
+	_DecodeExecute_Opcode( opcode );
+	_UpdateTimers();
 }
 
-void Chip8::FetchOpcode( uint16_t& opcode )
+void Chip8::_FetchOpcode( uint16_t& opcode )
 {
 	opcode = memory[ PC ];
 	uint8_t byte2 = memory[ PC + 1 ];
@@ -93,7 +93,7 @@ void Chip8::FetchOpcode( uint16_t& opcode )
 	PC += 2;
 }
 
-void Chip8::DecodeOpcode( const uint16_t opcode )
+void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 {
 	uint16_t NNN = opcode & 0x0FFF;
 	uint8_t NN = opcode & 0x00FF;
@@ -110,6 +110,7 @@ void Chip8::DecodeOpcode( const uint16_t opcode )
 		if( check == 0xE0 )
 		{
 			//Clears the screen
+			//memset( pixels, 0, sizeof( pixels ) );
 		}
 		else if( check == 0xEE )
 		{
@@ -352,11 +353,7 @@ void Chip8::DecodeOpcode( const uint16_t opcode )
 	}
 }
 
-void Chip8::ExecuteOpcode()
-{
-}
-
-void Chip8::UpdateTimers()
+void Chip8::_UpdateTimers()
 {
 	if( delay_timer > 0 )
 		--delay_timer;
