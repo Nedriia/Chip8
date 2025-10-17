@@ -77,7 +77,7 @@ void Chip8::LoadROM( const char* sROMToLoad )
 
 void Chip8::EmulateCycle()
 {
-	//if( delay_timer == 0 )
+	if( delay_timer == 0 )
 	{
 		uint16_t opcode = 0;
 		_FetchOpcode( opcode );
@@ -282,7 +282,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		I value does not change after the execution of this instruction*/
 		bool bErased = false;
 		uint8_t iYOffset = 0;
-		for( ; iYOffset <= N; ++iYOffset )
+		for( ; iYOffset < N; ++iYOffset )
 		{
 			Display::DrawPixelAtPos( registers[ X ], registers[ Y ] + iYOffset, memory[ I + iYOffset ], bErased );
 			VF = bErased ? 1 : 0;
