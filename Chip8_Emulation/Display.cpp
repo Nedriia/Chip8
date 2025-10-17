@@ -10,7 +10,9 @@ const uint16_t WINDOW_HEIGHT = 600;
 constexpr uint8_t CHIP8_DISPLAY_WIDTH = 64;
 constexpr uint8_t CHIP8_DISPLAY_HEIGHT = 32;
 
-static uint8_t pixels[ CHIP8_DISPLAY_WIDTH ][ CHIP8_DISPLAY_HEIGHT ] = { 0 };
+static uint8_t pixels[ CHIP8_DISPLAY_HEIGHT ][ CHIP8_DISPLAY_WIDTH ] = { 0 }; //Watch out, first element in 2D are lines
+
+#define FPS_LOCK 60.0f
 
 float vertices[] = {
 	// positions		//Texture coords
@@ -30,7 +32,8 @@ Display::Display() :
 	texture( 0 ),
 	VAO( 0 ),
 	VBO( 0 ),
-	EBO( 0 )
+	EBO( 0 ),
+	lastTime( 0.0 )
 {
 }
 
@@ -80,7 +83,6 @@ int Display::_CreateWindowChip()
 
 void Display::_InitTexture()
 {
-	unsigned int texture;
 	glGenTextures( 1, &texture );
 	glBindTexture( GL_TEXTURE_2D, texture );
 
@@ -139,6 +141,12 @@ void Display::processInput( GLFWwindow* window )
 		glfwSetWindowShouldClose( window, true );
 }
 
+void Display::UpdateTexture()
+{
+	glBindTexture( GL_TEXTURE_2D, texture );
+	glTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, CHIP8_DISPLAY_WIDTH, CHIP8_DISPLAY_HEIGHT, GL_RED, GL_UNSIGNED_BYTE, pixels );
+}
+
 void Display::DestroyWindow()
 {
 	// glfw: terminate, clearing all previously allocated GLFW resources.
@@ -149,30 +157,59 @@ void Display::DestroyWindow()
 	glfwTerminate();
 }
 
+void Display::ClearScreen()
+{
+	memset( pixels, 0, sizeof( pixels ) );
+}
+
+void Display::DrawPixelAtPos( uint8_t xPos, uint8_t yPos, uint8_t oValue, bool& bErased )
+{
+	uint8_t ByteMask = 0x80; //uint8_t mask 0x80 --> 10000000 // 01000000 // 00100000 ...
+	uint8_t iPosLine = xPos;
+	for( ByteMask; ByteMask > 0; ByteMask >>= 1, ++iPosLine )
+	{
+		iPosLine %= CHIP8_DISPLAY_WIDTH;
+		yPos %= CHIP8_DISPLAY_HEIGHT;
+		//bErased |= ;
+		if( ( oValue & ByteMask ) > 0 )
+		{
+			pixels[ yPos ][ iPosLine ] ^= 255;
+			std::cout << "Draw Pixels " << ( int )iPosLine << " " << ( int )yPos << std::endl;
+		}
+	}
+}
+
 void Display::Update( bool& quit )
 {
 	// render loop
-		// -----------
-	while( !glfwWindowShouldClose( window ) )
+	// -----------
+	if( !glfwWindowShouldClose( window ) )
 	{
 		// input
 		// -----
 		processInput( window );
 
-		// render
-		// ------
-		glClearColor( 0.f, 0.f, 0.f, 0.f );
-		glClear( GL_COLOR_BUFFER_BIT );
+		/*double now = glfwGetTime();
+		if( ( now - lastTime ) > 1 / FPS_LOCK )*/
+		{
+			// render
+			// ------
+			glClearColor( 0.f, 0.f, 0.f, 0.f );
+			glClear( GL_COLOR_BUFFER_BIT );
 
-		//Draw
-		shaderProgram.Use();
-		glDrawElements( GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0 );
+			//UpdateTexture
+			UpdateTexture();
 
-		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
-		// -------------------------------------------------------------------------------
-		glfwSwapBuffers( window );
+			//Draw
+			shaderProgram.Use();
+			glDrawElements( GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0 );
+
+			glfwSwapBuffers( window );
+		}
+		//lastTime = now;
+
 		glfwPollEvents();
 	}
-
-	quit = true;
+	else
+		quit = true;
 }

@@ -12,6 +12,8 @@ public:
 	int Init();
 	void Update( bool& quit );
 	void DestroyWindow();
+	static void ClearScreen();
+	static void DrawPixelAtPos( uint8_t xPos, uint8_t yPos, uint8_t oValue, bool& bErased );
 
 private:
 	int _CreateWindowChip();
@@ -21,6 +23,7 @@ private:
 
 	static void framebuffer_size_callback( GLFWwindow* window, int width, int height );
 	void processInput( GLFWwindow* window );
+	void UpdateTexture();
 
 	GLFWwindow* window;
 	Shader shaderProgram;
@@ -29,4 +32,6 @@ private:
 	unsigned int VAO;
 	unsigned int VBO;
 	unsigned int EBO;
+
+	double lastTime;
 };

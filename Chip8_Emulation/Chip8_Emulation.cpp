@@ -2,8 +2,8 @@
 #include <windows.h>
 #include "Display.h"
 
-Chip8 m_oChip8;
-Display m_oDisplay;
+static Chip8 m_oChip8;
+static Display m_oDisplay;
 
 int Quit()
 {
@@ -30,7 +30,6 @@ int main( int argc, char* argv[] )
 	while( !quit )
 	{
 		m_oChip8.EmulateCycle();
-
 		m_oDisplay.Update( quit );
 	}
 	

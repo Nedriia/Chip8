@@ -2,6 +2,7 @@
 #include <iostream>
 #include <fstream>
 #include <chrono>
+#include "Display.h"
 
 #define START_FONT_MEMORY_ADDRESS 0x050
 #define START_ROM_MEMORY_ADDRESS 0x200
@@ -76,9 +77,13 @@ void Chip8::LoadROM( const char* sROMToLoad )
 
 void Chip8::EmulateCycle()
 {
-	uint16_t opcode = 0;
-	_FetchOpcode( opcode );
-	_DecodeExecute_Opcode( opcode );
+	//if( delay_timer == 0 )
+	{
+		uint16_t opcode = 0;
+		_FetchOpcode( opcode );
+		_DecodeExecute_Opcode( opcode );
+	}
+
 	_UpdateTimers();
 }
 
@@ -100,6 +105,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 	uint8_t N = opcode & 0x000F;
 	uint8_t X = ( opcode & 0x0F00 ) >> 8;
 	uint8_t Y = ( opcode & 0x00F0 ) >> 4;
+	uint8_t& VF = registers[15];
 
 	uint16_t opcodeNibble = opcode & 0xF000;
 	switch( opcodeNibble )
@@ -110,7 +116,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		if( check == 0xE0 )
 		{
 			//Clears the screen
-			//memset( pixels, 0, sizeof( pixels ) );
+			Display::ClearScreen();
 		}
 		else if( check == 0xEE )
 		{
@@ -126,13 +132,13 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 	}
 	break;
 	case 0x1000:
-		//Jumps to address NNN
+	//Jumps to address NNN
 	{
 		PC = NNN;
 	}
 	break;
 	case 0x2000:
-		//Calls subroutine at NNN
+	//Calls subroutine at NNN
 	{
 		stack[ SP ] = PC;
 		++SP;
@@ -140,34 +146,34 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 	}
 	break;
 	case 0x3000:
-		//Skips the next instruction if VX equals NN (usually the next instruction is a jump to skip a code block)
+	//Skips the next instruction if VX equals NN (usually the next instruction is a jump to skip a code block)
 	{
 		if( registers[ X ] == NN )
 			PC += 2;
 	}
 	break;
 	case 0x4000:
-		//Skips the next instruction if VX does not equal NN (usually the next instruction is a jump to skip a code block).
+	//Skips the next instruction if VX does not equal NN (usually the next instruction is a jump to skip a code block).
 	{
 		if( registers[ X ] != NN )
 			PC += 2;
 	}
 	break;
 	case 0x5000:
-		//Skips the next instruction if VX equals VY (usually the next instruction is a jump to skip a code block).
+	//Skips the next instruction if VX equals VY (usually the next instruction is a jump to skip a code block).
 	{
 		if( registers[ X ] == registers[ Y ] )
 			PC += 2;
 	}
 	break;
 	case 0x6000:
-		//Sets NN To VX
+	//Sets NN To VX
 	{
 		registers[ X ] = NN;
 	}
 	break;
 	case 0x7000:
-		//Adds NN to VX (carry flag is not changed).
+	//Adds NN to VX (carry flag is not changed).
 	{
 		registers[ X ] += NN;
 	}
@@ -177,59 +183,59 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		switch( opcode & 0x000F )
 		{
 		case 0:
-			//Sets VX to the value of VY.
+		//Sets VX to the value of VY.
 		{
 			registers[ X ] = registers[ Y ];
 		}
 		break;
 		case 1:
-			//Sets VX to VX or VY. (bitwise OR operation).
+		//Sets VX to VX or VY. (bitwise OR operation).
 		{
 			registers[ X ] |= registers[ Y ];
 		}
 		break;
 		case 2:
-			//Sets VX to VX and VY. (bitwise AND operation).
+		//Sets VX to VX and VY. (bitwise AND operation).
 		{
 			registers[ X ] &= registers[ Y ];
 		}
 		break;
 		case 3:
-			//Sets VX to VX xor VY.
+		//Sets VX to VX xor VY.
 		{
 			registers[ X ] ^= registers[ Y ];
 		}
 		break;
 		case 4:
-			//Adds VY to VX.
+		//Adds VY to VX.
 		{
 			registers[ Y ] += registers[ X ];
 			//VF is set to 1 when there's an overflow, and to 0 when there is not.
 		}
 		break;
 		case 5:
-			//VY is subtracted from VX.
+		//VY is subtracted from VX.
 		{
 			registers[ X ] -= registers[ Y ];
 			// VF is set to 0 when there's an underflow, and 1 when there is not. (i.e. VF set to 1 if VX >= VY and 0 if not)
 		}
 		break;
 		case 6:
-			//Shifts VX to the right by 1,
+		//Shifts VX to the right by 1,
 		{
 			registers[ X ] >>= 1;
 			//then stores the least significant bit of VX prior to the shift into VF
 		}
 		break;
 		case 7:
-			//Sets VX equals to VY minus VX.
+		//Sets VX equals to VY minus VX.
 		{
 			registers[ X ] = registers[ Y ] - registers[ X ];
 			// VF is set to 0 when there's an underflow, and 1 when there is not. (i.e. VF set to 1 if VY >= VX).
 		}
 		break;
 		case 0xE:
-			//Shifts VX to the left by 1,
+		//Shifts VX to the left by 1,
 		{
 			registers[ X ] <<= 1;
 			//then sets VF to 1 if the most significant bit of VX prior to that shift was set, or to 0 if it was unset
@@ -241,38 +247,48 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 	}
 	break;
 	case 0x9000:
-		//Skips the next instruction if VX does not equal VY. (Usually the next instruction is a jump to skip a code block)
+	//Skips the next instruction if VX does not equal VY. (Usually the next instruction is a jump to skip a code block)
 	{
 		if( registers[ X ] != registers[ Y ] )
 			PC += 2;
 	}
 	break;
 	case 0xA000:
-		//Sets I to the address NNN
+	//Sets I to the address NNN
 	{
 		I = NNN;
 	}
 	break;
 	case 0xB000:
-		//Jumps to the address NNN plus V0
+	//Jumps to the address NNN plus V0
 	{
 		PC = NNN + registers[ 0 ];
 	}
 	break;
 	case 0xC000:
-		//Sets VX to the result of a bitwise and operation on a random number (Typically: 0 to 255) and NN
+	//Sets VX to the result of a bitwise and operation on a random number (Typically: 0 to 255) and NN
 	{
 		std::uniform_int_distribution<std::mt19937::result_type> dist( 0, 255 );
 		registers[ X ] = dist( rng ) & NN;
 	}
 	break;
 	case 0xD000:
-		/*Draws a sprite at coordinate(VX, VY) that has a width of 8 pixels and a height of N pixels.
-		Each row of 8 pixels is read as bit - coded starting from memory location I;
-		I value does not change after the execution of this instruction.As described above,
-		VF is set to 1 if any screen pixels are flipped from set to unset when the sprite is drawn,
-		and to 0 if that does not happen.*/
+	{
+		/*Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision.
+		The interpreter reads N bytes from memory, starting at the address stored in I.
+		These bytes are then displayed as sprites on screen at coordinates (Vx, Vy). Sprites are XORed onto the existing screen.
+		If this causes any pixels to be erased, VF is set to 1, otherwise it is set to 0.
+		If the sprite is positioned so part of it is outside the coordinates of the display, it wraps around to the opposite side of the screen
+		I value does not change after the execution of this instruction*/
+		bool bErased = false;
+		uint8_t iYOffset = 0;
+		for( ; iYOffset <= N; ++iYOffset )
+		{
+			Display::DrawPixelAtPos( registers[ X ], registers[ Y ] + iYOffset, memory[ I + iYOffset ], bErased );
+			VF = bErased ? 1 : 0;
+		}
 		break;
+	}
 	case 0xE000:
 	{
 		uint16_t check = opcode & 0x00FF;
@@ -314,6 +330,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		case 0x29:
 		{
 			//Sets I to the location of the sprite for the character in VX(only consider the lowest nibble). Characters 0-F (in hexadecimal) are represented by a 4x5 font.
+			//I = registers[ X ];
 		}
 		break;
 		case 0x33:
@@ -355,9 +372,9 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 
 void Chip8::_UpdateTimers()
 {
-	if( delay_timer > 0 )
+	if( delay_timer >= 0 )
 		--delay_timer;
 
-	if( sound_timer > 0 )
+	if( sound_timer >= 0 )
 		--sound_timer;
 }
