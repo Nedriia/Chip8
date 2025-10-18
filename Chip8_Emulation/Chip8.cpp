@@ -140,8 +140,9 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 	case 0x2000:
 	//Calls subroutine at NNN
 	{
+		if( stack[0] != 0 ) //could be simplier to use int and init the value to -1 but I want to keep 0 as start
+			++SP;
 		stack[ SP ] = PC;
-		++SP;
 		PC = NNN;
 	}
 	break;
@@ -209,36 +210,55 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		case 4:
 		//Adds VY to VX.
 		{
-			registers[ Y ] += registers[ X ];
+			uint16_t result = registers[ X ] + registers[ Y ];
+			if( result > 0xFF )
+			{
+				VF = 1;
+				result &= 0xFF;
+			}
+			else
+			{
+				VF = 0;
+			}
+			registers[ X ] = result;
+			
 			//VF is set to 1 when there's an overflow, and to 0 when there is not.
 		}
 		break;
 		case 5:
 		//VY is subtracted from VX.
 		{
+			if( registers[ X ] >= registers[ Y ] )
+				VF = 1;
+			else
+				VF = 0;
 			registers[ X ] -= registers[ Y ];
 			// VF is set to 0 when there's an underflow, and 1 when there is not. (i.e. VF set to 1 if VX >= VY and 0 if not)
 		}
 		break;
 		case 6:
-		//Shifts VX to the right by 1,
+		//If the least - significant bit of Vx is 1, then VF is set to 1, otherwise 0. Then Vx is divided by 2.
 		{
+			VF = ( registers[ X ] & 1 ) == 1 ? 1 : 0;
 			registers[ X ] >>= 1;
-			//then stores the least significant bit of VX prior to the shift into VF
 		}
 		break;
 		case 7:
 		//Sets VX equals to VY minus VX.
 		{
+			if( registers[ Y ] >= registers[ X ] )
+				VF = 1;
+			else
+				VF = 0;
 			registers[ X ] = registers[ Y ] - registers[ X ];
 			// VF is set to 0 when there's an underflow, and 1 when there is not. (i.e. VF set to 1 if VY >= VX).
 		}
 		break;
 		case 0xE:
-		//Shifts VX to the left by 1,
+		// If the most-significant bit of Vx is 1, then VF is set to 1, otherwise to 0. Then Vx is multiplied by 2.
 		{
+			VF = ( registers[ X ] & 0x80 ) == 1 ? 1 : 0;
 			registers[ X ] <<= 1;
-			//then sets VF to 1 if the most significant bit of VX prior to that shift was set, or to 0 if it was unset
 		}
 		break;
 		default:
@@ -330,7 +350,8 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		case 0x29:
 		{
 			//Sets I to the location of the sprite for the character in VX(only consider the lowest nibble). Characters 0-F (in hexadecimal) are represented by a 4x5 font.
-			//I = registers[ X ];
+			I = fontset[ registers[ X ] ];
+			//I = memory[ registers[ X ] ];
 		}
 		break;
 		case 0x33:
@@ -344,7 +365,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		case 0x55:
 		{
 			//Stores from V0 to VX (including VX) in memory, starting at address I. The offset from I is increased by 1 for each value written, but I itself is left unmodified
-			for( int i = 0; i < 16; ++i )
+			for( int i = 0; i <= X; ++i )
 			{
 				memory[ I + i ] = registers[ i ];
 			}
@@ -353,7 +374,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		case 0x65:
 		{
 			//Fills from V0 to VX (including VX) with values from memory, starting at address I. The offset from I is increased by 1 for each value read, but I itself is left unmodified
-			for( int i = 0; i < 16; ++i )
+			for( int i = 0; i <= X; ++i )
 			{
 				registers[ i ] = memory[ I + i ];
 			}
