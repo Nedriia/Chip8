@@ -170,7 +170,7 @@ void Display::DrawPixelAtPos( uint8_t xPos, uint8_t yPos, uint8_t oValue, bool& 
 	{
 		iPosLine %= CHIP8_DISPLAY_WIDTH;
 		yPos %= CHIP8_DISPLAY_HEIGHT;
-		if( ( oValue & ByteMask ) > 0 )
+		if( oValue & ByteMask )
 		{
 			bErased |= pixels[ yPos ][ iPosLine ] == 255;
 			pixels[ yPos ][ iPosLine ] ^= 255;

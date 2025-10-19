@@ -123,7 +123,8 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 			//Returns from a subroutine
 			PC = stack[ SP ];
 			stack[ SP ] = 0;
-			--SP;
+			if( SP != 0 )
+				--SP;
 		}
 		else
 		{
@@ -210,55 +211,48 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		case 4:
 		//Adds VY to VX.
 		{
-			uint16_t result = registers[ X ] + registers[ Y ];
-			if( result > 0xFF )
-			{
-				VF = 1;
-				result &= 0xFF;
-			}
-			else
-			{
-				VF = 0;
-			}
-			registers[ X ] = result;
-			
+			uint16_t sum = registers[ X ] + registers[ Y ];
+			registers[ X ] = sum & 0xFF;
+			VF = ( sum > 0xFF ) ? 1 : 0;
 			//VF is set to 1 when there's an overflow, and to 0 when there is not.
 		}
 		break;
 		case 5:
 		//VY is subtracted from VX.
 		{
-			if( registers[ X ] >= registers[ Y ] )
-				VF = 1;
-			else
+			uint16_t diff = registers[ X ] - registers[ Y ];
+			registers[ X ] = diff & 0xFF;
+			VF = 1;
+			if( diff > 0xFF )
 				VF = 0;
-			registers[ X ] -= registers[ Y ];
 			// VF is set to 0 when there's an underflow, and 1 when there is not. (i.e. VF set to 1 if VX >= VY and 0 if not)
 		}
 		break;
 		case 6:
 		//If the least - significant bit of Vx is 1, then VF is set to 1, otherwise 0. Then Vx is divided by 2.
 		{
-			VF = ( registers[ X ] & 1 ) == 1 ? 1 : 0;
-			registers[ X ] >>= 1;
+			uint8_t LSB = ( registers[ X ] & 1 );
+			registers[ X ] >>= 1; // OR registers[ X ] = registers[ Y ] >> 1 before 1990
+			VF = LSB;
 		}
 		break;
 		case 7:
 		//Sets VX equals to VY minus VX.
 		{
-			if( registers[ Y ] >= registers[ X ] )
-				VF = 1;
-			else
+			uint16_t diff = registers[ Y ] - registers[ X ];
+			registers[ X ] = diff & 0xFF;
+			VF = 1;
+			if( diff > 0xFF )
 				VF = 0;
-			registers[ X ] = registers[ Y ] - registers[ X ];
 			// VF is set to 0 when there's an underflow, and 1 when there is not. (i.e. VF set to 1 if VY >= VX).
 		}
 		break;
 		case 0xE:
 		// If the most-significant bit of Vx is 1, then VF is set to 1, otherwise to 0. Then Vx is multiplied by 2.
 		{
-			VF = ( registers[ X ] & 0x80 ) == 1 ? 1 : 0;
-			registers[ X ] <<= 1;
+			uint8_t MSB = ( registers[ X ] & 0x80 ) == 0x80 ? 1 : 0;
+			registers[ X ] <<= 1; // OR registers[ X ] = registers[ Y ] << 1 before 1990
+			VF = MSB;
 		}
 		break;
 		default:
