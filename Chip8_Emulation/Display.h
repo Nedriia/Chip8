@@ -10,7 +10,7 @@ class Display
 public:
 	Display();
 	int Init();
-	void Update( bool& quit );
+	void Update( bool& quit, bool bRefreshFrame );
 	void DestroyWindow();
 	static void ClearScreen();
 	static void DrawPixelAtPos( uint8_t xPos, uint8_t yPos, uint8_t oValue, bool& bErased );
@@ -36,6 +36,4 @@ private:
 	unsigned int VBO;
 	unsigned int EBO;
 	unsigned int FBO;
-
-	double lastTime;
 };

@@ -5,6 +5,9 @@
 static Chip8 m_oChip8;
 static Display m_oDisplay;
 
+#define REFRESH_RATE 60.0f
+static double lastTime = 0.0f;
+
 int Quit()
 {
 	m_oDisplay.DestroyWindow();
@@ -29,8 +32,14 @@ int main( int argc, char* argv[] )
 	bool quit = false;
 	while( !quit )
 	{
-		m_oChip8.EmulateCycle();
-		m_oDisplay.Update( quit );
+		double now = glfwGetTime();
+		bool bRefresh = ( ( now - lastTime ) > ( 1.0f / REFRESH_RATE ) );
+		
+		m_oChip8.EmulateCycle( bRefresh );
+		m_oDisplay.Update( quit, bRefresh );
+
+		if( bRefresh )
+			lastTime = glfwGetTime();
 	}
 	
 	Quit();

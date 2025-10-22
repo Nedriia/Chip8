@@ -17,8 +17,6 @@ constexpr uint8_t CHIP8_DISPLAY_HEIGHT = 32;
 
 static uint8_t pixels[ CHIP8_DISPLAY_HEIGHT ][ CHIP8_DISPLAY_WIDTH ] = { 0 }; //Watch out, first element in 2D are lines
 
-#define FPS_LOCK 60.0f
-
 static Chip8_Debugger oDebugger;
 
 float vertices[] = {
@@ -40,8 +38,7 @@ Display::Display() :
 	VAO( 0 ),
 	VBO( 0 ),
 	EBO( 0 ),
-	FBO( 0 ),
-	lastTime( 0.0 )
+	FBO( 0 )
 {
 }
 
@@ -209,7 +206,7 @@ void Display::RenderInTexture()
 	ImGui::Image( ( ImTextureID )( intptr_t )texture, ImVec2( 900, 600 ) );
 }
 
-void Display::Update( bool& quit )
+void Display::Update( bool& quit, bool bRefreshFrame )
 {
 	// render loop
 	// -----------
@@ -219,9 +216,9 @@ void Display::Update( bool& quit )
 		// -----
 		processInput( window );
 
-		/*double now = glfwGetTime();
-		if( ( now - lastTime ) > double( 1 / FPS_LOCK ) )
-		{*/
+		if( bRefreshFrame )
+		{
+			std::cout << "frame" << std::endl;
 			glBindFramebuffer( GL_FRAMEBUFFER, FBO );
 			
 			// render
@@ -281,8 +278,7 @@ void Display::Update( bool& quit )
 			oDebugger.Render();
 
 			glfwSwapBuffers( window );
-			//lastTime = now;
-		//}
+		}
 
 		glfwPollEvents();
 	}

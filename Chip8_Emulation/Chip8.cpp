@@ -75,7 +75,7 @@ void Chip8::LoadROM( const char* sROMToLoad )
 	}
 }
 
-void Chip8::EmulateCycle()
+void Chip8::EmulateCycle( bool bRefresh )
 {
 	if( delay_timer == 0 )
 	{
@@ -84,7 +84,8 @@ void Chip8::EmulateCycle()
 		_DecodeExecute_Opcode( opcode );
 	}
 
-	_UpdateTimers();
+	if( bRefresh )
+		_UpdateTimers();
 }
 
 void Chip8::_FetchOpcode( uint16_t& opcode )
@@ -100,12 +101,12 @@ void Chip8::_FetchOpcode( uint16_t& opcode )
 
 void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 {
-	uint16_t NNN = opcode & 0x0FFF;
-	uint8_t NN = opcode & 0x00FF;
-	uint8_t N = opcode & 0x000F;
-	uint8_t X = ( opcode & 0x0F00 ) >> 8;
-	uint8_t Y = ( opcode & 0x00F0 ) >> 4;
-	uint8_t& VF = registers[15];
+	uint16_t NNN	= opcode & 0x0FFF;
+	uint8_t NN		= opcode & 0x00FF;
+	uint8_t N		= opcode & 0x000F;
+	uint8_t X		= ( opcode & 0x0F00 ) >> 8;
+	uint8_t Y		= ( opcode & 0x00F0 ) >> 4;
+	uint8_t& VF		= registers[15];
 
 	uint16_t opcodeNibble = opcode & 0xF000;
 	switch( opcodeNibble )
