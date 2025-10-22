@@ -1,11 +1,16 @@
 #include "Display.h"
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include "Chip8_Debugger.h"
 #include <iostream>
 
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+
 // settings
-const uint16_t WINDOW_WIDTH = 800;
-const uint16_t WINDOW_HEIGHT = 600;
+const uint16_t WINDOW_WIDTH = 2000;
+const uint16_t WINDOW_HEIGHT = 1000;
 
 constexpr uint8_t CHIP8_DISPLAY_WIDTH = 64;
 constexpr uint8_t CHIP8_DISPLAY_HEIGHT = 32;
@@ -14,12 +19,14 @@ static uint8_t pixels[ CHIP8_DISPLAY_HEIGHT ][ CHIP8_DISPLAY_WIDTH ] = { 0 }; //
 
 #define FPS_LOCK 60.0f
 
+static Chip8_Debugger oDebugger;
+
 float vertices[] = {
 	// positions		//Texture coords
-	1.f, 1.0f, 0.0f,	1.0f, 0.0f,    // top right
-	1.0f, -1.0f, 0.0f,	1.0f, 1.0f,   // bottom right
-	-1.0f, -1.0f, 0.0f,	0.0f, 1.0f,   // bottom left 
-	-1.0f, 1.0f, 0.0f,	0.0f, 0.0f,    // top left
+	1.f, 1.0f, 0.0f,	1.0f, 0.0f,		// top right
+	1.0f, -1.0f, 0.0f,	1.0f, 1.0f,		// bottom right
+	-1.0f, -1.0f, 0.0f,	0.0f, 1.0f,		// bottom left 
+	-1.0f, 1.0f, 0.0f,	0.0f, 0.0f,		// top left
 };
 
 unsigned int indices[] = {
@@ -33,26 +40,33 @@ Display::Display() :
 	VAO( 0 ),
 	VBO( 0 ),
 	EBO( 0 ),
+	FBO( 0 ),
 	lastTime( 0.0 )
 {
 }
 
+static void glfw_error_callback( int error, const char* description )
+{
+	fprintf( stderr, "GLFW Error %d: %s\n", error, description );
+}
+
 int Display::Init()
 {
-	// glfw: initialize and configure
-		// ------------------------------
-	glfwInit();
+	glfwSetErrorCallback( glfw_error_callback );
+	if( !glfwInit() )
+		return -1;
+
 	glfwWindowHint( GLFW_CONTEXT_VERSION_MAJOR, 3 );
 	glfwWindowHint( GLFW_CONTEXT_VERSION_MINOR, 3 );
 	glfwWindowHint( GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE );
 
-#ifdef __APPLE__
-	glfwWindowHint( GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE );
-#endif
-
 	_CreateWindowChip();
-	_InitRenderer();
+	//_InitRenderer();
 	_InitTexture();
+	_InitFramebuffer();
+
+	oDebugger.Init( window );
+
 	return 0;
 }
 
@@ -93,6 +107,16 @@ void Display::_InitTexture()
 	glTexImage2D( GL_TEXTURE_2D, 0, GL_R8, CHIP8_DISPLAY_WIDTH, CHIP8_DISPLAY_HEIGHT, 0, GL_RED, GL_UNSIGNED_BYTE, pixels );
 }
 
+void Display::_InitFramebuffer()
+{
+	glGenFramebuffers( 1, &FBO );
+	glBindFramebuffer( GL_FRAMEBUFFER, FBO );
+	glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0 ); //bind texture to framebuffer
+
+	if( glCheckFramebufferStatus( GL_FRAMEBUFFER ) != GL_FRAMEBUFFER_COMPLETE )
+		std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
+}
+
 void Display::_InitRenderer()
 {
 	glGenVertexArrays( 1, &VAO );
@@ -122,6 +146,7 @@ void Display::_DestroyRenderer()
 	glDeleteVertexArrays( 1, &VAO );
 	glDeleteBuffers( 1, &VBO );
 	glDeleteBuffers( 1, &EBO );
+	glDeleteFramebuffers( 1, &FBO );
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
@@ -143,8 +168,7 @@ void Display::processInput( GLFWwindow* window )
 
 void Display::UpdateTexture()
 {
-	glBindTexture( GL_TEXTURE_2D, texture );
-	glTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, CHIP8_DISPLAY_WIDTH, CHIP8_DISPLAY_HEIGHT, GL_RED, GL_UNSIGNED_BYTE, pixels );
+	
 }
 
 void Display::DestroyWindow()
@@ -178,6 +202,13 @@ void Display::DrawPixelAtPos( uint8_t xPos, uint8_t yPos, uint8_t oValue, bool& 
 	}
 }
 
+void Display::RenderInTexture()
+{
+	glBindTexture( GL_TEXTURE_2D, texture );
+	glTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, CHIP8_DISPLAY_WIDTH, CHIP8_DISPLAY_HEIGHT, GL_RED, GL_UNSIGNED_BYTE, pixels );
+	ImGui::Image( ( ImTextureID )( intptr_t )texture, ImVec2( 900, 600 ) );
+}
+
 void Display::Update( bool& quit )
 {
 	// render loop
@@ -189,23 +220,69 @@ void Display::Update( bool& quit )
 		processInput( window );
 
 		/*double now = glfwGetTime();
-		if( ( now - lastTime ) > 1 / FPS_LOCK )*/
-		{
+		if( ( now - lastTime ) > double( 1 / FPS_LOCK ) )
+		{*/
+			glBindFramebuffer( GL_FRAMEBUFFER, FBO );
+			
 			// render
 			// ------
-			glClearColor( 0.f, 0.f, 0.f, 0.f );
+			ImGui_ImplOpenGL3_NewFrame();
+			ImGui_ImplGlfw_NewFrame();
+			ImGui::NewFrame();
+
+			ImGui::SetNextWindowPos( ImVec2( 0, 0 ), ImGuiCond_Always, ImVec2( 0, 0 ) );
+			ImGui::SetNextWindowSize( ImVec2( 600, 1000 ), ImGuiCond_Once );
+			if( ImGui::Begin( "CPU", nullptr, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
+				ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove ) )
+			{
+			}
+			ImGui::End();
+
+			ImGui::SetNextWindowPos( ImVec2( 600, 0 ), ImGuiCond_Always, ImVec2( 0, 0 ) );
+			ImGui::SetNextWindowSize( ImVec2( 900, 600 ), ImGuiCond_Once );
+			if( ImGui::Begin( "Chip-8 Display", nullptr, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
+				ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar ) )
+			{
+				RenderInTexture();
+			}
+			ImGui::End();
+
+			ImGui::SetNextWindowPos( ImVec2( 600, 600 ), ImGuiCond_Always, ImVec2( 0, 0 ) );
+			ImGui::SetNextWindowSize( ImVec2( 300, 400 ), ImGuiCond_Once );
+			if( ImGui::Begin( "Inputs", nullptr, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
+				ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar ) )
+			{
+			}
+			ImGui::End();
+
+			ImGui::SetNextWindowPos( ImVec2( 900, 600 ), ImGuiCond_Always, ImVec2( 0, 0 ) );
+			ImGui::SetNextWindowSize( ImVec2( 600, 400 ), ImGuiCond_Once );
+			if( ImGui::Begin( "Memory", nullptr, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
+				ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar ) )
+			{
+			}
+			ImGui::End();
+
+			ImGui::SetNextWindowPos( ImVec2( 1500, 0 ), ImGuiCond_Always, ImVec2( 0, 0 ) );
+			ImGui::SetNextWindowSize( ImVec2( 500, 1000 ), ImGuiCond_Once );
+			if( ImGui::Begin( "Opcode live view", nullptr, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
+				ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove ) )
+			{
+			}
+			ImGui::End();
+			
+			glBindFramebuffer( GL_FRAMEBUFFER, 0 );
+
+			glClearColor( 0.f, 0.f, 0.f, 1.f );
 			glClear( GL_COLOR_BUFFER_BIT );
 
-			//UpdateTexture
-			UpdateTexture();
+			//shaderProgram.Use();
 
-			//Draw
-			shaderProgram.Use();
-			glDrawElements( GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0 );
+			oDebugger.Render();
 
 			glfwSwapBuffers( window );
-		}
-		//lastTime = now;
+			//lastTime = now;
+		//}
 
 		glfwPollEvents();
 	}

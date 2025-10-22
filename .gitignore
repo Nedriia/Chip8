@@ -134,3 +134,6 @@ Chip8_Emulation/.vs/Chip8_Emulation/FileContentIndex/155ea431-611d-4a1d-b18d-d75
 Chip8_Emulation/.vs/Chip8_Emulation/FileContentIndex/0c09dcff-cd5b-4908-aab2-6f5ef9f8cfac.vsidx
 *.ch8
 *.user
+*.vsidx
+*.ipch
+*.vsidx

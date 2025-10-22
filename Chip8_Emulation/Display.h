@@ -14,10 +14,13 @@ public:
 	void DestroyWindow();
 	static void ClearScreen();
 	static void DrawPixelAtPos( uint8_t xPos, uint8_t yPos, uint8_t oValue, bool& bErased );
+	void RenderInTexture();
+	const unsigned int& GetTexture() const { return texture; }
 
 private:
 	int _CreateWindowChip();
 	void _InitTexture();
+	void _InitFramebuffer();
 	void _InitRenderer();
 	void _DestroyRenderer();
 
@@ -32,6 +35,7 @@ private:
 	unsigned int VAO;
 	unsigned int VBO;
 	unsigned int EBO;
+	unsigned int FBO;
 
 	double lastTime;
 };
