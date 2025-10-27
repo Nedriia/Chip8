@@ -12,12 +12,11 @@
 const uint16_t WINDOW_WIDTH = 2000;
 const uint16_t WINDOW_HEIGHT = 1000;
 
-constexpr uint8_t CHIP8_DISPLAY_WIDTH = 64;
-constexpr uint8_t CHIP8_DISPLAY_HEIGHT = 32;
+const uint8_t Display::CHIP8_DISPLAY_WIDTH = 64;
+const uint8_t Display::CHIP8_DISPLAY_HEIGHT = 32;
+uint8_t* Display::pixels = nullptr;
 
-static uint8_t pixels[ CHIP8_DISPLAY_HEIGHT ][ CHIP8_DISPLAY_WIDTH ] = { 0 }; //Watch out, first element in 2D are lines
-
-static Chip8_Debugger oDebugger;
+Display *Display::singleton = nullptr;
 
 float vertices[] = {
 	// positions		//Texture coords
@@ -42,6 +41,11 @@ Display::Display() :
 {
 }
 
+Display::~Display()
+{
+	delete singleton;
+}
+
 static void glfw_error_callback( int error, const char* description )
 {
 	fprintf( stderr, "GLFW Error %d: %s\n", error, description );
@@ -58,11 +62,12 @@ int Display::Init()
 	glfwWindowHint( GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE );
 
 	_CreateWindowChip();
-	//_InitRenderer();
+	//_InitRenderer(); //No more need since we are using FBO and rendering in ImGui Image
+	pixels = new uint8_t[ CHIP8_DISPLAY_WIDTH * CHIP8_DISPLAY_HEIGHT ];
 	_InitTexture();
 	_InitFramebuffer();
 
-	oDebugger.Init( window );
+	Chip8_Debugger::GetInstance()->Init(window);
 
 	return 0;
 }
@@ -100,7 +105,7 @@ void Display::_InitTexture()
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
 
-	memset( pixels, 0, CHIP8_DISPLAY_WIDTH * CHIP8_DISPLAY_HEIGHT );
+	_InitPixelsData();
 	glTexImage2D( GL_TEXTURE_2D, 0, GL_R8, CHIP8_DISPLAY_WIDTH, CHIP8_DISPLAY_HEIGHT, 0, GL_RED, GL_UNSIGNED_BYTE, pixels );
 }
 
@@ -146,6 +151,26 @@ void Display::_DestroyRenderer()
 	glDeleteFramebuffers( 1, &FBO );
 }
 
+void Display::_InitPixelsData()
+{
+	for( int i = 0; i < CHIP8_DISPLAY_HEIGHT; ++i )
+	{
+		for( int j = 0; j < CHIP8_DISPLAY_WIDTH; ++j )
+			*( pixels + i * CHIP8_DISPLAY_WIDTH + j ) = 0;
+	}
+}
+
+void Display::_XORedPixelsData( int xPos, int yPos, uint8_t odata )
+{
+	*( pixels + yPos * CHIP8_DISPLAY_WIDTH + xPos ) ^= odata;
+}
+
+bool Display::_IsPixelErase( int xPos, int yPos )
+{
+	return *( pixels + yPos * CHIP8_DISPLAY_WIDTH + xPos ) == 255;
+}
+
+
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
 // ---------------------------------------------------------------------------------------------
 void Display::framebuffer_size_callback( GLFWwindow* window, int width, int height )
@@ -163,15 +188,11 @@ void Display::processInput( GLFWwindow* window )
 		glfwSetWindowShouldClose( window, true );
 }
 
-void Display::UpdateTexture()
-{
-	
-}
-
 void Display::DestroyWindow()
 {
 	// glfw: terminate, clearing all previously allocated GLFW resources.
 	// ------------------------------------------------------------------
+	delete[] pixels;
 	glDeleteTextures( 1, &texture );
 	_DestroyRenderer();
 	shaderProgram.Delete();
@@ -180,7 +201,7 @@ void Display::DestroyWindow()
 
 void Display::ClearScreen()
 {
-	memset( pixels, 0, sizeof( pixels ) );
+	_InitPixelsData();
 }
 
 void Display::DrawPixelAtPos( uint8_t xPos, uint8_t yPos, uint8_t oValue, bool& bErased )
@@ -193,17 +214,10 @@ void Display::DrawPixelAtPos( uint8_t xPos, uint8_t yPos, uint8_t oValue, bool& 
 		yPos %= CHIP8_DISPLAY_HEIGHT;
 		if( oValue & ByteMask )
 		{
-			bErased |= pixels[ yPos ][ iPosLine ] == 255;
-			pixels[ yPos ][ iPosLine ] ^= 255;
+			bErased |= _IsPixelErase( iPosLine, yPos );
+			_XORedPixelsData( iPosLine, yPos, 255 );
 		}
 	}
-}
-
-void Display::RenderInTexture()
-{
-	glBindTexture( GL_TEXTURE_2D, texture );
-	glTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, CHIP8_DISPLAY_WIDTH, CHIP8_DISPLAY_HEIGHT, GL_RED, GL_UNSIGNED_BYTE, pixels );
-	ImGui::Image( ( ImTextureID )( intptr_t )texture, ImVec2( 900, 600 ) );
 }
 
 void Display::Update( bool& quit, bool bRefreshFrame )
@@ -218,64 +232,14 @@ void Display::Update( bool& quit, bool bRefreshFrame )
 
 		if( bRefreshFrame )
 		{
-			std::cout << "frame" << std::endl;
-			glBindFramebuffer( GL_FRAMEBUFFER, FBO );
-			
-			// render
-			// ------
-			ImGui_ImplOpenGL3_NewFrame();
-			ImGui_ImplGlfw_NewFrame();
-			ImGui::NewFrame();
-
-			ImGui::SetNextWindowPos( ImVec2( 0, 0 ), ImGuiCond_Always, ImVec2( 0, 0 ) );
-			ImGui::SetNextWindowSize( ImVec2( 600, 1000 ), ImGuiCond_Once );
-			if( ImGui::Begin( "CPU", nullptr, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
-				ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove ) )
-			{
-			}
-			ImGui::End();
-
-			ImGui::SetNextWindowPos( ImVec2( 600, 0 ), ImGuiCond_Always, ImVec2( 0, 0 ) );
-			ImGui::SetNextWindowSize( ImVec2( 900, 600 ), ImGuiCond_Once );
-			if( ImGui::Begin( "Chip-8 Display", nullptr, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
-				ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar ) )
-			{
-				RenderInTexture();
-			}
-			ImGui::End();
-
-			ImGui::SetNextWindowPos( ImVec2( 600, 600 ), ImGuiCond_Always, ImVec2( 0, 0 ) );
-			ImGui::SetNextWindowSize( ImVec2( 300, 400 ), ImGuiCond_Once );
-			if( ImGui::Begin( "Inputs", nullptr, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
-				ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar ) )
-			{
-			}
-			ImGui::End();
-
-			ImGui::SetNextWindowPos( ImVec2( 900, 600 ), ImGuiCond_Always, ImVec2( 0, 0 ) );
-			ImGui::SetNextWindowSize( ImVec2( 600, 400 ), ImGuiCond_Once );
-			if( ImGui::Begin( "Memory", nullptr, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
-				ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar ) )
-			{
-			}
-			ImGui::End();
-
-			ImGui::SetNextWindowPos( ImVec2( 1500, 0 ), ImGuiCond_Always, ImVec2( 0, 0 ) );
-			ImGui::SetNextWindowSize( ImVec2( 500, 1000 ), ImGuiCond_Once );
-			if( ImGui::Begin( "Opcode live view", nullptr, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
-				ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove ) )
-			{
-			}
-			ImGui::End();
-			
-			glBindFramebuffer( GL_FRAMEBUFFER, 0 );
+			Chip8_Debugger::GetInstance()->Update();
 
 			glClearColor( 0.f, 0.f, 0.f, 1.f );
 			glClear( GL_COLOR_BUFFER_BIT );
 
-			//shaderProgram.Use();
+			//shaderProgram.Use(); //We render into ImGui Image no more need for now ( keeping commented in case we are doing a fullscreen )
 
-			oDebugger.Render();
+			Chip8_Debugger::GetInstance()->Render();
 
 			glfwSwapBuffers( window );
 		}

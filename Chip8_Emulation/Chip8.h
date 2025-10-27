@@ -12,6 +12,7 @@ public:
 	void LoadROM( const char* sROMToLoad );
 
 	void EmulateCycle( bool bRefresh );
+
 private:
 	void _FetchOpcode( uint16_t& opcode );
 	void _DecodeExecute_Opcode( const uint16_t opcode );

@@ -3,20 +3,19 @@
 #include "Display.h"
 
 static Chip8 m_oChip8;
-static Display m_oDisplay;
 
 #define REFRESH_RATE 60.0f
 static double lastTime = 0.0f;
 
 int Quit()
 {
-	m_oDisplay.DestroyWindow();
+	Display::GetInstance()->DestroyWindow();
 	return -1;
 }
 
 int main( int argc, char* argv[] )
 {
-	if( m_oDisplay.Init() == -1 )
+	if( Display::GetInstance()->Init() == -1 )
 		return Quit();
 
 	const char* sROMToLoad = nullptr;
@@ -35,8 +34,8 @@ int main( int argc, char* argv[] )
 		double now = glfwGetTime();
 		bool bRefresh = ( ( now - lastTime ) > ( 1.0f / REFRESH_RATE ) );
 		
-		m_oChip8.EmulateCycle( bRefresh );
-		m_oDisplay.Update( quit, bRefresh );
+		m_oChip8.EmulateCycle( true );
+		Display::GetInstance()->Update( quit, bRefresh );
 
 		if( bRefresh )
 			lastTime = glfwGetTime();

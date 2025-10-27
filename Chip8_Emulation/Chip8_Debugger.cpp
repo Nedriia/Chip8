@@ -31,8 +31,7 @@
 #include "Chip8_Debugger.h"
 #include "Display.h"
 
-static Display m_oDisplay;
-
+Chip8_Debugger* Chip8_Debugger::singleton = nullptr;
 
 Chip8_Debugger::Chip8_Debugger() :
 	window( nullptr )
@@ -81,7 +80,67 @@ void Chip8_Debugger::Update()
 	}
 
 	// Start the Dear ImGui frame
-	
+	glBindFramebuffer( GL_FRAMEBUFFER, Display::GetInstance()->GetFBO() );
+
+	// render
+	// ------
+	ImGui_ImplOpenGL3_NewFrame();
+	ImGui_ImplGlfw_NewFrame();
+	ImGui::NewFrame();
+
+	ImGui::SetNextWindowPos( ImVec2( 0, 0 ), ImGuiCond_Always, ImVec2( 0, 0 ) );
+	ImGui::SetNextWindowSize( ImVec2( 600, 500 ), ImGuiCond_Once );
+	if( ImGui::Begin( "CPU", nullptr, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
+		ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove ) )
+	{
+	}
+	ImGui::End();
+
+	ImGui::SetNextWindowPos( ImVec2( 0, 500 ), ImGuiCond_Always, ImVec2( 0, 0 ) );
+	ImGui::SetNextWindowSize( ImVec2( 600, 500 ), ImGuiCond_Once );
+	if( ImGui::Begin( "Stack", nullptr, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
+		ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove ) )
+	{
+	}
+	ImGui::End();
+
+	ImGui::SetNextWindowPos( ImVec2( 600, 0 ), ImGuiCond_Always, ImVec2( 0, 0 ) );
+	ImGui::SetNextWindowSize( ImVec2( 900, 600 ), ImGuiCond_Once );
+	if( ImGui::Begin( "Chip-8 Display", nullptr, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
+		ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar ) )
+	{
+		glBindTexture( GL_TEXTURE_2D, Display::GetInstance()->GetTexture() );
+		glTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, Display::CHIP8_DISPLAY_WIDTH, Display::CHIP8_DISPLAY_HEIGHT, GL_RED, GL_UNSIGNED_BYTE, Display::GetInstance()->GetPixels() );
+		ImVec2 avail = ImGui::GetContentRegionAvail();
+		ImGui::Image( ( ImTextureID )( intptr_t )Display::GetInstance()->GetTexture(), avail);
+	}
+	ImGui::End();
+
+	ImGui::SetNextWindowPos( ImVec2( 600, 600 ), ImGuiCond_Always, ImVec2( 0, 0 ) );
+	ImGui::SetNextWindowSize( ImVec2( 300, 400 ), ImGuiCond_Once );
+	if( ImGui::Begin( "Inputs", nullptr, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
+		ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar ) )
+	{
+	}
+	ImGui::End();
+
+	ImGui::SetNextWindowPos( ImVec2( 900, 600 ), ImGuiCond_Always, ImVec2( 0, 0 ) );
+	ImGui::SetNextWindowSize( ImVec2( 600, 400 ), ImGuiCond_Once );
+	if( ImGui::Begin( "Memory", nullptr, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
+		ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar ) )
+	{
+	}
+	ImGui::End();
+
+	ImGui::SetNextWindowPos( ImVec2( 1500, 0 ), ImGuiCond_Always, ImVec2( 0, 0 ) );
+	ImGui::SetNextWindowSize( ImVec2( 500, 1000 ), ImGuiCond_Once );
+	if( ImGui::Begin( "Opcode live view", nullptr, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
+		ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove ) )
+	{
+	}
+	ImGui::End();
+
+	glBindFramebuffer( GL_FRAMEBUFFER, 0 );
 }
 
 void Chip8_Debugger::Render()
