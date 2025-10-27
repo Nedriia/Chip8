@@ -1,4 +1,5 @@
 #pragma once
+#include <deque>
 
 class Chip8_Debugger
 {
@@ -14,9 +15,12 @@ public:
 		return singleton;
 	}
 
+	void AddEntryOpcode( const char* pOpcode );
+
 private:
 	static Chip8_Debugger* singleton;
 	Chip8_Debugger();
+	std::deque<const char*> opcodeHistory;
 
 	GLFWwindow* window;
 };

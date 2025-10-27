@@ -137,6 +137,13 @@ void Chip8_Debugger::Update()
 	if( ImGui::Begin( "Opcode live view", nullptr, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
 		ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove ) )
 	{
+		static int item_selected_idx = 0; // Here we store our selected data as an index.
+		if (ImGui::BeginListBox("#", ImVec2(-FLT_MIN, 55 * ImGui::GetTextLineHeightWithSpacing() ) ) )
+		{
+			for ( int n = 0; n < opcodeHistory.size(); ++n )
+				ImGui::Selectable( opcodeHistory[n], false );
+			ImGui::EndListBox();
+		}
 	}
 	ImGui::End();
 
@@ -152,4 +159,12 @@ void Chip8_Debugger::Render()
 	ImGui::Render();
 
 	ImGui_ImplOpenGL3_RenderDrawData( ImGui::GetDrawData() );
+}
+
+void Chip8_Debugger::AddEntryOpcode( const char* pOpcode )
+{
+	if( opcodeHistory.size() >= 0x200)
+		opcodeHistory.pop_front();
+
+	opcodeHistory.push_back( pOpcode );
 }

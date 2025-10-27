@@ -3,6 +3,7 @@
 #include <fstream>
 #include <chrono>
 #include "Display.h"
+#include "Chip8_Debugger.h"
 
 #define START_FONT_MEMORY_ADDRESS 0x050
 #define START_ROM_MEMORY_ADDRESS 0x200
@@ -101,6 +102,8 @@ void Chip8::_FetchOpcode( uint16_t& opcode )
 
 void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 {
+	const char* OpcodeInstruct ="";
+
 	uint16_t NNN	= opcode & 0x0FFF;
 	uint8_t NN		= opcode & 0x00FF;
 	uint8_t N		= opcode & 0x000F;
@@ -118,6 +121,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		{
 			//Clears the screen
 			Display::ClearScreen();
+			OpcodeInstruct = "ONNN : CLS";
 		}
 		else if( check == 0xEE )
 		{
@@ -126,6 +130,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 			stack[ SP ] = 0;
 			if( SP != 0 )
 				--SP;
+			OpcodeInstruct = "0xEE : RET";
 		}
 		else
 		{
@@ -137,6 +142,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 	//Jumps to address NNN
 	{
 		PC = NNN;
+		OpcodeInstruct = "0x1000 : JMP NNN";
 	}
 	break;
 	case 0x2000:
@@ -146,6 +152,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 			++SP;
 		stack[ SP ] = PC;
 		PC = NNN;
+		OpcodeInstruct = "0x2000 : CALL NNN";
 	}
 	break;
 	case 0x3000:
@@ -153,6 +160,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 	{
 		if( registers[ X ] == NN )
 			PC += 2;
+		OpcodeInstruct = "0x3000 : SE VX, NN";
 	}
 	break;
 	case 0x4000:
@@ -160,6 +168,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 	{
 		if( registers[ X ] != NN )
 			PC += 2;
+		OpcodeInstruct = "0x4000 : SNE VX, NN";
 	}
 	break;
 	case 0x5000:
@@ -167,18 +176,21 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 	{
 		if( registers[ X ] == registers[ Y ] )
 			PC += 2;
+		OpcodeInstruct = "0x5000 : SE VX, VY";
 	}
 	break;
 	case 0x6000:
 	//Sets NN To VX
 	{
 		registers[ X ] = NN;
+		OpcodeInstruct = "0x6000 : LD VX, NN";
 	}
 	break;
 	case 0x7000:
 	//Adds NN to VX (carry flag is not changed).
 	{
 		registers[ X ] += NN;
+		OpcodeInstruct = "0x7000 : ADD VX, NN";
 	}
 	break;
 	case 0x8000:
@@ -189,24 +201,28 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		//Sets VX to the value of VY.
 		{
 			registers[ X ] = registers[ Y ];
+			OpcodeInstruct = "0x8000 : LD VX, VY";
 		}
 		break;
 		case 1:
 		//Sets VX to VX or VY. (bitwise OR operation).
 		{
 			registers[ X ] |= registers[ Y ];
+			OpcodeInstruct = "0x8001 : OR VX, VY";
 		}
 		break;
 		case 2:
 		//Sets VX to VX and VY. (bitwise AND operation).
 		{
 			registers[ X ] &= registers[ Y ];
+			OpcodeInstruct = "0x8002 : AND VX, VY";
 		}
 		break;
 		case 3:
 		//Sets VX to VX xor VY.
 		{
 			registers[ X ] ^= registers[ Y ];
+			OpcodeInstruct = "0x8003 : XOR VX, VY";
 		}
 		break;
 		case 4:
@@ -216,6 +232,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 			registers[ X ] = sum & 0xFF;
 			VF = ( sum > 0xFF ) ? 1 : 0;
 			//VF is set to 1 when there's an overflow, and to 0 when there is not.
+			OpcodeInstruct = "0x8004 : ADD VX, VY";
 		}
 		break;
 		case 5:
@@ -227,6 +244,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 			if( diff > 0xFF )
 				VF = 0;
 			// VF is set to 0 when there's an underflow, and 1 when there is not. (i.e. VF set to 1 if VX >= VY and 0 if not)
+			OpcodeInstruct = "0x8005 : SUB VX, VY";
 		}
 		break;
 		case 6:
@@ -235,6 +253,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 			uint8_t LSB = ( registers[ X ] & 1 );
 			registers[ X ] >>= 1; // OR registers[ X ] = registers[ Y ] >> 1 before 1990
 			VF = LSB;
+			OpcodeInstruct = "0x8006 : SHR VX, VY";
 		}
 		break;
 		case 7:
@@ -246,6 +265,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 			if( diff > 0xFF )
 				VF = 0;
 			// VF is set to 0 when there's an underflow, and 1 when there is not. (i.e. VF set to 1 if VY >= VX).
+			OpcodeInstruct = "0x8007 : SUBN VX, VY";
 		}
 		break;
 		case 0xE:
@@ -254,6 +274,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 			uint8_t MSB = ( registers[ X ] & 0x80 ) == 0x80 ? 1 : 0;
 			registers[ X ] <<= 1; // OR registers[ X ] = registers[ Y ] << 1 before 1990
 			VF = MSB;
+			OpcodeInstruct = "0x800E : SHL VX, VY";
 		}
 		break;
 		default:
@@ -266,18 +287,21 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 	{
 		if( registers[ X ] != registers[ Y ] )
 			PC += 2;
+		OpcodeInstruct = "0x9000 : SNE VX, VY";
 	}
 	break;
 	case 0xA000:
 	//Sets I to the address NNN
 	{
 		I = NNN;
+		OpcodeInstruct = "0xA000 : LD I, NNN";
 	}
 	break;
 	case 0xB000:
 	//Jumps to the address NNN plus V0
 	{
 		PC = NNN + registers[ 0 ];
+		OpcodeInstruct = "0xB000 : JMP V0, NNN";
 	}
 	break;
 	case 0xC000:
@@ -285,6 +309,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 	{
 		std::uniform_int_distribution<std::mt19937::result_type> dist( 0, 255 );
 		registers[ X ] = dist( rng ) & NN;
+		OpcodeInstruct = "0xC000 : RND VX, NN";
 	}
 	break;
 	case 0xD000:
@@ -302,6 +327,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 			Display::DrawPixelAtPos( registers[ X ], registers[ Y ] + iYOffset, memory[ I + iYOffset ], bErased );
 			VF = bErased ? 1 : 0;
 		}
+		OpcodeInstruct = "0xD000 : DRW VX, VY, N";
 		break;
 	}
 	case 0xE000:
@@ -310,10 +336,12 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		if( check == 0x9E )
 		{
 			//Skips the next instruction if the key stored in VX(only consider the lowest nibble) is pressed (usually the next instruction is a jump to skip a code block).
+			OpcodeInstruct = "0xE09E : SKP VX";
 		}
 		else if( check == 0xA1 )
 		{
 			//Skips the next instruction if the key stored in VX(only consider the lowest nibble) is not pressed (usually the next instruction is a jump to skip a code block).
+			OpcodeInstruct = "0xE0A1 : SKNP VX";
 		}
 	}
 	break;
@@ -324,28 +352,34 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		case 7:
 			//Sets VX to the value of the delay timer.
 			registers[ X ] = delay_timer;
+			OpcodeInstruct = "0xF007 : LD VX, DT";
 			break;
 		case 0x0A:
 		{
 			//A key press is awaited, and then stored in VX (blocking operation, all instruction halted until next key event, delay and sound timers should continue processing)
+			OpcodeInstruct = "0xF00A : LD VX, KEY";
 		}
 		break;
 		case 0x15:
 			//Sets the delay timer to VX
 			delay_timer = registers[ X ];
+			OpcodeInstruct = "0xF015 : LD DT, VX";
 			break;
 		case 0x18:
 			//Sets the sound timer to VX
 			sound_timer = registers[ X ];
+			OpcodeInstruct = "0xF018 : LD ST, VX";
 			break;
 		case 0x1E:
 			//Adds VX to I. VF is not affected
 			I += registers[ X ];
+			OpcodeInstruct = "0xF01E : ADD I, VXX";
 			break;
 		case 0x29:
 		{
 			//Sets I to the location of the sprite for the character in VX(only consider the lowest nibble). Characters 0-F (in hexadecimal) are represented by a 4x5 font.
 			I = fontset[ registers[ X ] ];
+			OpcodeInstruct = "0xF029 : LD I, FONT(VX)";
 			//I = memory[ registers[ X ] ];
 		}
 		break;
@@ -355,6 +389,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 			memory[ I ] = registers[ X ] / 100;
 			memory[ I + 1 ] = ( registers[ X ] / 10 ) % 10;
 			memory[ I + 2 ] = ( registers[ X ] % 100 ) % 10;
+			OpcodeInstruct = "0xF033 : BCD VX";
 		}
 		break;
 		case 0x55:
@@ -364,6 +399,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 			{
 				memory[ I + i ] = registers[ i ];
 			}
+			OpcodeInstruct = "0xF055 : LD [I], VX";
 		}
 		break;
 		case 0x65:
@@ -373,6 +409,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 			{
 				registers[ i ] = memory[ I + i ];
 			}
+			OpcodeInstruct = "0xF065 : LD VX, [I]";
 		}
 		break;
 		default:
@@ -384,6 +421,9 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 	default:
 		break;
 	}
+
+	if( OpcodeInstruct != "" )
+		Chip8_Debugger::GetInstance()->AddEntryOpcode( OpcodeInstruct );
 }
 
 void Chip8::_UpdateTimers()

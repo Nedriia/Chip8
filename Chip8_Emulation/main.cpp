@@ -4,7 +4,7 @@
 
 static Chip8 m_oChip8;
 
-#define REFRESH_RATE 60.0f
+#define REFRESH_RATE 1000000060.0f
 static double lastTime = 0.0f;
 
 int Quit()
