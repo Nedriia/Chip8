@@ -34,13 +34,14 @@
 Chip8_Debugger* Chip8_Debugger::singleton = nullptr;
 
 Chip8_Debugger::Chip8_Debugger() :
-	window( nullptr )
+	window( nullptr ),
+	m_bFollowPc( true )
 {
 }
 
 void Chip8_Debugger::Init( GLFWwindow* mainWindow )
 {
-	ImVec4 clear_color = ImVec4( 0.45f, 0.55f, 0.60f, 1.00f );
+	ImVec4 clear_color = ImVec4( 0.45f,0.55f,0.60f,1.00f );
 	float main_scale = ImGui_ImplGlfw_GetContentScaleForMonitor( glfwGetPrimaryMonitor() ); // Valid on GLFW 3.3+ only
 
 	window = mainWindow;
@@ -58,9 +59,9 @@ void Chip8_Debugger::Init( GLFWwindow* mainWindow )
 	style.FontScaleDpi = main_scale;        // Set initial font scale. (using io.ConfigDpiScaleFonts=true makes this unnecessary. We leave both here for documentation purpose)
 
 	// Setup Platform/Renderer backends
-	ImGui_ImplGlfw_InitForOpenGL( mainWindow, true );
+	ImGui_ImplGlfw_InitForOpenGL( mainWindow,true );
 #ifdef __EMSCRIPTEN__
-	ImGui_ImplGlfw_InstallEmscriptenCallbacks( mainWindow, "#canvas" );
+	ImGui_ImplGlfw_InstallEmscriptenCallbacks( mainWindow,"#canvas" );
 #endif
 	ImGui_ImplOpenGL3_Init( "#version 330" );
 }
@@ -73,14 +74,14 @@ void Chip8_Debugger::Update()
 	// - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
 	// Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
 	glfwPollEvents();
-	if( glfwGetWindowAttrib( window, GLFW_ICONIFIED ) != 0 )
+	if( glfwGetWindowAttrib( window,GLFW_ICONIFIED ) != 0 )
 	{
 		ImGui_ImplGlfw_Sleep( 10 );
 		return;
 	}
 
 	// Start the Dear ImGui frame
-	glBindFramebuffer( GL_FRAMEBUFFER, Display::GetInstance()->GetFBO() );
+	glBindFramebuffer( GL_FRAMEBUFFER,Display::GetInstance()->GetFBO() );
 
 	// render
 	// ------
@@ -88,73 +89,86 @@ void Chip8_Debugger::Update()
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
 
-	ImGui::SetNextWindowPos( ImVec2( 0, 0 ), ImGuiCond_Always, ImVec2( 0, 0 ) );
-	ImGui::SetNextWindowSize( ImVec2( 600, 500 ), ImGuiCond_Once );
-	if( ImGui::Begin( "CPU", nullptr, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
+	ImGui::SetNextWindowPos( ImVec2( 0,0 ),ImGuiCond_Always,ImVec2( 0,0 ) );
+	ImGui::SetNextWindowSize( ImVec2( 600,500 ),ImGuiCond_Once );
+	if( ImGui::Begin( "CPU",nullptr,ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
 		ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove ) )
 	{
 	}
 	ImGui::End();
 
-	ImGui::SetNextWindowPos( ImVec2( 0, 500 ), ImGuiCond_Always, ImVec2( 0, 0 ) );
-	ImGui::SetNextWindowSize( ImVec2( 600, 500 ), ImGuiCond_Once );
-	if( ImGui::Begin( "Stack", nullptr, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
+	ImGui::SetNextWindowPos( ImVec2( 0,500 ),ImGuiCond_Always,ImVec2( 0,0 ) );
+	ImGui::SetNextWindowSize( ImVec2( 600,500 ),ImGuiCond_Once );
+	if( ImGui::Begin( "Stack",nullptr,ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
 		ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove ) )
 	{
 	}
 	ImGui::End();
 
-	ImGui::SetNextWindowPos( ImVec2( 600, 0 ), ImGuiCond_Always, ImVec2( 0, 0 ) );
-	ImGui::SetNextWindowSize( ImVec2( 900, 600 ), ImGuiCond_Once );
-	if( ImGui::Begin( "Chip-8 Display", nullptr, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
+	ImGui::SetNextWindowPos( ImVec2( 600,0 ),ImGuiCond_Always,ImVec2( 0,0 ) );
+	ImGui::SetNextWindowSize( ImVec2( 900,600 ),ImGuiCond_Once );
+	if( ImGui::Begin( "Chip-8 Display",nullptr,ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
 		ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar ) )
 	{
-		glBindTexture( GL_TEXTURE_2D, Display::GetInstance()->GetTexture() );
-		glTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, Display::CHIP8_DISPLAY_WIDTH, Display::CHIP8_DISPLAY_HEIGHT, GL_RED, GL_UNSIGNED_BYTE, Display::GetInstance()->GetPixels() );
+		glBindTexture( GL_TEXTURE_2D,Display::GetInstance()->GetTexture() );
+		glTexSubImage2D( GL_TEXTURE_2D,0,0,0,Display::CHIP8_DISPLAY_WIDTH,Display::CHIP8_DISPLAY_HEIGHT,GL_RED,GL_UNSIGNED_BYTE,Display::GetInstance()->GetPixels() );
 		ImVec2 avail = ImGui::GetContentRegionAvail();
-		ImGui::Image( ( ImTextureID )( intptr_t )Display::GetInstance()->GetTexture(), avail);
+		ImGui::Image( ( ImTextureID )( intptr_t )Display::GetInstance()->GetTexture(),avail );
 	}
 	ImGui::End();
 
-	ImGui::SetNextWindowPos( ImVec2( 600, 600 ), ImGuiCond_Always, ImVec2( 0, 0 ) );
-	ImGui::SetNextWindowSize( ImVec2( 300, 400 ), ImGuiCond_Once );
-	if( ImGui::Begin( "Inputs", nullptr, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
+	ImGui::SetNextWindowPos( ImVec2( 600,600 ),ImGuiCond_Always,ImVec2( 0,0 ) );
+	ImGui::SetNextWindowSize( ImVec2( 300,400 ),ImGuiCond_Once );
+	if( ImGui::Begin( "Inputs",nullptr,ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
 		ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar ) )
 	{
 	}
 	ImGui::End();
 
-	ImGui::SetNextWindowPos( ImVec2( 900, 600 ), ImGuiCond_Always, ImVec2( 0, 0 ) );
-	ImGui::SetNextWindowSize( ImVec2( 600, 400 ), ImGuiCond_Once );
-	if( ImGui::Begin( "Memory", nullptr, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
+	ImGui::SetNextWindowPos( ImVec2( 900,600 ),ImGuiCond_Always,ImVec2( 0,0 ) );
+	ImGui::SetNextWindowSize( ImVec2( 600,400 ),ImGuiCond_Once );
+	if( ImGui::Begin( "Memory",nullptr,ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
 		ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar ) )
 	{
 	}
 	ImGui::End();
 
-	ImGui::SetNextWindowPos( ImVec2( 1500, 0 ), ImGuiCond_Always, ImVec2( 0, 0 ) );
-	ImGui::SetNextWindowSize( ImVec2( 500, 1000 ), ImGuiCond_Once );
-	if( ImGui::Begin( "Opcode live view", nullptr, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
+	ImGui::SetNextWindowPos( ImVec2( 1500,0 ),ImGuiCond_Always,ImVec2( 0,0 ) );
+	ImGui::SetNextWindowSize( ImVec2( 500,1000 ),ImGuiCond_Once );
+	if( ImGui::Begin( "Opcode live view",nullptr,ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
 		ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove ) )
 	{
-		static int item_selected_idx = 0; // Here we store our selected data as an index.
-		if (ImGui::BeginListBox("#", ImVec2(-FLT_MIN, 55 * ImGui::GetTextLineHeightWithSpacing() ) ) )
+		static int item_selected_idx = 0;
+		ImGui::Checkbox( "Follow PC : ",&m_bFollowPc );
+		if( ImGui::BeginListBox( "#",ImVec2( -FLT_MIN,54 * ImGui::GetTextLineHeightWithSpacing() ) ) )
 		{
-			for ( int n = 0; n < opcodeHistory.size(); ++n )
-				ImGui::Selectable( opcodeHistory[n], false );
+			for( int n = 0; n < opcodeHistory.size(); ++n )
+			{
+				ImGui::PushID( n );
+				bool is_selected = ( item_selected_idx == n );
+				if( ImGui::Selectable( opcodeHistory[ n ].c_str(),is_selected ) )
+					item_selected_idx = n;
+
+				if( m_bFollowPc && n == opcodeHistory.size() - 1 )
+				{
+					ImGui::SetScrollHereY( 1.0f );
+					item_selected_idx = opcodeHistory.size() - 1;
+				}
+				ImGui::PopID();
+			}
 			ImGui::EndListBox();
 		}
 	}
 	ImGui::End();
 
-	glBindFramebuffer( GL_FRAMEBUFFER, 0 );
+	glBindFramebuffer( GL_FRAMEBUFFER,0 );
 }
 
 void Chip8_Debugger::Render()
 {
-	int display_w, display_h;
-	glfwGetFramebufferSize( window, &display_w, &display_h );
-	glViewport( 0, 0, display_w, display_h );
+	int display_w,display_h;
+	glfwGetFramebufferSize( window,&display_w,&display_h );
+	glViewport( 0,0,display_w,display_h );
 
 	ImGui::Render();
 
@@ -163,7 +177,7 @@ void Chip8_Debugger::Render()
 
 void Chip8_Debugger::AddEntryOpcode( const char* pOpcode )
 {
-	if( opcodeHistory.size() >= 0x200)
+	if( opcodeHistory.size() >= 0x200 )
 		opcodeHistory.pop_front();
 
 	opcodeHistory.push_back( pOpcode );
