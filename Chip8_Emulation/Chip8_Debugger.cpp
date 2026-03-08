@@ -30,16 +30,19 @@
 
 #include "Chip8_Debugger.h"
 #include "Display.h"
+#include "Chip8.h"
+#include <iomanip>
+#include <format>
 
 Chip8_Debugger* Chip8_Debugger::singleton = nullptr;
 
 Chip8_Debugger::Chip8_Debugger() :
 	window( nullptr ),
-	m_bFollowPc( true )
+	m_bPause( false )
 {
 }
 
-void Chip8_Debugger::Init( GLFWwindow* mainWindow )
+void Chip8_Debugger::Init( GLFWwindow* mainWindow,const Chip8* pCPU )
 {
 	ImVec4 clear_color = ImVec4( 0.45f,0.55f,0.60f,1.00f );
 	float main_scale = ImGui_ImplGlfw_GetContentScaleForMonitor( glfwGetPrimaryMonitor() ); // Valid on GLFW 3.3+ only
@@ -64,6 +67,9 @@ void Chip8_Debugger::Init( GLFWwindow* mainWindow )
 	ImGui_ImplGlfw_InstallEmscriptenCallbacks( mainWindow,"#canvas" );
 #endif
 	ImGui_ImplOpenGL3_Init( "#version 330" );
+
+	if( pCPU != nullptr )
+		m_pCPU = pCPU;
 }
 
 void Chip8_Debugger::Update()
@@ -94,6 +100,30 @@ void Chip8_Debugger::Update()
 	if( ImGui::Begin( "CPU",nullptr,ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
 		ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove ) )
 	{
+		if( m_pCPU != nullptr )
+		{
+			if( ImGui::BeginListBox( "#",ImVec2( -FLT_MIN,26 * ImGui::GetTextLineHeightWithSpacing() ) ) )
+			{
+				const uint8_t* it = m_pCPU->GetRegisters();
+				if( it != nullptr )
+				{
+					std::string sAdress;
+					for( int i = 0; i < 0x10; ++i )
+					{
+						sAdress.clear();
+						ImGui::PushID( i );
+
+						sAdress = std::format( "V{:X}: {:02X}",i,( int )it[ i ] );
+						ImGui::Selectable( sAdress.c_str() );
+
+						ImGui::PopID();
+					}
+					sAdress = std::format( "\nI  : {:#06X} \nSP : {}\nPC : {:#06X}\nDT : {}\nST : {}",m_pCPU->GetI(),m_pCPU->GetSP(),m_pCPU->GetPC(),m_pCPU->GetDelayTimer(),m_pCPU->GetSoundTimer() );
+					ImGui::Text( sAdress.c_str() );
+				}
+			}
+			ImGui::EndListBox();
+		}
 	}
 	ImGui::End();
 
@@ -102,6 +132,28 @@ void Chip8_Debugger::Update()
 	if( ImGui::Begin( "Stack",nullptr,ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
 		ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove ) )
 	{
+		if( m_pCPU != nullptr )
+		{
+			if( ImGui::BeginListBox( "#",ImVec2( -FLT_MIN,26 * ImGui::GetTextLineHeightWithSpacing() ) ) )
+			{
+				const uint16_t* it = m_pCPU->GetStack();
+				if( it != nullptr )
+				{
+					std::string sAdress;
+					for( int i = 0; i < 0x10; ++i )
+					{
+						sAdress.clear();
+						ImGui::PushID( i );
+
+						sAdress = std::format( "{:#06X}",it[ i ] );
+						ImGui::Selectable( sAdress.c_str() );
+
+						ImGui::PopID();
+					}
+				}
+			}
+			ImGui::EndListBox();
+		}
 	}
 	ImGui::End();
 
@@ -130,31 +182,66 @@ void Chip8_Debugger::Update()
 	if( ImGui::Begin( "Memory",nullptr,ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
 		ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar ) )
 	{
+		if( m_pCPU != nullptr )
+		{
+			if( ImGui::BeginListBox( "#",ImVec2( -FLT_MIN,20 * ImGui::GetTextLineHeightWithSpacing() ) ) )
+			{
+				const uint8_t* it = m_pCPU->GetMemory();
+				if( it != nullptr )
+				{
+					std::string sAdress;
+					for( int i = 0; i < 0x1000; i += 0x10 )
+					{
+						sAdress.clear();
+
+						ImGui::PushID( i );
+
+						sAdress = std::format( "{:#06X} : ",i );
+
+						for( int n = i; n < i + 0x10; ++n )
+						{
+							if( n == i + 8 )
+								sAdress += "- ";
+							sAdress += std::format( "{:02X} ",it[ n ] );
+						}
+
+						ImGui::Selectable( sAdress.c_str() );
+
+						ImGui::PopID();
+					}
+				}
+			}
+			ImGui::EndListBox();
+		}
 	}
 	ImGui::End();
 
 	ImGui::SetNextWindowPos( ImVec2( 1500,0 ),ImGuiCond_Always,ImVec2( 0,0 ) );
 	ImGui::SetNextWindowSize( ImVec2( 500,1000 ),ImGuiCond_Once );
-	if( ImGui::Begin( "Opcode live view",nullptr,ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
+	if( ImGui::Begin( "Opcode Decode",nullptr,ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
 		ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove ) )
 	{
-		static int item_selected_idx = 0;
-		ImGui::Checkbox( "Follow PC : ",&m_bFollowPc );
-		if( ImGui::BeginListBox( "#",ImVec2( -FLT_MIN,54 * ImGui::GetTextLineHeightWithSpacing() ) ) )
+		if( m_pCPU != nullptr )
 		{
-			for( int n = 0; n < opcodeHistory.size(); ++n )
+			static int item_selected_idx = 0;
+			ImGui::Checkbox( "Pause : ",&m_bPause );
+			if( ImGui::BeginListBox( "#",ImVec2( -FLT_MIN,54 * ImGui::GetTextLineHeightWithSpacing() ) ) )
 			{
-				ImGui::PushID( n );
-				bool is_selected = ( item_selected_idx == n );
-				if( ImGui::Selectable( opcodeHistory[ n ].c_str(),is_selected ) )
-					item_selected_idx = n;
-
-				if( m_bFollowPc && n == opcodeHistory.size() - 1 )
+				for( int n = 0; n < m_pCPU->GetHistoryOpcode().size(); ++n )
 				{
-					ImGui::SetScrollHereY( 1.0f );
-					item_selected_idx = opcodeHistory.size() - 1;
+					ImGui::PushID( n );
+					bool is_selected = ( item_selected_idx == n );
+					if( ImGui::Selectable( m_pCPU->GetHistoryOpcode()[ n ].c_str(),is_selected ) )
+						item_selected_idx = n;
+
+					if( m_pCPU->GetHistoryOpcode().size() > 0 && !m_bPause )
+					{
+						ImGui::SetScrollHereY( 1.0f );
+						item_selected_idx = m_pCPU->GetHistoryOpcode().size() - 1;
+					}
+
+					ImGui::PopID();
 				}
-				ImGui::PopID();
 			}
 			ImGui::EndListBox();
 		}
@@ -173,12 +260,4 @@ void Chip8_Debugger::Render()
 	ImGui::Render();
 
 	ImGui_ImplOpenGL3_RenderDrawData( ImGui::GetDrawData() );
-}
-
-void Chip8_Debugger::AddEntryOpcode( const char* pOpcode )
-{
-	if( opcodeHistory.size() >= 0x200 )
-		opcodeHistory.pop_front();
-
-	opcodeHistory.push_back( pOpcode );
 }

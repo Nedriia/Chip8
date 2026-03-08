@@ -4,7 +4,7 @@
 
 static Chip8 m_oChip8;
 
-#define REFRESH_RATE 1000000060.0f
+#define REFRESH_RATE 2500.0f
 static double lastTime = 0.0f;
 
 int Quit()
@@ -15,17 +15,17 @@ int Quit()
 
 int main( int argc, char* argv[] )
 {
-	if( Display::GetInstance()->Init() == -1 )
-		return Quit();
-
 	const char* sROMToLoad = nullptr;
 	if( argc >= 1 )
-		sROMToLoad = argv[1];
+		sROMToLoad = argv[ 1 ];
 
 	if( sROMToLoad == nullptr )
 		Quit();
 
 	m_oChip8.Init( sROMToLoad );
+
+	if( Display::GetInstance()->Init( &m_oChip8 ) == -1 )
+		return Quit();
 
 	//Loop
 	bool quit = false;
@@ -34,7 +34,7 @@ int main( int argc, char* argv[] )
 		double now = glfwGetTime();
 		bool bRefresh = ( ( now - lastTime ) > ( 1.0f / REFRESH_RATE ) );
 		
-		m_oChip8.EmulateCycle( true );
+		m_oChip8.EmulateCycle();
 		Display::GetInstance()->Update( quit, bRefresh );
 
 		if( bRefresh )

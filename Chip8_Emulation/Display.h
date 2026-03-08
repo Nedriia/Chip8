@@ -4,11 +4,13 @@
 #include <GLFW/glfw3.h>
 #include "Shader.h"
 
+class Chip8;
+
 class Display
 {
 
 public:
-	int Init();
+	int Init( const Chip8* pCpu );
 	void Update( bool& quit, bool bRefreshFrame );
 	void DestroyWindow();
 	static void ClearScreen();
@@ -16,6 +18,7 @@ public:
 	const unsigned int& GetTexture() const { return texture; }
 	const unsigned int& GetFBO() const { return FBO; }
 	const uint8_t* GetPixels() const{ return pixels; }
+	const GLFWwindow* GetWindow() const { return window; }
 
 	static const uint8_t CHIP8_DISPLAY_WIDTH;
 	static const uint8_t CHIP8_DISPLAY_HEIGHT;

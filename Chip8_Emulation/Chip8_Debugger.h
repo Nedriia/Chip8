@@ -1,12 +1,14 @@
 #pragma once
-#include <deque>
 #include "string"
 #include <sstream>
 
+class Chip8;
 class Chip8_Debugger
 {
 public:
-	void Init( GLFWwindow* mainWindow );
+	Chip8_Debugger();
+
+	void Init( GLFWwindow* mainWindow,const Chip8* pCPU );
 	void Update();
 	void Render();
 
@@ -28,23 +30,15 @@ public:
 		if( num3 != 0 )
 			ss << ", 0x" << std::hex << num3;
 	}
-	static void ConvertUintToString( std::string& sString,const uint16_t& num,const uint16_t& num2 = 0xFFF,const uint16_t& num3 = 0xFFF )
-	{
-		sString += std::to_string( num );
-		if( num2 != 0xFFF )
-			sString += ", " + std::to_string( num2 );
-		if( num3 != 0xFFF )
-			sString += ", " + std::to_string( num3 );
-	}
 
-	void AddEntryOpcode( const char* pOpcode );
+	bool	IsEmulationPaused() const { return m_bPause; }
 
 private:
-	static Chip8_Debugger* singleton;
-	Chip8_Debugger();
-	std::deque<std::string> opcodeHistory;
-	bool	m_bFollowPc;
 
-	GLFWwindow* window;
+	static Chip8_Debugger*	singleton;
+	bool					m_bPause;
+
+	GLFWwindow*				window;
+	const Chip8*			m_pCPU;
 };
 
