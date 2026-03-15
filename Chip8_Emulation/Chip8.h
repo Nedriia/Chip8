@@ -1,8 +1,15 @@
 #pragma once
 
-#include <stdint.h>
 #include <random>
 #include <deque>
+#include <chrono>
+
+enum class RunningState
+{
+	Running,
+	Pause,
+	StepNextFrame
+};
 
 class Chip8
 {
@@ -12,7 +19,7 @@ public:
 	void LoadFont();
 	void LoadROM( const char* sROMToLoad );
 
-	void EmulateCycle();
+	void EmulateCycle( const std::chrono::steady_clock::time_point& time );
 
 	const uint16_t* GetStack() const { return stack; }
 	const uint8_t* GetMemory() const { return memory; }
@@ -26,6 +33,10 @@ public:
 	uint8_t		GetDelayTimer() const { return delay_timer;}
 	uint8_t		GetSoundTimer() const { return sound_timer;}
 
+	void		AskForState( RunningState oState ) const;
+	bool		IsPause() const { return m_oState == RunningState::Pause; }
+	bool		IsRunning() const { return m_oState == RunningState::Running; }
+
 private:
 	void _FetchOpcode( uint16_t& opcode );
 	void _DecodeExecute_Opcode( const uint16_t opcode );
@@ -38,6 +49,9 @@ private:
 	uint16_t stack[ 0x10 ] = { 0 };
 	uint8_t SP; //Stack pointer
 	uint16_t PC; //Program counter
+
+	uint16_t lastOpcode;
+	uint8_t countBeforeStop;
 
 	uint8_t delay_timer;
 	uint8_t sound_timer;
@@ -66,4 +80,8 @@ private:
 
 	std::deque<std::string> m_aOpcodeHistory;
 
+	mutable RunningState m_oState;
+	std::chrono::steady_clock::time_point		lastTimeUpdate;
+	std::chrono::steady_clock::time_point		lastTimeUpdateTimers;
+	float accumulator;
 };

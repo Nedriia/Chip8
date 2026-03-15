@@ -1,12 +1,6 @@
 #include "Display.h"
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
 #include "Chip8_Debugger.h"
 #include <iostream>
-
-#include "imgui.h"
-#include "imgui_impl_glfw.h"
-#include "imgui_impl_opengl3.h"
 
 // settings
 const uint16_t WINDOW_WIDTH = 2000;
@@ -37,7 +31,9 @@ Display::Display() :
 	VAO( 0 ),
 	VBO( 0 ),
 	EBO( 0 ),
-	FBO( 0 )
+	FBO( 0 ),
+	m_bDirtyFrame( true ),
+	lastTimeUpdate( std::chrono::high_resolution_clock::now() )
 {
 }
 
@@ -220,31 +216,55 @@ void Display::DrawPixelAtPos( uint8_t xPos,uint8_t yPos,uint8_t oValue,bool& bEr
 	}
 }
 
-void Display::Update( bool& quit,bool bRefreshFrame )
+void Display::Update( const std::chrono::steady_clock::time_point& time,bool cpuPaused, bool& quit )
 {
 	// render loop
 	// -----------
 	if( !glfwWindowShouldClose( window ) )
 	{
-		// input
-		// -----
-		processInput( window );
+		glfwPollEvents();
 
-		if( bRefreshFrame )
+		std::chrono::microseconds elapsed = std::chrono::duration_cast< std::chrono::microseconds >( time - lastTimeUpdate );
+		std::chrono::microseconds startElapsed = elapsed;
+		if( elapsed >= refreshTick || m_bDirtyFrame )
 		{
+			bool bDirtyFrame = m_bDirtyFrame;
+
+			int updateThisFrame = 0;
+			const int maxUpdatePerFrame = 5; //could go up to 8 frame to catch up ( 133 ms )
+
+			if( !m_bDirtyFrame && elapsed > ( refreshTick * maxUpdatePerFrame ) )// too much to catch up
+			{
+				lastTimeUpdate = time;
+				elapsed = std::chrono::microseconds( 0 );
+				return;
+			}
+
+			while( elapsed >= refreshTick && updateThisFrame < maxUpdatePerFrame )
+			{
+				processInput( window );
+
+				lastTimeUpdate += refreshTick;
+				++updateThisFrame;
+
+				elapsed = std::chrono::duration_cast< std::chrono::microseconds >( time - lastTimeUpdate );
+			}
+
 			Chip8_Debugger::GetInstance()->Update();
 
 			glClearColor( 0.f,0.f,0.f,1.f );
 			glClear( GL_COLOR_BUFFER_BIT );
 
-			//shaderProgram.Use(); //We render into ImGui Image no more need for now ( keeping commented in case we are doing a fullscreen )
-
 			Chip8_Debugger::GetInstance()->Render();
 
-			glfwSwapBuffers( window );
-		}
+			if( !cpuPaused || ( m_bDirtyFrame == true && m_bDirtyFrame == bDirtyFrame ) )
+			{
+				glfwSwapBuffers( window );
+				m_bDirtyFrame = false;
+			}
 
-		glfwPollEvents();
+			std::cout << std::chrono::duration<double,std::milli>( startElapsed ).count() << " ms " << std::endl;
+		}
 	}
 	else
 		quit = true;

@@ -1,21 +1,26 @@
 #include "Chip8.h"
-#include <iostream>
 #include <fstream>
 #include <chrono>
 #include "Display.h"
-#include "Chip8_Debugger.h"
 
 #define START_FONT_MEMORY_ADDRESS 0x050
 #define START_ROM_MEMORY_ADDRESS 0x200
 #define MEMORY_SIZE 4096
 #define DEFAULT_PARENT_ROM_FOLDER "..\\"
+#define INSTRUCTIONS_PER_FRAME 250.f // keep this as a float, it's use in accumulator [ 100 - 1000 ]
 
 Chip8::Chip8() :
 	I( 0 ),
 	SP( 0 ),
 	PC( 0 ),
+	lastOpcode( 0 ),
+	countBeforeStop( 0 ),
 	delay_timer( 0 ),
-	sound_timer( 0 )
+	sound_timer( 0 ),
+	m_oState( RunningState::Pause ),
+	lastTimeUpdate( std::chrono::high_resolution_clock::now() ),
+	lastTimeUpdateTimers( std::chrono::high_resolution_clock::now() ),
+	accumulator( 0.0f )
 {
 }
 
@@ -76,19 +81,49 @@ void Chip8::LoadROM( const char* sROMToLoad )
 	}
 }
 
-void Chip8::EmulateCycle()
+void Chip8::EmulateCycle( const std::chrono::steady_clock::time_point& time )
 {
-	if( Chip8_Debugger::GetInstance() && Chip8_Debugger::GetInstance()->IsEmulationPaused() )
-		return;
-
-	if( delay_timer == 0 )
+	if( m_oState == RunningState::Pause )
 	{
-		uint16_t opcode = 0;
-		_FetchOpcode( opcode );
-		_DecodeExecute_Opcode( opcode );
+		lastTimeUpdate = time;
+		return;
 	}
 
-	_UpdateTimers();
+	std::chrono::microseconds elapsed = std::chrono::duration_cast< std::chrono::microseconds >( time - lastTimeUpdate );
+	if( elapsed >= refreshTick )
+	{
+		float refreshPerFrame = INSTRUCTIONS_PER_FRAME / 60.f;
+		accumulator += refreshPerFrame - std::floor( refreshPerFrame );
+		int opcodePerFrame = std::floor( refreshPerFrame ) + std::floor( accumulator );
+		for( int i = 0; i < opcodePerFrame; ++i )
+		{
+			uint16_t opcode = 0;
+
+			_FetchOpcode( opcode );
+			_DecodeExecute_Opcode( opcode );
+
+			if( m_oState == RunningState::StepNextFrame )
+			{
+				i = opcodePerFrame; //We want to keep a view of unique opcode each "StepNextFrame"
+				m_oState = RunningState::Pause;
+			}
+		}
+
+		lastTimeUpdate += refreshTick;
+		accumulator -= std::floor( accumulator );
+	}
+
+	elapsed = std::chrono::duration_cast< std::chrono::microseconds >( time - lastTimeUpdateTimers );
+	if( elapsed >= refreshTick )
+	{
+		_UpdateTimers();
+		lastTimeUpdateTimers += refreshTick;
+	}
+}
+
+void Chip8::AskForState( RunningState oState ) const
+{
+	m_oState = oState;
 }
 
 void Chip8::_FetchOpcode( uint16_t& opcode )
@@ -461,14 +496,29 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 
 	if( !OpcodeInstruct.empty() )
 		_AddOpcodeToHistory( OpcodeInstruct.c_str() );
+
+	if( lastOpcode == opcode )
+	{
+		++countBeforeStop;
+		if( countBeforeStop >= 2 )
+		{
+			m_oState = RunningState::Pause;
+			return;
+		}
+	}
+	else
+	{
+		lastOpcode = opcode;
+		countBeforeStop = 0;
+	}
 }
 
 void Chip8::_UpdateTimers()
 {
-	if( delay_timer >= 0 )
+	if( delay_timer > 0 )
 		--delay_timer;
 
-	if( sound_timer >= 0 )
+	if( sound_timer > 0 )
 		--sound_timer;
 }
 

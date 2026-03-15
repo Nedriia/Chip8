@@ -31,14 +31,10 @@ public:
 			ss << ", 0x" << std::hex << num3;
 	}
 
-	bool	IsEmulationPaused() const { return m_bPause; }
-
 private:
 
 	static Chip8_Debugger*	singleton;
-	bool					m_bPause;
 
 	GLFWwindow*				window;
 	const Chip8*			m_pCPU;
 };
-

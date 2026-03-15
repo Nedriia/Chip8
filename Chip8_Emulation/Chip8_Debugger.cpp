@@ -38,7 +38,7 @@ Chip8_Debugger* Chip8_Debugger::singleton = nullptr;
 
 Chip8_Debugger::Chip8_Debugger() :
 	window( nullptr ),
-	m_bPause( false )
+	m_pCPU( nullptr )
 {
 }
 
@@ -134,6 +134,7 @@ void Chip8_Debugger::Update()
 	{
 		if( m_pCPU != nullptr )
 		{
+			static int item_selected_idx = 0;
 			if( ImGui::BeginListBox( "#",ImVec2( -FLT_MIN,26 * ImGui::GetTextLineHeightWithSpacing() ) ) )
 			{
 				const uint16_t* it = m_pCPU->GetStack();
@@ -146,7 +147,12 @@ void Chip8_Debugger::Update()
 						ImGui::PushID( i );
 
 						sAdress = std::format( "{:#06X}",it[ i ] );
-						ImGui::Selectable( sAdress.c_str() );
+						bool is_selected = ( item_selected_idx == i );
+						if( ImGui::Selectable( sAdress.c_str(),is_selected ) )
+						{
+							item_selected_idx = i;
+							Display::GetInstance()->SetFrameAsDirty();
+						}
 
 						ImGui::PopID();
 					}
@@ -184,6 +190,7 @@ void Chip8_Debugger::Update()
 	{
 		if( m_pCPU != nullptr )
 		{
+			static int item_selected_idx = 0;
 			if( ImGui::BeginListBox( "#",ImVec2( -FLT_MIN,20 * ImGui::GetTextLineHeightWithSpacing() ) ) )
 			{
 				const uint8_t* it = m_pCPU->GetMemory();
@@ -205,7 +212,12 @@ void Chip8_Debugger::Update()
 							sAdress += std::format( "{:02X} ",it[ n ] );
 						}
 
-						ImGui::Selectable( sAdress.c_str() );
+						bool is_selected = ( item_selected_idx == i );
+						if( ImGui::Selectable( sAdress.c_str(),is_selected ) )
+						{
+							item_selected_idx = i;
+							Display::GetInstance()->SetFrameAsDirty();
+						}
 
 						ImGui::PopID();
 					}
@@ -224,7 +236,23 @@ void Chip8_Debugger::Update()
 		if( m_pCPU != nullptr )
 		{
 			static int item_selected_idx = 0;
-			ImGui::Checkbox( "Pause : ",&m_bPause );
+			bool bPause = m_pCPU->IsPause();
+			if( ImGui::Checkbox( "Pause",&bPause ) )
+				m_pCPU->AskForState( bPause ? RunningState::Pause : RunningState::Running );
+			ImGui::SameLine();
+			static bool bCheckUpdate = false;
+			if( ImGui::Button( "Step Next Frame" ) )
+			{
+				m_pCPU->AskForState( RunningState::StepNextFrame );
+				Display::GetInstance()->SetFrameAsDirty();
+				item_selected_idx = m_pCPU->GetHistoryOpcode().size() - 1;
+				bCheckUpdate = true;
+			}
+			ImGui::SameLine();
+			if( ImGui::Button( "Reset" ) )
+			{
+			}
+
 			if( ImGui::BeginListBox( "#",ImVec2( -FLT_MIN,54 * ImGui::GetTextLineHeightWithSpacing() ) ) )
 			{
 				for( int n = 0; n < m_pCPU->GetHistoryOpcode().size(); ++n )
@@ -232,15 +260,20 @@ void Chip8_Debugger::Update()
 					ImGui::PushID( n );
 					bool is_selected = ( item_selected_idx == n );
 					if( ImGui::Selectable( m_pCPU->GetHistoryOpcode()[ n ].c_str(),is_selected ) )
-						item_selected_idx = n;
-
-					if( m_pCPU->GetHistoryOpcode().size() > 0 && !m_bPause )
 					{
-						ImGui::SetScrollHereY( 1.0f );
-						item_selected_idx = m_pCPU->GetHistoryOpcode().size() - 1;
+						item_selected_idx = n;
+						Display::GetInstance()->SetFrameAsDirty();
 					}
 
 					ImGui::PopID();
+				}
+
+				if( ( m_pCPU->GetHistoryOpcode().size() > 0 && m_pCPU->IsRunning() ) || ( bCheckUpdate && item_selected_idx != m_pCPU->GetHistoryOpcode().size() - 1 ) )
+				{
+					ImGui::SetScrollHereY( 0.5f );
+
+					item_selected_idx = m_pCPU->GetHistoryOpcode().size() - 1;
+					bCheckUpdate = false;
 				}
 			}
 			ImGui::EndListBox();

@@ -1,11 +1,9 @@
 #include "Chip8.h"
 #include <windows.h>
 #include "Display.h"
+#include <chrono>
 
 static Chip8 m_oChip8;
-
-#define REFRESH_RATE 2500.0f
-static double lastTime = 0.0f;
 
 int Quit()
 {
@@ -29,16 +27,13 @@ int main( int argc, char* argv[] )
 
 	//Loop
 	bool quit = false;
+
 	while( !quit )
 	{
-		double now = glfwGetTime();
-		bool bRefresh = ( ( now - lastTime ) > ( 1.0f / REFRESH_RATE ) );
-		
-		m_oChip8.EmulateCycle();
-		Display::GetInstance()->Update( quit, bRefresh );
+		std::chrono::steady_clock::time_point time = std::chrono::high_resolution_clock::now();
 
-		if( bRefresh )
-			lastTime = glfwGetTime();
+		m_oChip8.EmulateCycle( time );
+		Display::GetInstance()->Update( time, m_oChip8.IsPause(),quit);
 	}
 	
 	Quit();
