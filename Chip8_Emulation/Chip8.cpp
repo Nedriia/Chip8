@@ -156,14 +156,14 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		uint16_t check = opcode & 0x00FF;
 		if( check == 0xE0 )
 		{
-			OpcodeInstruct = "00E0 : CLS";
+			OpcodeInstruct = std::format( "{:04X}  : CLS",opcode );
 
 			//Clear the screen
 			Display::ClearScreen();
 		}
 		else if( check == 0xEE )
 		{
-			OpcodeInstruct = "00EE : RET";
+			OpcodeInstruct = std::format( "{:04X} : RET",opcode );
 
 			//Returns from a subroutine
 			PC = stack[ SP ];
@@ -179,7 +179,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 	break;
 	case 0x1000:
 	{
-		OpcodeInstruct = std::format( "1000 : JMP {:#06X} )",NNN );
+		OpcodeInstruct = std::format( "{:04X} : JMP",opcode );
 
 		//Jumps to address NNN
 		PC = NNN;
@@ -190,7 +190,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		if( stack[ 0 ] != 0 ) //could be simplier to use int and init the value to -1 but I want to keep 0 as start
 			++SP;
 
-		OpcodeInstruct = std::format( "2000 : CALL {:#06X}",NNN );
+		OpcodeInstruct = std::format( "{:04X} : CALL",opcode );
 
 		//Calls subroutine at NNN
 		stack[ SP ] = PC;
@@ -199,7 +199,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 	break;
 	case 0x3000:
 	{
-		OpcodeInstruct = std::format( "3000 : SE VX, NN {}", NN );
+		OpcodeInstruct = std::format( "{:04X} : SE VX, NN",opcode );
 
 		//Skips the next instruction if VX equals NN (usually the next instruction is a jump to skip a code block)
 		if( registers[ X ] == NN )
@@ -208,7 +208,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 	break;
 	case 0x4000:
 	{
-		OpcodeInstruct = std::format( "4000 : SNE VX, NN {:#02X}",NN );
+		OpcodeInstruct = std::format( "{:04X} : SNE VX, NN",opcode );
 
 		//Skips the next instruction if VX does not equal NN (usually the next instruction is a jump to skip a code block).
 		if( registers[ X ] != NN )
@@ -217,7 +217,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 	break;
 	case 0x5000:
 	{
-		OpcodeInstruct = "5000 : SE VX, VY";
+		OpcodeInstruct = std::format( "{:04X} : SE VX, VY",opcode );
 
 		//Skips the next instruction if VX equals VY (usually the next instruction is a jump to skip a code block).
 		if( registers[ X ] == registers[ Y ] )
@@ -226,7 +226,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 	break;
 	case 0x6000:
 	{
-		OpcodeInstruct = std::format( "6000 : LD VX, NN {:#02X}", NN );
+		OpcodeInstruct = std::format( "{:04X} : LD VX, NN",opcode );
 
 		//Sets NN To VX
 		registers[ X ] = NN;
@@ -234,7 +234,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 	break;
 	case 0x7000:
 	{
-		OpcodeInstruct = std::format( "7000 : ADD VX, NN {:#02X}",NN );
+		OpcodeInstruct = std::format( "{:04X} : ADD VX, NN",opcode );
 
 		//Adds NN to VX (carry flag is not changed).
 		registers[ X ] += NN;
@@ -246,7 +246,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		{
 		case 0:
 		{
-			OpcodeInstruct = "8000 : LD VX, VY";
+			OpcodeInstruct = std::format( "{:04X} : LD VX, VY",opcode );
 
 			//Sets VX to the value of VY.
 			registers[ X ] = registers[ Y ];
@@ -254,7 +254,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		break;
 		case 1:
 		{
-			OpcodeInstruct = "8001 : OR VX, VY";
+			OpcodeInstruct = std::format( "{:04X} : OR VX, VY",opcode );
 
 			//Sets VX to VX or VY. (bitwise OR operation)
 			registers[ X ] |= registers[ Y ];
@@ -262,7 +262,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		break;
 		case 2:
 		{
-			OpcodeInstruct = "8002 : AND VX, VY";
+			OpcodeInstruct = std::format( "{:04X} : AND VX, VY",opcode );
 
 			//Sets VX to VX and VY. (bitwise AND operation)
 			registers[ X ] &= registers[ Y ];
@@ -270,7 +270,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		break;
 		case 3:
 		{
-			OpcodeInstruct = "8003 : XOR VX, VY";
+			OpcodeInstruct = std::format( "{:04X} : XOR VX, VY",opcode );
 
 			//Sets VX to VX xor VY
 			registers[ X ] ^= registers[ Y ];
@@ -278,7 +278,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		break;
 		case 4:
 		{
-			OpcodeInstruct = "8004 : ADD VX, VY ( VF )";
+			OpcodeInstruct = std::format( "{:04X} : ADD VX, VY ( VF )",opcode );
 
 			//Adds VY to VX
 			uint16_t sum = registers[ X ] + registers[ Y ];
@@ -289,7 +289,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		break;
 		case 5:
 		{
-			OpcodeInstruct = "0x8005 : SUB VX, VY ( VF )";
+			OpcodeInstruct = std::format( "{:04X} : SUB VX, VY ( VF )",opcode );
 
 			//VY is subtracted from VX.
 			uint16_t diff = registers[ X ] - registers[ Y ];
@@ -302,7 +302,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		break;
 		case 6:
 		{
-			OpcodeInstruct = "8006 : SHR VX, VY";
+			OpcodeInstruct = std::format( "{:04X} : SHR VX, VY",opcode );
 
 			//If the least - significant bit of Vx is 1, then VF is set to 1, otherwise 0. Then Vx is divided by 2.
 			uint8_t LSB = ( registers[ X ] & 1 );
@@ -312,7 +312,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		break;
 		case 7:
 		{
-			OpcodeInstruct = "8007 : SUBN VX, VY";
+			OpcodeInstruct = std::format( "{:04X} : SUBN VX, VY",opcode );
 
 			//Sets VX equals to VY minus VX.
 			uint16_t diff = registers[ Y ] - registers[ X ];
@@ -325,7 +325,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		break;
 		case 0xE:
 		{
-			OpcodeInstruct = "800E : SHL VX";
+			OpcodeInstruct = std::format( "{:04X} : SHL VX",opcode );
 
 			// If the most-significant bit of Vx is 1, then VF is set to 1, otherwise to 0. Then Vx is multiplied by 2.
 			uint8_t MSB = ( registers[ X ] & 0x80 ) == 0x80 ? 1 : 0;
@@ -340,7 +340,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 	break;
 	case 0x9000:
 	{
-		OpcodeInstruct = "9000 : SNE VX, VY";
+		OpcodeInstruct = std::format( "{:04X} : SNE VX, VY",opcode );
 
 		//Skips the next instruction if VX does not equal VY. (Usually the next instruction is a jump to skip a code block)
 		if( registers[ X ] != registers[ Y ] )
@@ -349,7 +349,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 	break;
 	case 0xA000:
 	{
-		OpcodeInstruct = std::format( "A000 : LD I, NNN {:#06X}",NNN );
+		OpcodeInstruct = std::format( "{:04X} : LD I, NNN",opcode );
 
 		//Sets I to the address NNN
 		I = NNN;
@@ -357,7 +357,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 	break;
 	case 0xB000:
 	{
-		OpcodeInstruct = std::format( "B000 : JMP V0, NNN {:#06X}",NNN );
+		OpcodeInstruct = std::format( "{:04X} : JMP V0, NNN",opcode );
 
 		//Jumps to the address NNN plus V0
 		PC = NNN + registers[ 0 ];
@@ -365,7 +365,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 	break;
 	case 0xC000:
 	{
-		OpcodeInstruct = "C000 : RND VX, NN";
+		OpcodeInstruct = std::format( "{:04X} : RND VX, NN",opcode );
 
 		//Sets VX to the result of a bitwise and operation on a random number (Typically: 0 to 255) and NN
 		std::uniform_int_distribution<std::mt19937::result_type> dist( 0,255 );
@@ -374,7 +374,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 	break;
 	case 0xD000:
 	{
-		OpcodeInstruct = std::format( "D000 : DRW N {} VX, VY",N );
+		OpcodeInstruct = std::format( "{:04X} : DRW VX, VY",opcode );
 
 		/*Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision.
 		The interpreter reads N bytes from memory, starting at the address stored in I.
@@ -397,13 +397,13 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		uint16_t check = opcode & 0x00FF;
 		if( check == 0x9E )
 		{
-			OpcodeInstruct = "E09E : SKP";
+			OpcodeInstruct = std::format( "{:04X} : SKP",opcode );
 
 			//Skips the next instruction if the key stored in VX(only consider the lowest nibble) is pressed (usually the next instruction is a jump to skip a code block).
 		}
 		else if( check == 0xA1 )
 		{
-			OpcodeInstruct = "E0A1 : SKNP";
+			OpcodeInstruct = std::format( "{:04X} : SKNP",opcode );
 
 			//Skips the next instruction if the key stored in VX(only consider the lowest nibble) is not pressed (usually the next instruction is a jump to skip a code block).
 		}
@@ -414,39 +414,39 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		switch( opcode & 0x00FF )
 		{
 		case 7:
-			OpcodeInstruct = "F007 : LD VX, DT";
+			OpcodeInstruct = std::format( "{:04X} : LD VX, DT",opcode );
 
 			//Sets VX to the value of the delay timer.
 			registers[ X ] = delay_timer;
 			break;
 		case 0x0A:
 		{
-			OpcodeInstruct = "F00A : LD VX, KEY";
+			OpcodeInstruct = std::format( "{:04X} : LD VX, KEY",opcode );
 
 			//A key press is awaited, and then stored in VX (blocking operation, all instruction halted until next key event, delay and sound timers should continue processing)
 		}
 		break;
 		case 0x15:
-			OpcodeInstruct = "F015 : LD DT, VX";
+			OpcodeInstruct = std::format( "{:04X} : LD DT, VX",opcode );
 
 			//Sets the delay timer to VX
 			delay_timer = registers[ X ];
 			break;
 		case 0x18:
-			OpcodeInstruct = "F018 : LD ST, VX";
+			OpcodeInstruct = std::format( "{:04X} : LD ST, VX",opcode );
 
 			//Sets the sound timer to VX
 			sound_timer = registers[ X ];
 			break;
 		case 0x1E:
-			OpcodeInstruct = "F01E : ADD I, VX";
+			OpcodeInstruct = std::format( "{:04X} : ADD I, VX",opcode );
 
 			//Adds VX to I. VF is not affected
 			I += registers[ X ];
 			break;
 		case 0x29:
 		{
-			OpcodeInstruct = "F029 : LD I, FONT( VX )";
+			OpcodeInstruct = std::format( "{:04X} : LD I, FONT( VX )",opcode );
 
 			//Sets I to the location of the sprite for the character in VX(only consider the lowest nibble). Characters 0-F (in hexadecimal) are represented by a 4x5 font.
 			I = fontset[ registers[ X ] ];
@@ -454,7 +454,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		break;
 		case 0x33:
 		{
-			OpcodeInstruct = "F033 : BCD VX";
+			OpcodeInstruct = std::format( "{:04X} : BCD VX",opcode );
 
 			//Stores the binary-coded decimal representation of VX, with the hundreds digit in memory at location in I, the tens digit at location I+1, and the ones digit at location I+2
 			memory[ I ] = registers[ X ] / 100;
@@ -464,7 +464,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		break;
 		case 0x55:
 		{
-			OpcodeInstruct = "F055 : LD [I], VX";
+			OpcodeInstruct = std::format( "{:04X} : LD [I], VX",opcode );
 
 			//Stores from V0 to VX (including VX) in memory, starting at address I. The offset from I is increased by 1 for each value written, but I itself is left unmodified
 			for( int i = 0; i <= X; ++i )
@@ -475,7 +475,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		break;
 		case 0x65:
 		{
-			OpcodeInstruct = "F065 : LD VX, [I]";
+			OpcodeInstruct = std::format( "{:04X} : LD VX, [I]",opcode );
 
 			//Fills from V0 to VX (including VX) with values from memory, starting at address I. The offset from I is increased by 1 for each value read, but I itself is left unmodified
 			for( int i = 0; i <= X; ++i )
