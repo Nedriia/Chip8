@@ -11,6 +11,41 @@ enum class RunningState
 	StepNextFrame
 };
 
+template< typename T>
+struct Data
+{
+public:
+	Data() { data = 0; bNewValue = false; }
+	Data& operator=( const T& rhs )
+	{
+		bNewValue = ( data != rhs );
+		data = rhs;
+		return *this;
+	}
+
+	Data& operator+=( const T& rhs ){ return Update( [ & ] { data += rhs; } ); }
+	Data& operator|=( const T& rhs ){ return Update( [ & ] { data |= rhs; } ); }
+	Data& operator&=( const T& rhs ){ return Update( [ & ] { data &= rhs; } ); }
+	Data& operator^=( const T& rhs ){ return Update( [ & ] { data ^= rhs; } ); }
+	Data& operator>>=( const T& rhs ) { return Update( [ & ] { data >>= rhs; } ); }
+	Data& operator<<=( const T& rhs ) { return Update( [ & ] { data <<= rhs; } ); }
+
+	operator T() const { return data; }
+	bool HasChanged() const { return bNewValue; }
+
+private:
+	T data;
+	bool bNewValue;
+	template< typename F>
+	Data& Update( F operation )
+	{
+		T previous = data;
+		operation();
+		bNewValue = ( previous != data );
+		return *this;
+	}
+};
+
 class Chip8
 {
 public:
@@ -21,17 +56,17 @@ public:
 
 	void EmulateCycle( const std::chrono::steady_clock::time_point& time );
 
-	const uint16_t* GetStack() const { return stack; }
-	const uint8_t* GetMemory() const { return memory; }
-	const uint8_t* GetRegisters() const { return registers; }
+	const Data< uint16_t>* GetStack() const { return stack; }
+	const Data< uint8_t>* GetMemory() const { return memory; }
+	const Data< uint8_t>* GetRegisters() const { return registers; }
 	const std::deque<std::string>& GetHistoryOpcode() const { return m_aOpcodeHistory; }
 
-	uint16_t	GetI() const { return I;}
-	uint16_t	GetPC() const { return PC;}
+	uint16_t	GetI() const { return I; }
+	uint16_t	GetPC() const { return PC; }
 
 	uint8_t		GetSP() const { return SP; }
-	uint8_t		GetDelayTimer() const { return delay_timer;}
-	uint8_t		GetSoundTimer() const { return sound_timer;}
+	uint8_t		GetDelayTimer() const { return delay_timer; }
+	uint8_t		GetSoundTimer() const { return sound_timer; }
 
 	void		AskForState( RunningState oState ) const;
 	bool		IsPause() const { return m_oState == RunningState::Pause; }
@@ -43,10 +78,10 @@ private:
 	void _UpdateTimers();
 	void _AddOpcodeToHistory( const char* pOpcode );
 
-	uint8_t memory[ 0x1000 ] = { 0 };
-	uint8_t registers[ 0x10 ] = { 0 };
+	Data<uint8_t> memory[ 0x1000 ];
+	Data<uint8_t> registers[ 0x10 ];
 	uint16_t I; //Address register
-	uint16_t stack[ 0x10 ] = { 0 };
+	Data<uint16_t> stack[ 0x10 ];
 	uint8_t SP; //Stack pointer
 	uint16_t PC; //Program counter
 

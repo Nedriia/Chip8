@@ -146,7 +146,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 	uint8_t N = opcode & 0x000F;
 	uint8_t X = ( opcode & 0x0F00 ) >> 8;
 	uint8_t Y = ( opcode & 0x00F0 ) >> 4;
-	uint8_t& VF = registers[ 15 ];
+	Data < uint8_t>& VF = registers[ 15 ];
 
 	uint16_t opcodeNibble = opcode & 0xF000;
 	switch( opcodeNibble )

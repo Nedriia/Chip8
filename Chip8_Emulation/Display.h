@@ -24,6 +24,7 @@ public:
 	const unsigned int& GetFBO() const { return FBO; }
 	const uint8_t* GetPixels() const{ return pixels; }
 	const GLFWwindow* GetWindow() const { return window; }
+	const std::chrono::steady_clock::time_point& GetLastTimeUpdate() const { return lastTimeUpdate; }
 
 	static const uint8_t CHIP8_DISPLAY_WIDTH;
 	static const uint8_t CHIP8_DISPLAY_HEIGHT;

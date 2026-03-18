@@ -250,7 +250,7 @@ void Display::Update( const std::chrono::steady_clock::time_point& time,bool cpu
 				elapsed = std::chrono::duration_cast< std::chrono::microseconds >( time - lastTimeUpdate );
 			}
 
-			Chip8_Debugger::GetInstance()->Update();
+			Chip8_Debugger::GetInstance()->Update( startElapsed );
 
 			glClearColor( 0.f,0.f,0.f,1.f );
 			glClear( GL_COLOR_BUFFER_BIT );
@@ -262,8 +262,6 @@ void Display::Update( const std::chrono::steady_clock::time_point& time,bool cpu
 				glfwSwapBuffers( window );
 				m_bDirtyFrame = false;
 			}
-
-			std::cout << std::chrono::duration<double,std::milli>( startElapsed ).count() << " ms " << std::endl;
 		}
 	}
 	else

@@ -33,6 +33,7 @@
 #include "Chip8.h"
 #include <iomanip>
 #include <format>
+#include <chrono>
 
 Chip8_Debugger* Chip8_Debugger::singleton = nullptr;
 
@@ -72,7 +73,7 @@ void Chip8_Debugger::Init( GLFWwindow* mainWindow,const Chip8* pCPU )
 		m_pCPU = pCPU;
 }
 
-void Chip8_Debugger::Update()
+void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 {
 	// Poll and handle events (inputs, window resize, etc.)
 	// You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
@@ -104,7 +105,7 @@ void Chip8_Debugger::Update()
 		{
 			if( ImGui::BeginListBox( "#",ImVec2( -FLT_MIN,26 * ImGui::GetTextLineHeightWithSpacing() ) ) )
 			{
-				const uint8_t* it = m_pCPU->GetRegisters();
+				const Data<uint8_t>* it = m_pCPU->GetRegisters();
 				if( it != nullptr )
 				{
 					std::string sAdress;
@@ -113,7 +114,7 @@ void Chip8_Debugger::Update()
 						sAdress.clear();
 						ImGui::PushID( i );
 
-						sAdress = std::format( "V{:X}: {:02X}",i,( int )it[ i ] );
+						sAdress = std::format( "V{:X}: {:02X}",i,( uint8_t )it[ i ] );
 						ImGui::Selectable( sAdress.c_str() );
 
 						ImGui::PopID();
@@ -137,7 +138,7 @@ void Chip8_Debugger::Update()
 			static int item_selected_idx = 0;
 			if( ImGui::BeginListBox( "#",ImVec2( -FLT_MIN,26 * ImGui::GetTextLineHeightWithSpacing() ) ) )
 			{
-				const uint16_t* it = m_pCPU->GetStack();
+				const Data<uint16_t>* it = m_pCPU->GetStack();
 				if( it != nullptr )
 				{
 					std::string sAdress;
@@ -146,7 +147,7 @@ void Chip8_Debugger::Update()
 						sAdress.clear();
 						ImGui::PushID( i );
 
-						sAdress = std::format( "{:#06X}",it[ i ] );
+						sAdress = std::format( "{:#06X}", ( uint16_t ) it[ i ] );
 						bool is_selected = ( item_selected_idx == i );
 						if( ImGui::Selectable( sAdress.c_str(),is_selected ) )
 						{
@@ -163,17 +164,30 @@ void Chip8_Debugger::Update()
 	}
 	ImGui::End();
 
-	ImGui::SetNextWindowPos( ImVec2( 600,0 ),ImGuiCond_Always,ImVec2( 0,0 ) );
-	ImGui::SetNextWindowSize( ImVec2( 900,600 ),ImGuiCond_Once );
-	if( ImGui::Begin( "Chip-8 Display",nullptr,ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
-		ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar ) )
 	{
-		glBindTexture( GL_TEXTURE_2D,Display::GetInstance()->GetTexture() );
-		glTexSubImage2D( GL_TEXTURE_2D,0,0,0,Display::CHIP8_DISPLAY_WIDTH,Display::CHIP8_DISPLAY_HEIGHT,GL_RED,GL_UNSIGNED_BYTE,Display::GetInstance()->GetPixels() );
-		ImVec2 avail = ImGui::GetContentRegionAvail();
-		ImGui::Image( ( ImTextureID )( intptr_t )Display::GetInstance()->GetTexture(),avail );
+		ImGui::SetNextWindowPos( ImVec2( 600,0 ),ImGuiCond_Always,ImVec2( 0,0 ) );
+		ImGui::SetNextWindowSize( ImVec2( 900,600 ),ImGuiCond_Once );
+		if( ImGui::Begin( "#ID",nullptr,ImGuiWindowFlags_NoTitleBar |
+			ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
+			ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar ) )
+		{
+			glBindTexture( GL_TEXTURE_2D,Display::GetInstance()->GetTexture() );
+			glTexSubImage2D( GL_TEXTURE_2D,0,0,0,Display::CHIP8_DISPLAY_WIDTH,Display::CHIP8_DISPLAY_HEIGHT,GL_RED,GL_UNSIGNED_BYTE,Display::GetInstance()->GetPixels() );
+			ImVec2 avail = ImVec2( ImGui::GetContentRegionAvail().x,ImGui::GetContentRegionAvail().y - 14 );
+			ImGui::Image( ( ImTextureID )( intptr_t )Display::GetInstance()->GetTexture(),avail );
+		}
+
+		float width = ImGui::GetContentRegionAvail().x;
+		const char* titleLeft = "Chip-8 Display";
+
+		std::string textPerfDebug = std::format( "{} ms",std::chrono::duration<double,std::milli>( time ).count() );
+		ImGui::TextColored( ImVec4( 0.7f,0.7f,0.7f,1.0f ),"%s",titleLeft );
+
+		ImGui::SameLine( width - ImGui::CalcTextSize( textPerfDebug.c_str() ).x );
+		ImGui::TextColored( ImVec4( 0.5f,0.5f,0.5f,1.0f ),"%s",textPerfDebug.c_str() );
+
+		ImGui::End();
 	}
-	ImGui::End();
 
 	ImGui::SetNextWindowPos( ImVec2( 600,600 ),ImGuiCond_Always,ImVec2( 0,0 ) );
 	ImGui::SetNextWindowSize( ImVec2( 300,400 ),ImGuiCond_Once );
@@ -193,7 +207,7 @@ void Chip8_Debugger::Update()
 			static int item_selected_idx = 0;
 			if( ImGui::BeginListBox( "#",ImVec2( -FLT_MIN,20 * ImGui::GetTextLineHeightWithSpacing() ) ) )
 			{
-				const uint8_t* it = m_pCPU->GetMemory();
+				const Data<uint8_t>* it = m_pCPU->GetMemory();
 				if( it != nullptr )
 				{
 					std::string sAdress;
@@ -209,7 +223,7 @@ void Chip8_Debugger::Update()
 						{
 							if( n == i + 8 )
 								sAdress += "- ";
-							sAdress += std::format( "{:02X} ",it[ n ] );
+							sAdress += std::format( "{:02X} ", ( uint8_t )it[ n ] );
 						}
 
 						bool is_selected = ( item_selected_idx == i );

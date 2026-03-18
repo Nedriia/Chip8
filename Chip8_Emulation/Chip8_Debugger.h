@@ -1,6 +1,7 @@
 #pragma once
 #include "string"
 #include <sstream>
+#include <chrono>
 
 class Chip8;
 class Chip8_Debugger
@@ -9,7 +10,7 @@ public:
 	Chip8_Debugger();
 
 	void Init( GLFWwindow* mainWindow,const Chip8* pCPU );
-	void Update();
+	void Update( const std::chrono::microseconds& time );
 	void Render();
 
 	static Chip8_Debugger* GetInstance()
