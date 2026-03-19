@@ -10,13 +10,7 @@
 #define INSTRUCTIONS_PER_FRAME 250.f // keep this as a float, it's use in accumulator [ 100 - 1000 ]
 
 Chip8::Chip8() :
-	I( 0 ),
-	SP( 0 ),
-	PC( 0 ),
 	lastOpcode( 0 ),
-	countBeforeStop( 0 ),
-	delay_timer( 0 ),
-	sound_timer( 0 ),
 	m_oState( RunningState::Pause ),
 	lastTimeUpdate( std::chrono::high_resolution_clock::now() ),
 	lastTimeUpdateTimers( std::chrono::high_resolution_clock::now() ),

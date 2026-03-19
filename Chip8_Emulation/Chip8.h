@@ -24,6 +24,8 @@ public:
 	}
 
 	Data& operator+=( const T& rhs ){ return Update( [ & ] { data += rhs; } ); }
+	Data& operator--(){ return Update( [ & ] { --data; } ); }
+	Data& operator++(){ return Update( [ & ] { ++data; } ); }
 	Data& operator|=( const T& rhs ){ return Update( [ & ] { data |= rhs; } ); }
 	Data& operator&=( const T& rhs ){ return Update( [ & ] { data &= rhs; } ); }
 	Data& operator^=( const T& rhs ){ return Update( [ & ] { data ^= rhs; } ); }
@@ -32,7 +34,7 @@ public:
 
 	operator T() const { return data; }
 	bool HasChanged() const { return bNewValue; }
-
+	bool IsNULL() const { return data == 0; }
 private:
 	T data;
 	bool bNewValue;
@@ -61,12 +63,12 @@ public:
 	const Data< uint8_t>* GetRegisters() const { return registers; }
 	const std::deque<std::string>& GetHistoryOpcode() const { return m_aOpcodeHistory; }
 
-	uint16_t	GetI() const { return I; }
-	uint16_t	GetPC() const { return PC; }
+	const Data< uint16_t> GetI() const { return I; }
+	const Data< uint16_t> GetPC() const { return PC; }
 
-	uint8_t		GetSP() const { return SP; }
-	uint8_t		GetDelayTimer() const { return delay_timer; }
-	uint8_t		GetSoundTimer() const { return sound_timer; }
+	const Data< uint8_t> GetSP() const { return SP; }
+	const Data< uint8_t> GetDelayTimer() const { return delay_timer; }
+	const Data< uint8_t> GetSoundTimer() const { return sound_timer; }
 
 	void		AskForState( RunningState oState ) const;
 	bool		IsPause() const { return m_oState == RunningState::Pause; }
@@ -80,16 +82,16 @@ private:
 
 	Data<uint8_t> memory[ 0x1000 ];
 	Data<uint8_t> registers[ 0x10 ];
-	uint16_t I; //Address register
+	Data<uint16_t> I; //Address register
 	Data<uint16_t> stack[ 0x10 ];
-	uint8_t SP; //Stack pointer
-	uint16_t PC; //Program counter
+	Data<uint8_t> SP; //Stack pointer
+	Data<uint16_t> PC; //Program counter
 
 	uint16_t lastOpcode;
 	uint8_t countBeforeStop;
 
-	uint8_t delay_timer;
-	uint8_t sound_timer;
+	Data<uint8_t> delay_timer;
+	Data<uint8_t> sound_timer;
 
 	std::mt19937 rng;
 

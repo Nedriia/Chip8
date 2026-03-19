@@ -34,6 +34,11 @@
 #include <iomanip>
 #include <format>
 #include <chrono>
+#include <iostream>
+
+#define NULL_DATA_COLOR IM_COL32( 128,128,128,255 )
+#define CHANGE_DATA_COLOR IM_COL32( 255,0,0,255 )
+#define DEFAULT_DATA_COLOR IM_COL32( 255,255,255,180 )
 
 Chip8_Debugger* Chip8_Debugger::singleton = nullptr;
 
@@ -96,6 +101,13 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
 
+	ImGuiIO& io = ImGui::GetIO();
+	bool needsRedraw = ( io.MouseWheel != 0 )
+		|| io.InputQueueCharacters.Size > 0
+		|| ImGui::IsAnyItemActive();
+	if( needsRedraw )
+		Display::GetInstance()->SetFrameAsDirty();
+
 	ImGui::SetNextWindowPos( ImVec2( 0,0 ),ImGuiCond_Always,ImVec2( 0,0 ) );
 	ImGui::SetNextWindowSize( ImVec2( 600,500 ),ImGuiCond_Once );
 	if( ImGui::Begin( "CPU",nullptr,ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
@@ -108,19 +120,25 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 				const Data<uint8_t>* it = m_pCPU->GetRegisters();
 				if( it != nullptr )
 				{
-					std::string sAdress;
 					for( int i = 0; i < 0x10; ++i )
 					{
-						sAdress.clear();
 						ImGui::PushID( i );
 
-						sAdress = std::format( "V{:X}: {:02X}",i,( uint8_t )it[ i ] );
-						ImGui::Selectable( sAdress.c_str() );
+						ImGui::Text( std::format( "V{:X} :",i ).c_str() );
+						ImGui::SameLine();
+						ImGui::PushStyleColor( ImGuiCol_Text,it[ i ].IsNULL() ? NULL_DATA_COLOR : it[ i ].HasChanged() ? CHANGE_DATA_COLOR : DEFAULT_DATA_COLOR );
+						ImGui::Selectable( std::format( "{:02X}",( uint8_t )it[ i ] ).c_str() );
+						ImGui::PopStyleColor();
 
 						ImGui::PopID();
 					}
-					sAdress = std::format( "\nI  : {:#06X} \nSP : {}\nPC : {:#06X}\nDT : {}\nST : {}",m_pCPU->GetI(),m_pCPU->GetSP(),m_pCPU->GetPC(),m_pCPU->GetDelayTimer(),m_pCPU->GetSoundTimer() );
-					ImGui::Text( sAdress.c_str() );
+
+					ImGui::NewLine();
+					FormatDebugData( "I  :","%#06X",m_pCPU->GetI() );
+					FormatDebugData( "SP :","%#06X",m_pCPU->GetSP() );
+					FormatDebugData( "PC :","%#06X",m_pCPU->GetPC() );
+					FormatDebugData( "DT :","%#06X",m_pCPU->GetDelayTimer() );
+					FormatDebugData( "ST :","%#06X",m_pCPU->GetSoundTimer() );
 				}
 			}
 			ImGui::EndListBox();
@@ -147,13 +165,15 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 						sAdress.clear();
 						ImGui::PushID( i );
 
-						sAdress = std::format( "{:#06X}", ( uint16_t ) it[ i ] );
+						sAdress = std::format( "{:#06X}",( uint16_t )it[ i ] );
 						bool is_selected = ( item_selected_idx == i );
+						ImGui::PushStyleColor( ImGuiCol_Text,it[ i ].IsNULL() ? NULL_DATA_COLOR : it[ i ].HasChanged() ? CHANGE_DATA_COLOR : DEFAULT_DATA_COLOR );
 						if( ImGui::Selectable( sAdress.c_str(),is_selected ) )
 						{
 							item_selected_idx = i;
 							Display::GetInstance()->SetFrameAsDirty();
 						}
+						ImGui::PopStyleColor();
 
 						ImGui::PopID();
 					}
@@ -217,23 +237,31 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 
 						ImGui::PushID( i );
 
-						sAdress = std::format( "{:#06X} : ",i );
-
-						for( int n = i; n < i + 0x10; ++n )
-						{
-							if( n == i + 8 )
-								sAdress += "- ";
-							sAdress += std::format( "{:02X} ", ( uint8_t )it[ n ] );
-						}
+						ImGui::Text( std::format( "{:#06X} : ",i ).c_str() );
+						ImGui::SameLine();
 
 						bool is_selected = ( item_selected_idx == i );
-						if( ImGui::Selectable( sAdress.c_str(),is_selected ) )
+						for( int n = i; n < i + 0x10; ++n )
 						{
-							item_selected_idx = i;
-							Display::GetInstance()->SetFrameAsDirty();
-						}
+							ImGui::PushID( n );
+							if( n == i + 8 )
+							{
+								ImGui::Text( "-" );
+								ImGui::SameLine();
+							}
 
+							ImGui::PushStyleColor( ImGuiCol_Text,it[ i ].IsNULL() ? NULL_DATA_COLOR : it[ i ].HasChanged() ? CHANGE_DATA_COLOR : DEFAULT_DATA_COLOR );
+							if( ImGui::Selectable( std::format( "{:02X}",( uint8_t )it[ n ] ).c_str(),is_selected ) )
+							{
+								item_selected_idx = i;
+								Display::GetInstance()->SetFrameAsDirty();
+							}
+							ImGui::PopStyleColor();
+							ImGui::SameLine();
+							ImGui::PopID();
+						}
 						ImGui::PopID();
+						ImGui::NewLine();
 					}
 				}
 			}
@@ -307,4 +335,27 @@ void Chip8_Debugger::Render()
 	ImGui::Render();
 
 	ImGui_ImplOpenGL3_RenderDrawData( ImGui::GetDrawData() );
+}
+
+template< typename T >
+void Chip8_Debugger::FormatDebugData( std::string sText,const char* sFormat,T oData )
+{
+	ImGui::Text( sText.c_str() );
+	ImGui::SameLine();
+	ImGui::PushStyleColor( ImGuiCol_Text,oData.IsNULL() ? NULL_DATA_COLOR : oData.HasChanged() ? CHANGE_DATA_COLOR : DEFAULT_DATA_COLOR );
+
+	char buffer[ 64 ];
+	if constexpr( std::is_same_v<T,Data<uint8_t>> ) 
+	{
+		uint8_t val = ( uint8_t )oData;
+		snprintf( buffer,sizeof( buffer ),sFormat,val );
+	}
+	else if constexpr( std::is_same_v<T,Data<uint16_t>> ) 
+	{
+		uint16_t val = ( uint16_t )oData;
+		snprintf( buffer,sizeof( buffer ),sFormat,val );
+	}
+
+	ImGui::TextUnformatted( buffer );
+	ImGui::PopStyleColor();
 }
