@@ -2,6 +2,7 @@
 #include "string"
 #include <sstream>
 #include <chrono>
+#include "Chip8.h"
 
 class Chip8;
 class Chip8_Debugger
@@ -40,4 +41,5 @@ private:
 
 	GLFWwindow*				window;
 	const Chip8*			m_pCPU;
+	Chip8::KeyAccess		m_oKey;
 };

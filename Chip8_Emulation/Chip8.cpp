@@ -10,27 +10,51 @@
 #define INSTRUCTIONS_PER_FRAME 250.f // keep this as a float, it's use in accumulator [ 100 - 1000 ]
 
 Chip8::Chip8() :
-	lastOpcode( 0 ),
+	m_iLastOpcode( 0 ),
 	m_oState( RunningState::Pause ),
 	lastTimeUpdate( std::chrono::high_resolution_clock::now() ),
 	lastTimeUpdateTimers( std::chrono::high_resolution_clock::now() ),
-	accumulator( 0.0f )
+	accumulator( 0.0f ),
+	m_sCurrentRomLoaded( nullptr )
 {
 }
 
-void Chip8::Init( const char* sROMToLoad )
+void Chip8::Init( Chip8::KeyAccess key, const char* sROMToLoad )
 {
 	unsigned timeSeed = std::chrono::steady_clock::now().time_since_epoch().count();
 	rng.seed( timeSeed );
 
-	LoadFont();
-	LoadROM( sROMToLoad );
+	_LoadFont();
+	_LoadROM( sROMToLoad );
 
 	PC = START_ROM_MEMORY_ADDRESS;
 	SP = 0;
 }
 
-void Chip8::LoadFont()
+void Chip8::_Reset()
+{
+	if( m_sCurrentRomLoaded == nullptr )
+		return;
+
+	I.clear();
+	delay_timer.clear();
+	sound_timer.clear();
+	accumulator = 0.f;
+	m_aOpcodeHistory.clear();
+	m_iLastOpcode = 0;
+
+	for( Data<uint8_t>* it = &memory[ 0 ]; it != &memory[ 0x1000 ]; ++it )
+		it->clear();
+	for( Data<uint8_t>* it = &registers[ 0 ]; it != &registers[ 0x10 ]; ++it )
+		it->clear();
+	for( Data<uint16_t>* it = &stack[ 0 ]; it != &stack[ 0x10 ]; ++it )
+		it->clear();
+
+	Chip8::KeyAccess oKey;
+	Init( oKey, m_sCurrentRomLoaded );
+}
+
+void Chip8::_LoadFont()
 {
 	for( uint8_t i = 0; i < 80; ++i )
 	{
@@ -38,7 +62,7 @@ void Chip8::LoadFont()
 	}
 }
 
-void Chip8::LoadROM( const char* sROMToLoad )
+void Chip8::_LoadROM( const char* sROMToLoad )
 {
 	//TODO : Add Check here if command not empty
 	std::string sPath = DEFAULT_PARENT_ROM_FOLDER;
@@ -72,11 +96,19 @@ void Chip8::LoadROM( const char* sROMToLoad )
 		}
 
 		delete[] memblock;
+
+		m_sCurrentRomLoaded = sROMToLoad;
 	}
 }
 
-void Chip8::EmulateCycle( const std::chrono::steady_clock::time_point& time )
+void Chip8::EmulateCycle( Chip8::KeyAccess key, const std::chrono::steady_clock::time_point& time )
 {
+	if( m_oState == RunningState::Reset )
+	{
+		_Reset();
+		m_oState = RunningState::Pause;
+	}
+
 	if( m_oState == RunningState::Pause )
 	{
 		lastTimeUpdate = time;
@@ -115,7 +147,7 @@ void Chip8::EmulateCycle( const std::chrono::steady_clock::time_point& time )
 	}
 }
 
-void Chip8::AskForState( RunningState oState ) const
+void Chip8::AskForState( Chip8::KeyAccess key, RunningState oState ) const
 {
 	m_oState = oState;
 }
@@ -491,7 +523,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 	if( !OpcodeInstruct.empty() )
 		_AddOpcodeToHistory( OpcodeInstruct.c_str() );
 
-	if( lastOpcode == opcode )
+	if( m_iLastOpcode == opcode )
 	{
 		++countBeforeStop;
 		if( countBeforeStop >= 2 )
@@ -502,7 +534,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 	}
 	else
 	{
-		lastOpcode = opcode;
+		m_iLastOpcode = opcode;
 		countBeforeStop = 0;
 	}
 }

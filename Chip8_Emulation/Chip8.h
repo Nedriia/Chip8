@@ -8,7 +8,8 @@ enum class RunningState
 {
 	Running,
 	Pause,
-	StepNextFrame
+	StepNextFrame,
+	Reset
 };
 
 template< typename T>
@@ -35,6 +36,8 @@ public:
 	operator T() const { return data; }
 	bool HasChanged() const { return bNewValue; }
 	bool IsNULL() const { return data == 0; }
+	void clear() { data = 0; bNewValue = false; }
+
 private:
 	T data;
 	bool bNewValue;
@@ -52,11 +55,18 @@ class Chip8
 {
 public:
 	Chip8();
-	void Init( const char* sROMToLoad );
-	void LoadFont();
-	void LoadROM( const char* sROMToLoad );
 
-	void EmulateCycle( const std::chrono::steady_clock::time_point& time );
+	class KeyAccess
+	{
+		friend class Chip8;
+		friend class Chip8_Debugger;
+		friend int main( int argc,char** argv );
+		KeyAccess(){}
+	};
+
+	void Init( KeyAccess key, const char* sROMToLoad );
+	void EmulateCycle( KeyAccess key, const std::chrono::steady_clock::time_point& time );
+	void AskForState( KeyAccess key,RunningState oState ) const;
 
 	const Data< uint16_t>* GetStack() const { return stack; }
 	const Data< uint8_t>* GetMemory() const { return memory; }
@@ -70,11 +80,14 @@ public:
 	const Data< uint8_t> GetDelayTimer() const { return delay_timer; }
 	const Data< uint8_t> GetSoundTimer() const { return sound_timer; }
 
-	void		AskForState( RunningState oState ) const;
 	bool		IsPause() const { return m_oState == RunningState::Pause; }
 	bool		IsRunning() const { return m_oState == RunningState::Running; }
 
 private:
+	void _Reset( );
+	void _LoadFont( );
+	void _LoadROM( const char* sROMToLoad );
+
 	void _FetchOpcode( uint16_t& opcode );
 	void _DecodeExecute_Opcode( const uint16_t opcode );
 	void _UpdateTimers();
@@ -87,7 +100,7 @@ private:
 	Data<uint8_t> SP; //Stack pointer
 	Data<uint16_t> PC; //Program counter
 
-	uint16_t lastOpcode;
+	uint16_t m_iLastOpcode;
 	uint8_t countBeforeStop;
 
 	Data<uint8_t> delay_timer;
@@ -115,10 +128,11 @@ private:
 		0xF0, 0x80, 0xF0, 0x80, 0x80  // F
 	};
 
-	std::deque<std::string> m_aOpcodeHistory;
+	std::deque<std::string>						m_aOpcodeHistory;
 
-	mutable RunningState m_oState;
+	mutable RunningState						m_oState;
 	std::chrono::steady_clock::time_point		lastTimeUpdate;
 	std::chrono::steady_clock::time_point		lastTimeUpdateTimers;
-	float accumulator;
+	float										accumulator;
+	const char*									m_sCurrentRomLoaded;
 };

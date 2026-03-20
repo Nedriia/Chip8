@@ -11,7 +11,7 @@ int Quit()
 	return -1;
 }
 
-int main( int argc, char* argv[] )
+int main( int argc,char* argv[] )
 {
 	const char* sROMToLoad = nullptr;
 	if( argc >= 1 )
@@ -20,7 +20,8 @@ int main( int argc, char* argv[] )
 	if( sROMToLoad == nullptr )
 		Quit();
 
-	m_oChip8.Init( sROMToLoad );
+	Chip8::KeyAccess oKey;
+	m_oChip8.Init( oKey,sROMToLoad );
 
 	if( Display::GetInstance()->Init( &m_oChip8 ) == -1 )
 		return Quit();
@@ -32,10 +33,10 @@ int main( int argc, char* argv[] )
 	{
 		std::chrono::steady_clock::time_point time = std::chrono::high_resolution_clock::now();
 
-		m_oChip8.EmulateCycle( time );
-		Display::GetInstance()->Update( time, m_oChip8.IsPause(),quit);
+		m_oChip8.EmulateCycle( oKey,time );
+		Display::GetInstance()->Update( time,m_oChip8.IsPause(),quit );
 	}
-	
+
 	Quit();
 
 	return 0;

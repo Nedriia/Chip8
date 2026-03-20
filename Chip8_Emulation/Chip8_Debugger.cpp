@@ -46,6 +46,7 @@ Chip8_Debugger::Chip8_Debugger() :
 	window( nullptr ),
 	m_pCPU( nullptr )
 {
+	m_oKey		= Chip8::KeyAccess();
 }
 
 void Chip8_Debugger::Init( GLFWwindow* mainWindow,const Chip8* pCPU )
@@ -169,10 +170,7 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 						bool is_selected = ( item_selected_idx == i );
 						ImGui::PushStyleColor( ImGuiCol_Text,it[ i ].IsNULL() ? NULL_DATA_COLOR : it[ i ].HasChanged() ? CHANGE_DATA_COLOR : DEFAULT_DATA_COLOR );
 						if( ImGui::Selectable( sAdress.c_str(),is_selected ) )
-						{
 							item_selected_idx = i;
-							Display::GetInstance()->SetFrameAsDirty();
-						}
 						ImGui::PopStyleColor();
 
 						ImGui::PopID();
@@ -252,10 +250,7 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 
 							ImGui::PushStyleColor( ImGuiCol_Text,it[ i ].IsNULL() ? NULL_DATA_COLOR : it[ i ].HasChanged() ? CHANGE_DATA_COLOR : DEFAULT_DATA_COLOR );
 							if( ImGui::Selectable( std::format( "{:02X}",( uint8_t )it[ n ] ).c_str(),is_selected ) )
-							{
 								item_selected_idx = i;
-								Display::GetInstance()->SetFrameAsDirty();
-							}
 							ImGui::PopStyleColor();
 							ImGui::SameLine();
 							ImGui::PopID();
@@ -280,20 +275,18 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 			static int item_selected_idx = 0;
 			bool bPause = m_pCPU->IsPause();
 			if( ImGui::Checkbox( "Pause",&bPause ) )
-				m_pCPU->AskForState( bPause ? RunningState::Pause : RunningState::Running );
+				m_pCPU->AskForState( m_oKey, bPause ? RunningState::Pause : RunningState::Running );
 			ImGui::SameLine();
 			static bool bCheckUpdate = false;
 			if( ImGui::Button( "Step Next Frame" ) )
 			{
-				m_pCPU->AskForState( RunningState::StepNextFrame );
-				Display::GetInstance()->SetFrameAsDirty();
+				m_pCPU->AskForState( m_oKey, RunningState::StepNextFrame );
 				item_selected_idx = m_pCPU->GetHistoryOpcode().size() - 1;
 				bCheckUpdate = true;
 			}
 			ImGui::SameLine();
 			if( ImGui::Button( "Reset" ) )
-			{
-			}
+				m_pCPU->AskForState( m_oKey,RunningState::Reset );
 
 			if( ImGui::BeginListBox( "#",ImVec2( -FLT_MIN,54 * ImGui::GetTextLineHeightWithSpacing() ) ) )
 			{
@@ -302,10 +295,7 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 					ImGui::PushID( n );
 					bool is_selected = ( item_selected_idx == n );
 					if( ImGui::Selectable( m_pCPU->GetHistoryOpcode()[ n ].c_str(),is_selected ) )
-					{
 						item_selected_idx = n;
-						Display::GetInstance()->SetFrameAsDirty();
-					}
 
 					ImGui::PopID();
 				}
@@ -340,6 +330,8 @@ void Chip8_Debugger::Render()
 template< typename T >
 void Chip8_Debugger::FormatDebugData( std::string sText,const char* sFormat,T oData )
 {
+	static_assert( std::is_same_v<T,Data<uint8_t>> || std::is_same_v<T,Data<uint16_t>>,"Function is being call with an unsupported type" );
+
 	ImGui::Text( sText.c_str() );
 	ImGui::SameLine();
 	ImGui::PushStyleColor( ImGuiCol_Text,oData.IsNULL() ? NULL_DATA_COLOR : oData.HasChanged() ? CHANGE_DATA_COLOR : DEFAULT_DATA_COLOR );
