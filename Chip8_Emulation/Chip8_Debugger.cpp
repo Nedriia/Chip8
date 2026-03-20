@@ -306,6 +306,7 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 
 					item_selected_idx = m_pCPU->GetHistoryOpcode().size() - 1;
 					bCheckUpdate = false;
+					Display::GetInstance()->SetFrameAsDirty();
 				}
 			}
 			ImGui::EndListBox();
