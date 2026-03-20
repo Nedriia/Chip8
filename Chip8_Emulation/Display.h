@@ -14,11 +14,22 @@ class Display
 {
 
 public:
-	int Init( const Chip8* pCpu );
+	class KeyDisplayAccess
+	{
+		friend int main( int argc,char** argv );
+		friend int Quit();
+		friend class Chip8;
+		friend class Chip8_Debugger;
+		KeyDisplayAccess(){}
+	};
+
+	int Init( const KeyDisplayAccess& oKey, const Chip8* pCpu );
+	static void ClearScreen( const KeyDisplayAccess& oKey );
+	static void DrawPixelAtPos( const KeyDisplayAccess& oKey, uint8_t xPos,uint8_t yPos,uint8_t oValue,bool& bErased );
+	void DestroyWindow( const KeyDisplayAccess& oKey );
+
 	void Update( const std::chrono::steady_clock::time_point& time, bool cpuPaused, bool& quit );
-	void DestroyWindow();
-	static void ClearScreen();
-	static void DrawPixelAtPos( uint8_t xPos, uint8_t yPos, uint8_t oValue, bool& bErased );
+
 	void SetFrameAsDirty() { m_bDirtyFrame = true; }
 	const unsigned int& GetTexture() const { return texture; }
 	const unsigned int& GetFBO() const { return FBO; }

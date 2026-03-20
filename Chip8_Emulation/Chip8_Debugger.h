@@ -2,7 +2,6 @@
 #include "string"
 #include <sstream>
 #include <chrono>
-#include "Chip8.h"
 
 class Chip8;
 class Chip8_Debugger
@@ -37,9 +36,8 @@ private:
 	template< typename T >
 	void FormatDebugData( std::string sText,const char* sFormat, T oData );
 
-	static Chip8_Debugger*	singleton;
+	static Chip8_Debugger*		singleton;
 
-	GLFWwindow*				window;
-	const Chip8*			m_pCPU;
-	Chip8::KeyAccess		m_oKey;
+	GLFWwindow*					window;
+	const Chip8*				m_pCPU;
 };

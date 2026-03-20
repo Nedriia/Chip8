@@ -45,9 +45,7 @@ Chip8_Debugger* Chip8_Debugger::singleton = nullptr;
 Chip8_Debugger::Chip8_Debugger() :
 	window( nullptr ),
 	m_pCPU( nullptr )
-{
-	m_oKey		= Chip8::KeyAccess();
-}
+{}
 
 void Chip8_Debugger::Init( GLFWwindow* mainWindow,const Chip8* pCPU )
 {
@@ -272,21 +270,30 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 	{
 		if( m_pCPU != nullptr )
 		{
+			Chip8::KeyAccess oKey;
+			Display::KeyDisplayAccess oKeyDisplay;
+
 			static int item_selected_idx = 0;
 			bool bPause = m_pCPU->IsPause();
+
 			if( ImGui::Checkbox( "Pause",&bPause ) )
-				m_pCPU->AskForState( m_oKey, bPause ? RunningState::Pause : RunningState::Running );
+				m_pCPU->AskForState( oKey, bPause ? RunningState::Pause : RunningState::Running );
 			ImGui::SameLine();
+
 			static bool bCheckUpdate = false;
 			if( ImGui::Button( "Step Next Frame" ) )
 			{
-				m_pCPU->AskForState( m_oKey, RunningState::StepNextFrame );
+				m_pCPU->AskForState( oKey, RunningState::StepNextFrame );
 				item_selected_idx = m_pCPU->GetHistoryOpcode().size() - 1;
 				bCheckUpdate = true;
 			}
 			ImGui::SameLine();
+
 			if( ImGui::Button( "Reset" ) )
-				m_pCPU->AskForState( m_oKey,RunningState::Reset );
+			{
+				Display::ClearScreen( oKeyDisplay );
+				m_pCPU->AskForState( oKey,RunningState::Reset );
+			}
 
 			if( ImGui::BeginListBox( "#",ImVec2( -FLT_MIN,54 * ImGui::GetTextLineHeightWithSpacing() ) ) )
 			{

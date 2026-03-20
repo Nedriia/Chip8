@@ -7,7 +7,8 @@ static Chip8 m_oChip8;
 
 int Quit()
 {
-	Display::GetInstance()->DestroyWindow();
+	Display::KeyDisplayAccess oKeyDisplay;
+	Display::GetInstance()->DestroyWindow( oKeyDisplay );
 	return -1;
 }
 
@@ -21,9 +22,11 @@ int main( int argc,char* argv[] )
 		Quit();
 
 	Chip8::KeyAccess oKey;
+	Display::KeyDisplayAccess oKeyDisplay;
+
 	m_oChip8.Init( oKey,sROMToLoad );
 
-	if( Display::GetInstance()->Init( &m_oChip8 ) == -1 )
+	if( Display::GetInstance()->Init( oKeyDisplay, &m_oChip8 ) == -1 )
 		return Quit();
 
 	//Loop

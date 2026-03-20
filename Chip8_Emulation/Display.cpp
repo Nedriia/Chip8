@@ -47,7 +47,7 @@ static void glfw_error_callback( int error,const char* description )
 	fprintf( stderr,"GLFW Error %d: %s\n",error,description );
 }
 
-int Display::Init( const Chip8* pCpu )
+int Display::Init( const KeyDisplayAccess& oKey, const Chip8* pCpu )
 {
 	glfwSetErrorCallback( glfw_error_callback );
 	if( !glfwInit() )
@@ -184,7 +184,7 @@ void Display::processInput( GLFWwindow* window )
 		glfwSetWindowShouldClose( window,true );
 }
 
-void Display::DestroyWindow()
+void Display::DestroyWindow( const KeyDisplayAccess& oKey )
 {
 	// glfw: terminate, clearing all previously allocated GLFW resources.
 	// ------------------------------------------------------------------
@@ -195,12 +195,12 @@ void Display::DestroyWindow()
 	glfwTerminate();
 }
 
-void Display::ClearScreen()
+void Display::ClearScreen( const KeyDisplayAccess& oKey )
 {
 	_InitPixelsData();
 }
 
-void Display::DrawPixelAtPos( uint8_t xPos,uint8_t yPos,uint8_t oValue,bool& bErased )
+void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey, uint8_t xPos,uint8_t yPos,uint8_t oValue,bool& bErased )
 {
 	uint8_t ByteMask = 0x80; //uint8_t mask 0x80 --> 10000000 // 01000000 // 00100000 ...
 	uint8_t iPosLine = xPos;

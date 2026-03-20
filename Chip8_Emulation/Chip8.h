@@ -64,9 +64,9 @@ public:
 		KeyAccess(){}
 	};
 
-	void Init( KeyAccess key, const char* sROMToLoad );
-	void EmulateCycle( KeyAccess key, const std::chrono::steady_clock::time_point& time );
-	void AskForState( KeyAccess key,RunningState oState ) const;
+	void Init( const KeyAccess& key, const char* sROMToLoad );
+	void EmulateCycle( const KeyAccess& key, const std::chrono::steady_clock::time_point& time );
+	void AskForState( const KeyAccess& key,RunningState oState ) const;
 
 	const Data< uint16_t>* GetStack() const { return stack; }
 	const Data< uint8_t>* GetMemory() const { return memory; }

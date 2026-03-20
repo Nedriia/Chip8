@@ -19,7 +19,7 @@ Chip8::Chip8() :
 {
 }
 
-void Chip8::Init( Chip8::KeyAccess key, const char* sROMToLoad )
+void Chip8::Init( const KeyAccess& key, const char* sROMToLoad )
 {
 	unsigned timeSeed = std::chrono::steady_clock::now().time_since_epoch().count();
 	rng.seed( timeSeed );
@@ -101,7 +101,7 @@ void Chip8::_LoadROM( const char* sROMToLoad )
 	}
 }
 
-void Chip8::EmulateCycle( Chip8::KeyAccess key, const std::chrono::steady_clock::time_point& time )
+void Chip8::EmulateCycle( const KeyAccess& key, const std::chrono::steady_clock::time_point& time )
 {
 	if( m_oState == RunningState::Reset )
 	{
@@ -147,7 +147,7 @@ void Chip8::EmulateCycle( Chip8::KeyAccess key, const std::chrono::steady_clock:
 	}
 }
 
-void Chip8::AskForState( Chip8::KeyAccess key, RunningState oState ) const
+void Chip8::AskForState( const KeyAccess& key, RunningState oState ) const
 {
 	m_oState = oState;
 }
@@ -184,8 +184,8 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		{
 			OpcodeInstruct = std::format( "{:04X}  : CLS",opcode );
 
-			//Clear the screen
-			Display::ClearScreen();
+			Display::KeyDisplayAccess oKeyDisplay;
+			Display::ClearScreen( oKeyDisplay );
 		}
 		else if( check == 0xEE )
 		{
@@ -410,9 +410,11 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		I value does not change after the execution of this instruction*/
 		bool bErased = false;
 		uint8_t iYOffset = 0;
+
+		Display::KeyDisplayAccess oKeyDisplay;
 		for( ; iYOffset < N; ++iYOffset )
 		{
-			Display::DrawPixelAtPos( registers[ X ],registers[ Y ] + iYOffset,memory[ I + iYOffset ],bErased );
+			Display::DrawPixelAtPos( oKeyDisplay, registers[ X ],registers[ Y ] + iYOffset,memory[ I + iYOffset ],bErased );
 			VF = bErased ? 1 : 0;
 		}
 
