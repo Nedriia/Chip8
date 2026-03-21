@@ -35,12 +35,13 @@ public:
 
 	operator T() const { return data; }
 	bool HasChanged() const { return bNewValue; }
+	void ClearFlag() const { bNewValue = false; }
 	bool IsNULL() const { return data == 0; }
 	void clear() { data = 0; bNewValue = false; }
 
 private:
 	T data;
-	bool bNewValue;
+	mutable bool bNewValue;
 	template< typename F>
 	Data& Update( F operation )
 	{

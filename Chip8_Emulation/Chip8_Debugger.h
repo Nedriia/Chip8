@@ -34,7 +34,7 @@ public:
 
 private:
 	template< typename T >
-	void FormatDebugData( std::string sText,const char* sFormat, T oData );
+	void FormatDebugData( std::string sText,const char* sFormat, const T& oData );
 
 	static Chip8_Debugger*		singleton;
 

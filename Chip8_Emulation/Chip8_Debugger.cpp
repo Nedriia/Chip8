@@ -122,13 +122,8 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 					for( int i = 0; i < 0x10; ++i )
 					{
 						ImGui::PushID( i );
-
-						ImGui::Text( std::format( "V{:X} :",i ).c_str() );
-						ImGui::SameLine();
-						ImGui::PushStyleColor( ImGuiCol_Text,it[ i ].IsNULL() ? NULL_DATA_COLOR : it[ i ].HasChanged() ? CHANGE_DATA_COLOR : DEFAULT_DATA_COLOR );
-						ImGui::Selectable( std::format( "{:02X}",( uint8_t )it[ i ] ).c_str() );
-						ImGui::PopStyleColor();
-
+						std::string sText= "V" + std::format( "{:X}:",i );
+						FormatDebugData( sText,"%02X",it[i] );
 						ImGui::PopID();
 					}
 
@@ -161,16 +156,8 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 					std::string sAdress;
 					for( int i = 0; i < 0x10; ++i )
 					{
-						sAdress.clear();
 						ImGui::PushID( i );
-
-						sAdress = std::format( "{:#06X}",( uint16_t )it[ i ] );
-						bool is_selected = ( item_selected_idx == i );
-						ImGui::PushStyleColor( ImGuiCol_Text,it[ i ].IsNULL() ? NULL_DATA_COLOR : it[ i ].HasChanged() ? CHANGE_DATA_COLOR : DEFAULT_DATA_COLOR );
-						if( ImGui::Selectable( sAdress.c_str(),is_selected ) )
-							item_selected_idx = i;
-						ImGui::PopStyleColor();
-
+						FormatDebugData( "","%#06X",it[i]);
 						ImGui::PopID();
 					}
 				}
@@ -233,7 +220,7 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 
 						ImGui::PushID( i );
 
-						ImGui::Text( std::format( "{:#06X} : ",i ).c_str() );
+						ImGui::Text( std::format( "{:#06X}:",i ).c_str() );
 						ImGui::SameLine();
 
 						bool is_selected = ( item_selected_idx == i );
@@ -245,11 +232,7 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 								ImGui::Text( "-" );
 								ImGui::SameLine();
 							}
-
-							ImGui::PushStyleColor( ImGuiCol_Text,it[ i ].IsNULL() ? NULL_DATA_COLOR : it[ i ].HasChanged() ? CHANGE_DATA_COLOR : DEFAULT_DATA_COLOR );
-							if( ImGui::Selectable( std::format( "{:02X}",( uint8_t )it[ n ] ).c_str(),is_selected ) )
-								item_selected_idx = i;
-							ImGui::PopStyleColor();
+							FormatDebugData( "","%02X",it[ n ] );
 							ImGui::SameLine();
 							ImGui::PopID();
 						}
@@ -334,12 +317,15 @@ void Chip8_Debugger::Render()
 }
 
 template< typename T >
-void Chip8_Debugger::FormatDebugData( std::string sText,const char* sFormat,T oData )
+void Chip8_Debugger::FormatDebugData( std::string sText,const char* sFormat,const T& oData )
 {
 	static_assert( std::is_same_v<T,Data<uint8_t>> || std::is_same_v<T,Data<uint16_t>>,"Function is being call with an unsupported type" );
 
-	ImGui::Text( sText.c_str() );
-	ImGui::SameLine();
+	if( !sText.empty() )
+	{
+		ImGui::Text( sText.c_str() );
+		ImGui::SameLine();
+	}
 	ImGui::PushStyleColor( ImGuiCol_Text,oData.IsNULL() ? NULL_DATA_COLOR : oData.HasChanged() ? CHANGE_DATA_COLOR : DEFAULT_DATA_COLOR );
 
 	char buffer[ 64 ];
@@ -354,6 +340,7 @@ void Chip8_Debugger::FormatDebugData( std::string sText,const char* sFormat,T oD
 		snprintf( buffer,sizeof( buffer ),sFormat,val );
 	}
 
+	oData.ClearFlag();
 	ImGui::TextUnformatted( buffer );
 	ImGui::PopStyleColor();
 }
