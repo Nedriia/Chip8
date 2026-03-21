@@ -277,15 +277,13 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 			bool bPause = m_pCPU->IsPause();
 
 			if( ImGui::Checkbox( "Pause",&bPause ) )
-				m_pCPU->AskForState( oKey, bPause ? RunningState::Pause : RunningState::Running );
+				m_pCPU->AskForState( oKey,bPause ? RunningState::Pause : RunningState::Running );
 			ImGui::SameLine();
 
-			static bool bCheckUpdate = false;
+			static int iIndex = 0;
 			if( ImGui::Button( "Step Next Frame" ) )
 			{
-				m_pCPU->AskForState( oKey, RunningState::StepNextFrame );
-				item_selected_idx = m_pCPU->GetHistoryOpcode().size() - 1;
-				bCheckUpdate = true;
+				m_pCPU->AskForState( oKey,RunningState::StepNextFrame );
 			}
 			ImGui::SameLine();
 
@@ -307,12 +305,12 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 					ImGui::PopID();
 				}
 
-				if( ( m_pCPU->GetHistoryOpcode().size() > 0 && m_pCPU->IsRunning() ) || ( bCheckUpdate && item_selected_idx != m_pCPU->GetHistoryOpcode().size() - 1 ) )
+				if( ( m_pCPU->GetHistoryOpcode().size() > 0 && m_pCPU->IsRunning() ) || ( iIndex != m_pCPU->GetCycleId() ) )
 				{
 					ImGui::SetScrollHereY( 0.5f );
 
 					item_selected_idx = m_pCPU->GetHistoryOpcode().size() - 1;
-					bCheckUpdate = false;
+					iIndex = m_pCPU->GetCycleId();
 					Display::GetInstance()->SetFrameAsDirty();
 				}
 			}
@@ -345,12 +343,12 @@ void Chip8_Debugger::FormatDebugData( std::string sText,const char* sFormat,T oD
 	ImGui::PushStyleColor( ImGuiCol_Text,oData.IsNULL() ? NULL_DATA_COLOR : oData.HasChanged() ? CHANGE_DATA_COLOR : DEFAULT_DATA_COLOR );
 
 	char buffer[ 64 ];
-	if constexpr( std::is_same_v<T,Data<uint8_t>> ) 
+	if constexpr( std::is_same_v<T,Data<uint8_t>> )
 	{
 		uint8_t val = ( uint8_t )oData;
 		snprintf( buffer,sizeof( buffer ),sFormat,val );
 	}
-	else if constexpr( std::is_same_v<T,Data<uint16_t>> ) 
+	else if constexpr( std::is_same_v<T,Data<uint16_t>> )
 	{
 		uint16_t val = ( uint16_t )oData;
 		snprintf( buffer,sizeof( buffer ),sFormat,val );

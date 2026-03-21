@@ -79,6 +79,7 @@ public:
 	const Data< uint8_t> GetSP() const { return SP; }
 	const Data< uint8_t> GetDelayTimer() const { return delay_timer; }
 	const Data< uint8_t> GetSoundTimer() const { return sound_timer; }
+	int GetCycleId() const { return m_iCycle; }
 
 	bool		IsPause() const { return m_oState == RunningState::Pause; }
 	bool		IsRunning() const { return m_oState == RunningState::Running; }
@@ -135,4 +136,5 @@ private:
 	std::chrono::steady_clock::time_point		lastTimeUpdateTimers;
 	float										accumulator;
 	const char*									m_sCurrentRomLoaded;
+	int											m_iCycle;
 };

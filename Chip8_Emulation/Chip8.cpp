@@ -15,7 +15,8 @@ Chip8::Chip8() :
 	lastTimeUpdate( std::chrono::high_resolution_clock::now() ),
 	lastTimeUpdateTimers( std::chrono::high_resolution_clock::now() ),
 	accumulator( 0.0f ),
-	m_sCurrentRomLoaded( nullptr )
+	m_sCurrentRomLoaded( nullptr ),
+	m_iCycle( 0 )
 {
 }
 
@@ -42,6 +43,7 @@ void Chip8::_Reset()
 	accumulator = 0.f;
 	m_aOpcodeHistory.clear();
 	m_iLastOpcode = 0;
+	m_iCycle = 0;
 
 	for( Data<uint8_t>* it = &memory[ 0 ]; it != &memory[ 0x1000 ]; ++it )
 		it->clear();
@@ -131,6 +133,7 @@ void Chip8::EmulateCycle( const KeyAccess& key, const std::chrono::steady_clock:
 			if( m_oState == RunningState::StepNextFrame )
 			{
 				i = opcodePerFrame; //We want to keep a view of unique opcode each "StepNextFrame"
+				accumulator = 0;
 				m_oState = RunningState::Pause;
 			}
 		}
@@ -557,4 +560,5 @@ void Chip8::_AddOpcodeToHistory( const char* pOpcode )
 		m_aOpcodeHistory.pop_front();
 
 	m_aOpcodeHistory.push_back( pOpcode );
+	++m_iCycle;
 }
