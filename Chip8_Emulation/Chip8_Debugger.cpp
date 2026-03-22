@@ -44,7 +44,8 @@ Chip8_Debugger* Chip8_Debugger::singleton = nullptr;
 
 Chip8_Debugger::Chip8_Debugger() :
 	window( nullptr ),
-	m_pCPU( nullptr )
+	m_pCPU( nullptr ),
+	m_iCycleIndex( 0 )
 {}
 
 void Chip8_Debugger::Init( GLFWwindow* mainWindow,const Chip8* pCPU )
@@ -101,10 +102,8 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 	ImGui::NewFrame();
 
 	ImGuiIO& io = ImGui::GetIO();
-	bool needsRedraw = ( io.MouseWheel != 0 )
-		|| io.InputQueueCharacters.Size > 0
-		|| ImGui::IsAnyItemActive();
-	if( needsRedraw )
+	bool bNeedsRedraw = ( io.MouseWheel != 0 );
+	if( bNeedsRedraw )
 		Display::GetInstance()->SetFrameAsDirty();
 
 	ImGui::SetNextWindowPos( ImVec2( 0,0 ),ImGuiCond_Always,ImVec2( 0,0 ) );
@@ -128,11 +127,11 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 					}
 
 					ImGui::NewLine();
-					FormatDebugData( "I  :","%#06X",m_pCPU->GetI() );
-					FormatDebugData( "SP :","%#06X",m_pCPU->GetSP() );
-					FormatDebugData( "PC :","%#06X",m_pCPU->GetPC() );
-					FormatDebugData( "DT :","%#06X",m_pCPU->GetDelayTimer() );
-					FormatDebugData( "ST :","%#06X",m_pCPU->GetSoundTimer() );
+					FormatDebugData( "I :","%#06X",m_pCPU->GetI() );
+					FormatDebugData( "SP:","%#06X",m_pCPU->GetSP() );
+					FormatDebugData( "PC:","%#06X",m_pCPU->GetPC() );
+					FormatDebugData( "DT:","%03X",m_pCPU->GetDelayTimer() );
+					FormatDebugData( "ST:","%03X",m_pCPU->GetSoundTimer() );
 				}
 			}
 			ImGui::EndListBox();
@@ -157,7 +156,7 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 					for( int i = 0; i < 0x10; ++i )
 					{
 						ImGui::PushID( i );
-						FormatDebugData( "","%#06X",it[i]);
+						FormatDebugData( "","%#06X",it[i] );
 						ImGui::PopID();
 					}
 				}
@@ -263,7 +262,6 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 				m_pCPU->AskForState( oKey,bPause ? RunningState::Pause : RunningState::Running );
 			ImGui::SameLine();
 
-			static int iIndex = 0;
 			if( ImGui::Button( "Step Next Frame" ) )
 			{
 				m_pCPU->AskForState( oKey,RunningState::StepNextFrame );
@@ -288,13 +286,11 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 					ImGui::PopID();
 				}
 
-				if( ( m_pCPU->GetHistoryOpcode().size() > 0 && m_pCPU->IsRunning() ) || ( iIndex != m_pCPU->GetCycleId() ) )
+				if( ( m_pCPU->GetHistoryOpcode().size() > 0 && m_pCPU->IsRunning() ) || ( m_iCycleIndex != m_pCPU->GetCycleId() ) )
 				{
 					ImGui::SetScrollHereY( 0.5f );
-
-					item_selected_idx = m_pCPU->GetHistoryOpcode().size() - 1;
-					iIndex = m_pCPU->GetCycleId();
-					Display::GetInstance()->SetFrameAsDirty();
+					item_selected_idx = m_pCPU->GetHistoryOpcode().size();
+					m_iCycleIndex = m_pCPU->GetCycleId();
 				}
 			}
 			ImGui::EndListBox();
@@ -339,8 +335,10 @@ void Chip8_Debugger::FormatDebugData( std::string sText,const char* sFormat,cons
 		uint16_t val = ( uint16_t )oData;
 		snprintf( buffer,sizeof( buffer ),sFormat,val );
 	}
+	
+	if( !m_pCPU->IsPause() )
+		oData.ClearFlag();
 
-	oData.ClearFlag();
 	ImGui::TextUnformatted( buffer );
 	ImGui::PopStyleColor();
 }

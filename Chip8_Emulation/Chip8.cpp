@@ -108,6 +108,7 @@ void Chip8::EmulateCycle( const KeyAccess& key, const std::chrono::steady_clock:
 	if( m_oState == RunningState::Reset )
 	{
 		_Reset();
+		Display::GetInstance()->SetFrameAsDirty();
 		m_oState = RunningState::Pause;
 	}
 
@@ -132,8 +133,9 @@ void Chip8::EmulateCycle( const KeyAccess& key, const std::chrono::steady_clock:
 
 			if( m_oState == RunningState::StepNextFrame )
 			{
-				i = opcodePerFrame; //We want to keep a view of unique opcode each "StepNextFrame"
+				i = opcodePerFrame; //We want to keep a view of unique opcode each step
 				accumulator = 0;
+				Display::GetInstance()->SetFrameAsDirty();
 				m_oState = RunningState::Pause;
 			}
 		}

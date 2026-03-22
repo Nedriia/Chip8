@@ -40,4 +40,5 @@ private:
 
 	GLFWwindow*					window;
 	const Chip8*				m_pCPU;
+	int							m_iCycleIndex;
 };

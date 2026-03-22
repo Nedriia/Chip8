@@ -17,13 +17,9 @@ struct Data
 {
 public:
 	Data() { data = 0; bNewValue = false; }
-	Data& operator=( const T& rhs )
-	{
-		bNewValue = ( data != rhs );
-		data = rhs;
-		return *this;
-	}
 
+	Data& operator=( const Data& rhs ){ return Update( [ & ] { data = rhs.data; } ); }
+	Data& operator=( const T& rhs ){ return Update( [ & ] { data = rhs; } ); }
 	Data& operator+=( const T& rhs ){ return Update( [ & ] { data += rhs; } ); }
 	Data& operator--(){ return Update( [ & ] { --data; } ); }
 	Data& operator++(){ return Update( [ & ] { ++data; } ); }
