@@ -108,7 +108,6 @@ void Chip8::EmulateCycle( const KeyAccess& key, const std::chrono::steady_clock:
 	if( m_oState == RunningState::Reset )
 	{
 		_Reset();
-		Display::GetInstance()->SetFrameAsDirty();
 		m_oState = RunningState::Pause;
 	}
 
@@ -118,8 +117,15 @@ void Chip8::EmulateCycle( const KeyAccess& key, const std::chrono::steady_clock:
 		return;
 	}
 
+	bool bForceNextStep = false;
+	if( m_oState == RunningState::StepNextFrame )
+	{
+		m_oState = RunningState::Pause;
+		bForceNextStep = true;
+	}
+
 	std::chrono::microseconds elapsed = std::chrono::duration_cast< std::chrono::microseconds >( time - lastTimeUpdate );
-	if( elapsed >= refreshTick )
+	if( elapsed >= refreshTick || bForceNextStep )
 	{
 		float refreshPerFrame = INSTRUCTIONS_PER_FRAME / 60.f;
 		accumulator += refreshPerFrame - std::floor( refreshPerFrame );
@@ -131,12 +137,10 @@ void Chip8::EmulateCycle( const KeyAccess& key, const std::chrono::steady_clock:
 			_FetchOpcode( opcode );
 			_DecodeExecute_Opcode( opcode );
 
-			if( m_oState == RunningState::StepNextFrame )
+			if( bForceNextStep )
 			{
-				i = opcodePerFrame; //We want to keep a view of unique opcode each step
 				accumulator = 0;
-				Display::GetInstance()->SetFrameAsDirty();
-				m_oState = RunningState::Pause;
+				break;
 			}
 		}
 
@@ -145,7 +149,7 @@ void Chip8::EmulateCycle( const KeyAccess& key, const std::chrono::steady_clock:
 	}
 
 	elapsed = std::chrono::duration_cast< std::chrono::microseconds >( time - lastTimeUpdateTimers );
-	if( elapsed >= refreshTick )
+	if( elapsed >= refreshTick || bForceNextStep )
 	{
 		_UpdateTimers();
 		lastTimeUpdateTimers += refreshTick;

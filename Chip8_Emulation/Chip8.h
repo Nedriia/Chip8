@@ -31,19 +31,31 @@ public:
 
 	operator T() const { return data; }
 	bool HasChanged() const { return bNewValue; }
-	void ClearFlag() const { bNewValue = false; }
+	void SetDataAsDirty() const 
+	{
+		if( !m_bDirty )
+			m_bDirty = true;
+		else
+		{
+			m_bDirty = false;
+			bNewValue = false;
+		}
+	}
 	bool IsNULL() const { return data == 0; }
 	void clear() { data = 0; bNewValue = false; }
 
 private:
 	T data;
 	mutable bool bNewValue;
+	mutable bool m_bDirty;
 	template< typename F>
 	Data& Update( F operation )
 	{
 		T previous = data;
 		operation();
 		bNewValue = ( previous != data );
+		if( bNewValue )
+			m_bDirty = false;
 		return *this;
 	}
 };
@@ -70,12 +82,12 @@ public:
 	const Data< uint8_t>* GetRegisters() const { return registers; }
 	const std::deque<std::string>& GetHistoryOpcode() const { return m_aOpcodeHistory; }
 
-	const Data< uint16_t> GetI() const { return I; }
-	const Data< uint16_t> GetPC() const { return PC; }
+	const Data< uint16_t>& GetI() const { return I; }
+	const Data< uint16_t>& GetPC() const { return PC; }
 
-	const Data< uint8_t> GetSP() const { return SP; }
-	const Data< uint8_t> GetDelayTimer() const { return delay_timer; }
-	const Data< uint8_t> GetSoundTimer() const { return sound_timer; }
+	const Data< uint8_t>& GetSP() const { return SP; }
+	const Data< uint8_t>& GetDelayTimer() const { return delay_timer; }
+	const Data< uint8_t>& GetSoundTimer() const { return sound_timer; }
 	int GetCycleId() const { return m_iCycle; }
 
 	bool		IsPause() const { return m_oState == RunningState::Pause; }

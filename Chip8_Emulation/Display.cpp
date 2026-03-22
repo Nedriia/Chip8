@@ -32,7 +32,6 @@ Display::Display() :
 	VBO( 0 ),
 	EBO( 0 ),
 	FBO( 0 ),
-	m_bDirtyFrame( true ),
 	lastTimeUpdate( std::chrono::high_resolution_clock::now() )
 {
 }
@@ -226,14 +225,12 @@ void Display::Update( const std::chrono::steady_clock::time_point& time, bool cp
 
 		std::chrono::microseconds elapsed = std::chrono::duration_cast< std::chrono::microseconds >( time - lastTimeUpdate );
 		std::chrono::microseconds startElapsed = elapsed;
-		if( elapsed >= refreshTick || m_bDirtyFrame )
+		if( elapsed >= refreshTick )
 		{
-			bool bDirtyFrame = m_bDirtyFrame;
-
 			int updateThisFrame = 0;
 			const int maxUpdatePerFrame = 5; //could go up to 8 frame to catch up ( 133 ms )
 
-			if( !m_bDirtyFrame && elapsed > ( refreshTick * maxUpdatePerFrame ) )// too much to catch up
+			if( elapsed > ( refreshTick * maxUpdatePerFrame ) )// too much to catch up
 			{
 				lastTimeUpdate = time;
 				elapsed = std::chrono::microseconds( 0 );
@@ -257,11 +254,7 @@ void Display::Update( const std::chrono::steady_clock::time_point& time, bool cp
 
 			Chip8_Debugger::GetInstance()->Render();
 
-			if( !cpuPaused || ( m_bDirtyFrame == true && m_bDirtyFrame == bDirtyFrame ) )
-			{
-				glfwSwapBuffers( window );
-				m_bDirtyFrame = false;
-			}
+			glfwSwapBuffers( window );
 		}
 	}
 	else

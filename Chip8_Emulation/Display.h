@@ -30,7 +30,6 @@ public:
 
 	void Update( const std::chrono::steady_clock::time_point& time, bool cpuPaused, bool& quit );
 
-	void SetFrameAsDirty() { m_bDirtyFrame = true; }
 	const unsigned int& GetTexture() const { return texture; }
 	const unsigned int& GetFBO() const { return FBO; }
 	const uint8_t* GetPixels() const{ return pixels; }
@@ -76,6 +75,4 @@ private:
 	static uint8_t* pixels;
 
 	std::chrono::steady_clock::time_point lastTimeUpdate;
-
-	bool	m_bDirtyFrame;
 };

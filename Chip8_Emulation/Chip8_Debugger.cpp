@@ -101,11 +101,6 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
 
-	ImGuiIO& io = ImGui::GetIO();
-	bool bNeedsRedraw = ( io.MouseWheel != 0 );
-	if( bNeedsRedraw )
-		Display::GetInstance()->SetFrameAsDirty();
-
 	ImGui::SetNextWindowPos( ImVec2( 0,0 ),ImGuiCond_Always,ImVec2( 0,0 ) );
 	ImGui::SetNextWindowSize( ImVec2( 600,500 ),ImGuiCond_Once );
 	if( ImGui::Begin( "CPU",nullptr,ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
@@ -263,9 +258,8 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 			ImGui::SameLine();
 
 			if( ImGui::Button( "Step Next Frame" ) )
-			{
 				m_pCPU->AskForState( oKey,RunningState::StepNextFrame );
-			}
+
 			ImGui::SameLine();
 
 			if( ImGui::Button( "Reset" ) )
@@ -289,7 +283,7 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 				if( ( m_pCPU->GetHistoryOpcode().size() > 0 && m_pCPU->IsRunning() ) || ( m_iCycleIndex != m_pCPU->GetCycleId() ) )
 				{
 					ImGui::SetScrollHereY( 0.5f );
-					item_selected_idx = m_pCPU->GetHistoryOpcode().size();
+					item_selected_idx = m_pCPU->GetHistoryOpcode().size() - 1;
 					m_iCycleIndex = m_pCPU->GetCycleId();
 				}
 			}
@@ -317,6 +311,9 @@ void Chip8_Debugger::FormatDebugData( std::string sText,const char* sFormat,cons
 {
 	static_assert( std::is_same_v<T,Data<uint8_t>> || std::is_same_v<T,Data<uint16_t>>,"Function is being call with an unsupported type" );
 
+	if( m_pCPU && m_iCycleIndex != m_pCPU->GetCycleId() )
+		oData.SetDataAsDirty();
+
 	if( !sText.empty() )
 	{
 		ImGui::Text( sText.c_str() );
@@ -336,9 +333,6 @@ void Chip8_Debugger::FormatDebugData( std::string sText,const char* sFormat,cons
 		snprintf( buffer,sizeof( buffer ),sFormat,val );
 	}
 	
-	if( !m_pCPU->IsPause() )
-		oData.ClearFlag();
-
 	ImGui::TextUnformatted( buffer );
 	ImGui::PopStyleColor();
 }
