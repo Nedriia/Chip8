@@ -42,7 +42,7 @@
 Chip8_Debugger* Chip8_Debugger::m_pSingleton = nullptr;
 
 Chip8_Debugger::Chip8_Debugger() :
-	m_oWindow( nullptr ),
+	m_pWindow( nullptr ),
 	m_pCPU( nullptr ),
 	m_iCycleIndex( 0 ),
 	m_iRegisterSelected( 0 ),
@@ -55,7 +55,7 @@ void Chip8_Debugger::Init( GLFWwindow* mainWindow,const Chip8* pCPU )
 	ImVec4 clear_color = ImVec4( 0.45f,0.55f,0.60f,1.00f );
 	float main_scale = ImGui_ImplGlfw_GetContentScaleForMonitor( glfwGetPrimaryMonitor() ); // Valid on GLFW 3.3+ only
 
-	m_oWindow = mainWindow;
+	m_pWindow = mainWindow;
 	// Setup Dear ImGui context
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -88,7 +88,7 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 	// - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
 	// Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
 	glfwPollEvents();
-	if( glfwGetWindowAttrib( m_oWindow,GLFW_ICONIFIED ) != 0 )
+	if( glfwGetWindowAttrib( m_pWindow,GLFW_ICONIFIED ) != 0 )
 	{
 		ImGui_ImplGlfw_Sleep( 10 );
 		return;
@@ -166,8 +166,6 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 			ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
 			ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar ) )
 		{
-			glBindTexture( GL_TEXTURE_2D,Display::GetInstance()->GetTexture() );
-			glTexSubImage2D( GL_TEXTURE_2D,0,0,0,Display::CHIP8_DISPLAY_WIDTH,Display::CHIP8_DISPLAY_HEIGHT,GL_RED,GL_UNSIGNED_BYTE,Display::GetInstance()->GetPixels() );
 			ImVec2 avail = ImVec2( ImGui::GetContentRegionAvail().x,ImGui::GetContentRegionAvail().y - 14 );
 			ImGui::Image( ( ImTextureID )( intptr_t )Display::GetInstance()->GetTexture(),avail );
 		}
@@ -295,7 +293,7 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 void Chip8_Debugger::Render()
 {
 	int display_w,display_h;
-	glfwGetFramebufferSize( m_oWindow,&display_w,&display_h );
+	glfwGetFramebufferSize( m_pWindow,&display_w,&display_h );
 	glViewport( 0,0,display_w,display_h );
 
 	ImGui::Render();

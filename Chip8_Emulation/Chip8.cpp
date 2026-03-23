@@ -12,6 +12,7 @@
 
 Chip8::Chip8() :
 	m_iLastOpcode( 0 ),
+	m_iCountBeforeStop( 0 ),
 	m_oState( RunningState::Pause ),
 	m_iLastTimeUpdate( std::chrono::high_resolution_clock::now() ),
 	m_iLastTimeUpdateTimers( std::chrono::high_resolution_clock::now() ),

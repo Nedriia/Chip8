@@ -16,7 +16,7 @@ template< typename T>
 struct Data
 {
 public:
-	Data() { oData = 0; m_bNewValue = false; }
+	Data() { oData = 0; m_bNewValue = false; m_bDirty = false; }
 
 	Data& operator=( const Data& rhs ){ return Update( [ & ] { oData = rhs.oData; } ); }
 	Data& operator=( const T& rhs ){ return Update( [ & ] { oData = rhs; } ); }

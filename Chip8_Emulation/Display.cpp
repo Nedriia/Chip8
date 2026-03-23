@@ -8,8 +8,9 @@ const uint16_t WINDOW_HEIGHT = 1000;
 
 const uint8_t Display::CHIP8_DISPLAY_WIDTH = 64;
 const uint8_t Display::CHIP8_DISPLAY_HEIGHT = 32;
-uint8_t* Display::m_pPixels = nullptr;
 
+uint8_t* Display::m_pPixels = nullptr;
+bool Display::m_bDirtyFrame = false;
 Display* Display::m_pSingleton = nullptr;
 
 float vertices[] = {
@@ -26,7 +27,7 @@ unsigned int indices[] = {
 };
 
 Display::Display() :
-	m_oWindow( nullptr ),
+	m_pWindow( nullptr ),
 	m_iTexture( 0 ),
 	m_iVAO( 0 ),
 	m_iVBO( 0 ),
@@ -38,7 +39,9 @@ Display::Display() :
 
 Display::~Display()
 {
-	delete m_pSingleton;
+	delete[] m_pPixels;
+	m_pPixels = nullptr;
+	m_pSingleton = nullptr;
 }
 
 static void glfw_error_callback( int error,const char* description )
@@ -46,7 +49,7 @@ static void glfw_error_callback( int error,const char* description )
 	fprintf( stderr,"GLFW Error %d: %s\n",error,description );
 }
 
-int Display::Init( const KeyDisplayAccess& oKey, const Chip8* pCpu )
+int Display::Init( const KeyDisplayAccess& oKey,const Chip8* pCpu )
 {
 	glfwSetErrorCallback( glfw_error_callback );
 	if( !glfwInit() )
@@ -60,9 +63,9 @@ int Display::Init( const KeyDisplayAccess& oKey, const Chip8* pCpu )
 	//_InitRenderer(); //No more need since we are using FBO and rendering in ImGui Image
 	m_pPixels = new uint8_t[ CHIP8_DISPLAY_WIDTH * CHIP8_DISPLAY_HEIGHT ];
 	_InitTexture();
-	_InitFramebuffer();
+	//_InitFramebuffer();
 
-	Chip8_Debugger::GetInstance()->Init( m_oWindow,pCpu );
+	Chip8_Debugger::GetInstance()->Init( m_pWindow,pCpu );
 
 	return 0;
 }
@@ -71,15 +74,15 @@ int Display::_CreateWindowChip()
 {
 	// glfw window creation
 	// --------------------
-	m_oWindow = glfwCreateWindow( WINDOW_WIDTH,WINDOW_HEIGHT,"Chip8 Emulator",nullptr,nullptr );
-	if( m_oWindow == nullptr )
+	m_pWindow = glfwCreateWindow( WINDOW_WIDTH,WINDOW_HEIGHT,"Chip8 Emulator",nullptr,nullptr );
+	if( m_pWindow == nullptr )
 	{
 		std::cout << "Failed to create GLFW window" << std::endl;
 		glfwTerminate();
 		return -1;
 	}
-	glfwMakeContextCurrent( m_oWindow );
-	glfwSetFramebufferSizeCallback( m_oWindow,Display::framebuffer_size_callback );
+	glfwMakeContextCurrent( m_pWindow );
+	glfwSetFramebufferSizeCallback( m_pWindow,Display::framebuffer_size_callback );
 
 	// glad: load all OpenGL function pointers
 	// ---------------------------------------
@@ -153,11 +156,14 @@ void Display::_InitPixelsData()
 		for( int j = 0; j < CHIP8_DISPLAY_WIDTH; ++j )
 			*( m_pPixels + i * CHIP8_DISPLAY_WIDTH + j ) = 0;
 	}
+	m_bDirtyFrame = true;
 }
 
 void Display::_XORedPixelsData( int xPos,int yPos,uint8_t odata )
 {
+	uint8_t iPrevious = *( m_pPixels + yPos * CHIP8_DISPLAY_WIDTH + xPos );
 	*( m_pPixels + yPos * CHIP8_DISPLAY_WIDTH + xPos ) ^= odata;
+	m_bDirtyFrame |= *( m_pPixels + yPos * CHIP8_DISPLAY_WIDTH + xPos ) != iPrevious;
 }
 
 bool Display::_IsPixelErase( int xPos,int yPos )
@@ -168,7 +174,7 @@ bool Display::_IsPixelErase( int xPos,int yPos )
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
 // ---------------------------------------------------------------------------------------------
-void Display::framebuffer_size_callback( GLFWwindow* m_oWindow,int width,int height )
+void Display::framebuffer_size_callback( GLFWwindow* m_pWindow,int width,int height )
 {
 	// make sure the viewport matches the new window dimensions; note that width and 
 	// height will be significantly larger than specified on retina displays.
@@ -177,21 +183,32 @@ void Display::framebuffer_size_callback( GLFWwindow* m_oWindow,int width,int hei
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
-void Display::processInput( GLFWwindow* m_oWindow )
+void Display::processInput( GLFWwindow* m_pWindow )
 {
-	if( glfwGetKey( m_oWindow,GLFW_KEY_ESCAPE ) == GLFW_PRESS )
-		glfwSetWindowShouldClose( m_oWindow,true );
+	if( glfwGetKey( m_pWindow,GLFW_KEY_ESCAPE ) == GLFW_PRESS )
+		glfwSetWindowShouldClose( m_pWindow,true );
 }
 
 void Display::DestroyWindow( const KeyDisplayAccess& oKey )
 {
 	// glfw: terminate, clearing all previously allocated GLFW resources.
 	// ------------------------------------------------------------------
-	delete[] m_pPixels;
 	glDeleteTextures( 1,&m_iTexture );
 	_DestroyRenderer();
+
+	m_iTexture = 0;
+	m_iVAO = 0;
+	m_iVBO = 0;
+	m_iEBO = 0;
+	m_iFBO = 0;
+
 	m_sShaderProgram.Delete();
+
+	glfwDestroyWindow( m_pWindow );
 	glfwTerminate();
+
+	m_pWindow = nullptr;
+	delete m_pSingleton;
 }
 
 void Display::ClearScreen( const KeyDisplayAccess& oKey )
@@ -199,7 +216,7 @@ void Display::ClearScreen( const KeyDisplayAccess& oKey )
 	_InitPixelsData();
 }
 
-void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey, uint8_t xPos,uint8_t yPos,uint8_t oValue,bool& bErased )
+void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xPos,uint8_t yPos,uint8_t oValue,bool& bErased )
 {
 	uint8_t ByteMask = 0x80; //uint8_t mask 0x80 --> 10000000 // 01000000 // 00100000 ...
 	uint8_t iPosLine = xPos;
@@ -215,21 +232,18 @@ void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey, uint8_t xPos,uint8_t
 	}
 }
 
-void Display::Update( const std::chrono::steady_clock::time_point& time, bool cpuPaused, bool& quit )
+void Display::Update( const std::chrono::steady_clock::time_point& time,bool cpuPaused,bool& quit )
 {
 	// render loop
 	// -----------
-	if( !glfwWindowShouldClose( m_oWindow ) )
+	if( !glfwWindowShouldClose( m_pWindow ) )
 	{
-		glfwPollEvents();
-
 		std::chrono::microseconds elapsed = std::chrono::duration_cast< std::chrono::microseconds >( time - m_iLastTimeUpdate );
 		std::chrono::microseconds startElapsed = elapsed;
 		if( elapsed >= refreshTick )
 		{
 			int updateThisFrame = 0;
 			const int maxUpdatePerFrame = 5; //could go up to 8 frame to catch up ( 133 ms )
-
 			if( elapsed > ( refreshTick * maxUpdatePerFrame ) )// too much to catch up
 			{
 				m_iLastTimeUpdate = time;
@@ -237,25 +251,32 @@ void Display::Update( const std::chrono::steady_clock::time_point& time, bool cp
 				return;
 			}
 
+			processInput( m_pWindow );
+
 			while( elapsed >= refreshTick && updateThisFrame < maxUpdatePerFrame )
 			{
-				processInput( m_oWindow );
-
 				m_iLastTimeUpdate += refreshTick;
 				++updateThisFrame;
 
 				elapsed = std::chrono::duration_cast< std::chrono::microseconds >( time - m_iLastTimeUpdate );
 			}
 
-			Chip8_Debugger::GetInstance()->Update( startElapsed );
-
 			glClearColor( 0.f,0.f,0.f,1.f );
 			glClear( GL_COLOR_BUFFER_BIT );
 
+			Chip8_Debugger::GetInstance()->Update( startElapsed );
 			Chip8_Debugger::GetInstance()->Render();
 
-			glfwSwapBuffers( m_oWindow );
+			if( m_bDirtyFrame )
+			{
+				glBindTexture( GL_TEXTURE_2D,m_iTexture );
+				glTexSubImage2D( GL_TEXTURE_2D,0,0,0,CHIP8_DISPLAY_WIDTH,CHIP8_DISPLAY_HEIGHT,GL_RED,GL_UNSIGNED_BYTE,m_pPixels );
+				m_bDirtyFrame = false;
+			}
+
+			glfwSwapBuffers( m_pWindow );
 		}
+		glfwPollEvents();
 	}
 	else
 		quit = true;

@@ -38,7 +38,7 @@ private:
 
 	static Chip8_Debugger*		m_pSingleton;
 
-	GLFWwindow*					m_oWindow;
+	GLFWwindow*					m_pWindow;
 	const Chip8*				m_pCPU;
 	int							m_iCycleIndex;
 
