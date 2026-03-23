@@ -16,21 +16,21 @@ template< typename T>
 struct Data
 {
 public:
-	Data() { data = 0; bNewValue = false; }
+	Data() { oData = 0; m_bNewValue = false; }
 
-	Data& operator=( const Data& rhs ){ return Update( [ & ] { data = rhs.data; } ); }
-	Data& operator=( const T& rhs ){ return Update( [ & ] { data = rhs; } ); }
-	Data& operator+=( const T& rhs ){ return Update( [ & ] { data += rhs; } ); }
-	Data& operator--(){ return Update( [ & ] { --data; } ); }
-	Data& operator++(){ return Update( [ & ] { ++data; } ); }
-	Data& operator|=( const T& rhs ){ return Update( [ & ] { data |= rhs; } ); }
-	Data& operator&=( const T& rhs ){ return Update( [ & ] { data &= rhs; } ); }
-	Data& operator^=( const T& rhs ){ return Update( [ & ] { data ^= rhs; } ); }
-	Data& operator>>=( const T& rhs ) { return Update( [ & ] { data >>= rhs; } ); }
-	Data& operator<<=( const T& rhs ) { return Update( [ & ] { data <<= rhs; } ); }
+	Data& operator=( const Data& rhs ){ return Update( [ & ] { oData = rhs.oData; } ); }
+	Data& operator=( const T& rhs ){ return Update( [ & ] { oData = rhs; } ); }
+	Data& operator+=( const T& rhs ){ return Update( [ & ] { oData += rhs; } ); }
+	Data& operator--(){ return Update( [ & ] { --oData; } ); }
+	Data& operator++(){ return Update( [ & ] { ++oData; } ); }
+	Data& operator|=( const T& rhs ){ return Update( [ & ] { oData |= rhs; } ); }
+	Data& operator&=( const T& rhs ){ return Update( [ & ] { oData &= rhs; } ); }
+	Data& operator^=( const T& rhs ){ return Update( [ & ] { oData ^= rhs; } ); }
+	Data& operator>>=( const T& rhs ) { return Update( [ & ] { oData >>= rhs; } ); }
+	Data& operator<<=( const T& rhs ) { return Update( [ & ] { oData <<= rhs; } ); }
 
-	operator T() const { return data; }
-	bool HasChanged() const { return bNewValue; }
+	operator T() const { return oData; }
+	bool HasChanged() const { return m_bNewValue; }
 	void SetDataAsDirty() const 
 	{
 		if( !m_bDirty )
@@ -38,23 +38,23 @@ public:
 		else
 		{
 			m_bDirty = false;
-			bNewValue = false;
+			m_bNewValue = false;
 		}
 	}
-	bool IsNULL() const { return data == 0; }
-	void clear() { data = 0; bNewValue = false; }
+	bool IsNULL() const { return oData == 0; }
+	void clear() { oData = 0; m_bNewValue = false; }
 
 private:
-	T data;
-	mutable bool bNewValue;
+	T oData;
+	mutable bool m_bNewValue;
 	mutable bool m_bDirty;
 	template< typename F>
 	Data& Update( F operation )
 	{
-		T previous = data;
+		T previous = oData;
 		operation();
-		bNewValue = ( previous != data );
-		if( bNewValue )
+		m_bNewValue = ( previous != oData );
+		if( m_bNewValue )
 			m_bDirty = false;
 		return *this;
 	}
@@ -73,21 +73,21 @@ public:
 		KeyAccess(){}
 	};
 
-	void Init( const KeyAccess& key, const char* sROMToLoad );
-	void EmulateCycle( const KeyAccess& key, const std::chrono::steady_clock::time_point& time );
-	void AskForState( const KeyAccess& key,RunningState oState ) const;
+	void Init( const KeyAccess& oKey, const char* sROMToLoad );
+	void EmulateCycle( const KeyAccess& oKey, const std::chrono::steady_clock::time_point& iTime );
+	void AskForState( const KeyAccess& oKey,RunningState oState ) const;
 
-	const Data< uint16_t>* GetStack() const { return stack; }
-	const Data< uint8_t>* GetMemory() const { return memory; }
-	const Data< uint8_t>* GetRegisters() const { return registers; }
+	const Data< uint16_t>* GetStack() const { return m_aStack; }
+	const Data< uint8_t>* GetMemory() const { return m_aMemory; }
+	const Data< uint8_t>* GetRegisters() const { return m_aRegisters; }
 	const std::deque<std::string>& GetHistoryOpcode() const { return m_aOpcodeHistory; }
 
-	const Data< uint16_t>& GetI() const { return I; }
-	const Data< uint16_t>& GetPC() const { return PC; }
+	const Data< uint16_t>& GetI() const { return m_iI; }
+	const Data< uint16_t>& GetPC() const { return m_iPC; }
 
-	const Data< uint8_t>& GetSP() const { return SP; }
-	const Data< uint8_t>& GetDelayTimer() const { return delay_timer; }
-	const Data< uint8_t>& GetSoundTimer() const { return sound_timer; }
+	const Data< uint8_t>& GetSP() const { return m_iSP; }
+	const Data< uint8_t>& GetDelayTimer() const { return m_iDelay_timer; }
+	const Data< uint8_t>& GetSoundTimer() const { return m_iSound_timer; }
 	int GetCycleId() const { return m_iCycle; }
 
 	bool		IsPause() const { return m_oState == RunningState::Pause; }
@@ -98,27 +98,27 @@ private:
 	void _LoadFont( );
 	void _LoadROM( const char* sROMToLoad );
 
-	void _FetchOpcode( uint16_t& opcode );
-	void _DecodeExecute_Opcode( const uint16_t opcode );
+	void _FetchOpcode( uint16_t& iOpcode );
+	void _DecodeExecute_Opcode( const uint16_t iOpcode );
 	void _UpdateTimers();
 	void _AddOpcodeToHistory( const char* pOpcode );
 
-	Data<uint8_t> memory[ 0x1000 ];
-	Data<uint8_t> registers[ 0x10 ];
-	Data<uint16_t> I; //Address register
-	Data<uint16_t> stack[ 0x10 ];
-	Data<uint8_t> SP; //Stack pointer
-	Data<uint16_t> PC; //Program counter
+	Data<uint8_t> m_aMemory[ 0x1000 ];
+	Data<uint8_t> m_aRegisters[ 0x10 ];
+	Data<uint16_t> m_iI; //Address register
+	Data<uint16_t> m_aStack[ 0x10 ];
+	Data<uint8_t> m_iSP; //Stack pointer
+	Data<uint16_t> m_iPC; //Program counter
 
 	uint16_t m_iLastOpcode;
-	uint8_t countBeforeStop;
+	uint8_t m_iCountBeforeStop;
 
-	Data<uint8_t> delay_timer;
-	Data<uint8_t> sound_timer;
+	Data<uint8_t> m_iDelay_timer;
+	Data<uint8_t> m_iSound_timer;
 
-	std::mt19937 rng;
+	std::mt19937 m_iRng;
 
-	uint8_t fontset[ 0x50 ] =
+	uint8_t m_aFontset[ 0x50 ] =
 	{
 		0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
 		0x20, 0x60, 0x20, 0x20, 0x70, // 1
@@ -141,9 +141,9 @@ private:
 	std::deque<std::string>						m_aOpcodeHistory;
 
 	mutable RunningState						m_oState;
-	std::chrono::steady_clock::time_point		lastTimeUpdate;
-	std::chrono::steady_clock::time_point		lastTimeUpdateTimers;
-	float										accumulator;
+	std::chrono::steady_clock::time_point		m_iLastTimeUpdate;
+	std::chrono::steady_clock::time_point		m_iLastTimeUpdateTimers;
+	float										m_fAccumulator;
 	const char*									m_sCurrentRomLoaded;
 	int											m_iCycle;
 };

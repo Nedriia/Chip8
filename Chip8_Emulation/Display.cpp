@@ -8,9 +8,9 @@ const uint16_t WINDOW_HEIGHT = 1000;
 
 const uint8_t Display::CHIP8_DISPLAY_WIDTH = 64;
 const uint8_t Display::CHIP8_DISPLAY_HEIGHT = 32;
-uint8_t* Display::pixels = nullptr;
+uint8_t* Display::m_pPixels = nullptr;
 
-Display* Display::singleton = nullptr;
+Display* Display::m_pSingleton = nullptr;
 
 float vertices[] = {
 	// positions		//Texture coords
@@ -26,19 +26,19 @@ unsigned int indices[] = {
 };
 
 Display::Display() :
-	window( nullptr ),
-	texture( 0 ),
-	VAO( 0 ),
-	VBO( 0 ),
-	EBO( 0 ),
-	FBO( 0 ),
-	lastTimeUpdate( std::chrono::high_resolution_clock::now() )
+	m_oWindow( nullptr ),
+	m_iTexture( 0 ),
+	m_iVAO( 0 ),
+	m_iVBO( 0 ),
+	m_iEBO( 0 ),
+	m_iFBO( 0 ),
+	m_iLastTimeUpdate( std::chrono::high_resolution_clock::now() )
 {
 }
 
 Display::~Display()
 {
-	delete singleton;
+	delete m_pSingleton;
 }
 
 static void glfw_error_callback( int error,const char* description )
@@ -58,11 +58,11 @@ int Display::Init( const KeyDisplayAccess& oKey, const Chip8* pCpu )
 
 	_CreateWindowChip();
 	//_InitRenderer(); //No more need since we are using FBO and rendering in ImGui Image
-	pixels = new uint8_t[ CHIP8_DISPLAY_WIDTH * CHIP8_DISPLAY_HEIGHT ];
+	m_pPixels = new uint8_t[ CHIP8_DISPLAY_WIDTH * CHIP8_DISPLAY_HEIGHT ];
 	_InitTexture();
 	_InitFramebuffer();
 
-	Chip8_Debugger::GetInstance()->Init( window,pCpu );
+	Chip8_Debugger::GetInstance()->Init( m_oWindow,pCpu );
 
 	return 0;
 }
@@ -71,15 +71,15 @@ int Display::_CreateWindowChip()
 {
 	// glfw window creation
 	// --------------------
-	window = glfwCreateWindow( WINDOW_WIDTH,WINDOW_HEIGHT,"Chip8 Emulator",nullptr,nullptr );
-	if( window == nullptr )
+	m_oWindow = glfwCreateWindow( WINDOW_WIDTH,WINDOW_HEIGHT,"Chip8 Emulator",nullptr,nullptr );
+	if( m_oWindow == nullptr )
 	{
 		std::cout << "Failed to create GLFW window" << std::endl;
 		glfwTerminate();
 		return -1;
 	}
-	glfwMakeContextCurrent( window );
-	glfwSetFramebufferSizeCallback( window,Display::framebuffer_size_callback );
+	glfwMakeContextCurrent( m_oWindow );
+	glfwSetFramebufferSizeCallback( m_oWindow,Display::framebuffer_size_callback );
 
 	// glad: load all OpenGL function pointers
 	// ---------------------------------------
@@ -94,21 +94,21 @@ int Display::_CreateWindowChip()
 
 void Display::_InitTexture()
 {
-	glGenTextures( 1,&texture );
-	glBindTexture( GL_TEXTURE_2D,texture );
+	glGenTextures( 1,&m_iTexture );
+	glBindTexture( GL_TEXTURE_2D,m_iTexture );
 
 	glTexParameteri( GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST );
 	glTexParameteri( GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST );
 
 	_InitPixelsData();
-	glTexImage2D( GL_TEXTURE_2D,0,GL_R8,CHIP8_DISPLAY_WIDTH,CHIP8_DISPLAY_HEIGHT,0,GL_RED,GL_UNSIGNED_BYTE,pixels );
+	glTexImage2D( GL_TEXTURE_2D,0,GL_R8,CHIP8_DISPLAY_WIDTH,CHIP8_DISPLAY_HEIGHT,0,GL_RED,GL_UNSIGNED_BYTE,m_pPixels );
 }
 
 void Display::_InitFramebuffer()
 {
-	glGenFramebuffers( 1,&FBO );
-	glBindFramebuffer( GL_FRAMEBUFFER,FBO );
-	glFramebufferTexture2D( GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,GL_TEXTURE_2D,texture,0 ); //bind texture to framebuffer
+	glGenFramebuffers( 1,&m_iFBO );
+	glBindFramebuffer( GL_FRAMEBUFFER,m_iFBO );
+	glFramebufferTexture2D( GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,GL_TEXTURE_2D,m_iTexture,0 ); //bind texture to framebuffer
 
 	if( glCheckFramebufferStatus( GL_FRAMEBUFFER ) != GL_FRAMEBUFFER_COMPLETE )
 		std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
@@ -116,15 +116,15 @@ void Display::_InitFramebuffer()
 
 void Display::_InitRenderer()
 {
-	glGenVertexArrays( 1,&VAO );
-	glBindVertexArray( VAO ); //Need to be bind before, any vertex attributs call will be stored inside the VAO
-	glGenBuffers( 1,&VBO );
-	glGenBuffers( 1,&EBO );
+	glGenVertexArrays( 1,&m_iVAO );
+	glBindVertexArray( m_iVAO ); //Need to be bind before, any vertex attributs call will be stored inside the VAO
+	glGenBuffers( 1,&m_iVBO );
+	glGenBuffers( 1,&m_iEBO );
 
-	glBindBuffer( GL_ARRAY_BUFFER,VBO );
+	glBindBuffer( GL_ARRAY_BUFFER,m_iVBO );
 	glBufferData( GL_ARRAY_BUFFER,sizeof( vertices ),vertices,GL_STATIC_DRAW );
 
-	glBindBuffer( GL_ELEMENT_ARRAY_BUFFER,EBO );
+	glBindBuffer( GL_ELEMENT_ARRAY_BUFFER,m_iEBO );
 	glBufferData( GL_ELEMENT_ARRAY_BUFFER,sizeof( indices ),indices,GL_STATIC_DRAW );
 
 	glVertexAttribPointer( 0,3,GL_FLOAT,GL_FALSE,5 * sizeof( float ),( void* )0 ); //Vertices
@@ -133,17 +133,17 @@ void Display::_InitRenderer()
 	glVertexAttribPointer( 1,2,GL_FLOAT,GL_FALSE,5 * sizeof( float ),( void* )( 3 * sizeof( float ) ) ); //UV coords
 	glEnableVertexAttribArray( 1 );
 
-	glBindVertexArray( VAO );
+	glBindVertexArray( m_iVAO );
 
-	shaderProgram = Shader( "vertexShader.glsl","fragmentShader.glsl" );
+	m_sShaderProgram = Shader( "vertexShader.glsl","fragmentShader.glsl" );
 }
 
 void Display::_DestroyRenderer()
 {
-	glDeleteVertexArrays( 1,&VAO );
-	glDeleteBuffers( 1,&VBO );
-	glDeleteBuffers( 1,&EBO );
-	glDeleteFramebuffers( 1,&FBO );
+	glDeleteVertexArrays( 1,&m_iVAO );
+	glDeleteBuffers( 1,&m_iVBO );
+	glDeleteBuffers( 1,&m_iEBO );
+	glDeleteFramebuffers( 1,&m_iFBO );
 }
 
 void Display::_InitPixelsData()
@@ -151,24 +151,24 @@ void Display::_InitPixelsData()
 	for( int i = 0; i < CHIP8_DISPLAY_HEIGHT; ++i )
 	{
 		for( int j = 0; j < CHIP8_DISPLAY_WIDTH; ++j )
-			*( pixels + i * CHIP8_DISPLAY_WIDTH + j ) = 0;
+			*( m_pPixels + i * CHIP8_DISPLAY_WIDTH + j ) = 0;
 	}
 }
 
 void Display::_XORedPixelsData( int xPos,int yPos,uint8_t odata )
 {
-	*( pixels + yPos * CHIP8_DISPLAY_WIDTH + xPos ) ^= odata;
+	*( m_pPixels + yPos * CHIP8_DISPLAY_WIDTH + xPos ) ^= odata;
 }
 
 bool Display::_IsPixelErase( int xPos,int yPos )
 {
-	return *( pixels + yPos * CHIP8_DISPLAY_WIDTH + xPos ) == 255;
+	return *( m_pPixels + yPos * CHIP8_DISPLAY_WIDTH + xPos ) == 255;
 }
 
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
 // ---------------------------------------------------------------------------------------------
-void Display::framebuffer_size_callback( GLFWwindow* window,int width,int height )
+void Display::framebuffer_size_callback( GLFWwindow* m_oWindow,int width,int height )
 {
 	// make sure the viewport matches the new window dimensions; note that width and 
 	// height will be significantly larger than specified on retina displays.
@@ -177,20 +177,20 @@ void Display::framebuffer_size_callback( GLFWwindow* window,int width,int height
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
-void Display::processInput( GLFWwindow* window )
+void Display::processInput( GLFWwindow* m_oWindow )
 {
-	if( glfwGetKey( window,GLFW_KEY_ESCAPE ) == GLFW_PRESS )
-		glfwSetWindowShouldClose( window,true );
+	if( glfwGetKey( m_oWindow,GLFW_KEY_ESCAPE ) == GLFW_PRESS )
+		glfwSetWindowShouldClose( m_oWindow,true );
 }
 
 void Display::DestroyWindow( const KeyDisplayAccess& oKey )
 {
 	// glfw: terminate, clearing all previously allocated GLFW resources.
 	// ------------------------------------------------------------------
-	delete[] pixels;
-	glDeleteTextures( 1,&texture );
+	delete[] m_pPixels;
+	glDeleteTextures( 1,&m_iTexture );
 	_DestroyRenderer();
-	shaderProgram.Delete();
+	m_sShaderProgram.Delete();
 	glfwTerminate();
 }
 
@@ -219,11 +219,11 @@ void Display::Update( const std::chrono::steady_clock::time_point& time, bool cp
 {
 	// render loop
 	// -----------
-	if( !glfwWindowShouldClose( window ) )
+	if( !glfwWindowShouldClose( m_oWindow ) )
 	{
 		glfwPollEvents();
 
-		std::chrono::microseconds elapsed = std::chrono::duration_cast< std::chrono::microseconds >( time - lastTimeUpdate );
+		std::chrono::microseconds elapsed = std::chrono::duration_cast< std::chrono::microseconds >( time - m_iLastTimeUpdate );
 		std::chrono::microseconds startElapsed = elapsed;
 		if( elapsed >= refreshTick )
 		{
@@ -232,19 +232,19 @@ void Display::Update( const std::chrono::steady_clock::time_point& time, bool cp
 
 			if( elapsed > ( refreshTick * maxUpdatePerFrame ) )// too much to catch up
 			{
-				lastTimeUpdate = time;
+				m_iLastTimeUpdate = time;
 				elapsed = std::chrono::microseconds( 0 );
 				return;
 			}
 
 			while( elapsed >= refreshTick && updateThisFrame < maxUpdatePerFrame )
 			{
-				processInput( window );
+				processInput( m_oWindow );
 
-				lastTimeUpdate += refreshTick;
+				m_iLastTimeUpdate += refreshTick;
 				++updateThisFrame;
 
-				elapsed = std::chrono::duration_cast< std::chrono::microseconds >( time - lastTimeUpdate );
+				elapsed = std::chrono::duration_cast< std::chrono::microseconds >( time - m_iLastTimeUpdate );
 			}
 
 			Chip8_Debugger::GetInstance()->Update( startElapsed );
@@ -254,7 +254,7 @@ void Display::Update( const std::chrono::steady_clock::time_point& time, bool cp
 
 			Chip8_Debugger::GetInstance()->Render();
 
-			glfwSwapBuffers( window );
+			glfwSwapBuffers( m_oWindow );
 		}
 	}
 	else

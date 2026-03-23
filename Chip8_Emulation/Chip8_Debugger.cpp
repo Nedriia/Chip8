@@ -33,17 +33,16 @@
 #include "Chip8.h"
 #include <iomanip>
 #include <format>
-#include <chrono>
 #include <iostream>
 
 #define NULL_DATA_COLOR IM_COL32( 128,128,128,255 )
 #define CHANGE_DATA_COLOR IM_COL32( 255,0,0,255 )
 #define DEFAULT_DATA_COLOR IM_COL32( 255,255,255,180 )
 
-Chip8_Debugger* Chip8_Debugger::singleton = nullptr;
+Chip8_Debugger* Chip8_Debugger::m_pSingleton = nullptr;
 
 Chip8_Debugger::Chip8_Debugger() :
-	window( nullptr ),
+	m_oWindow( nullptr ),
 	m_pCPU( nullptr ),
 	m_iCycleIndex( 0 )
 {}
@@ -53,7 +52,7 @@ void Chip8_Debugger::Init( GLFWwindow* mainWindow,const Chip8* pCPU )
 	ImVec4 clear_color = ImVec4( 0.45f,0.55f,0.60f,1.00f );
 	float main_scale = ImGui_ImplGlfw_GetContentScaleForMonitor( glfwGetPrimaryMonitor() ); // Valid on GLFW 3.3+ only
 
-	window = mainWindow;
+	m_oWindow = mainWindow;
 	// Setup Dear ImGui context
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -86,7 +85,7 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 	// - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
 	// Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
 	glfwPollEvents();
-	if( glfwGetWindowAttrib( window,GLFW_ICONIFIED ) != 0 )
+	if( glfwGetWindowAttrib( m_oWindow,GLFW_ICONIFIED ) != 0 )
 	{
 		ImGui_ImplGlfw_Sleep( 10 );
 		return;
@@ -298,7 +297,7 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 void Chip8_Debugger::Render()
 {
 	int display_w,display_h;
-	glfwGetFramebufferSize( window,&display_w,&display_h );
+	glfwGetFramebufferSize( m_oWindow,&display_w,&display_h );
 	glViewport( 0,0,display_w,display_h );
 
 	ImGui::Render();

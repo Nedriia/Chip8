@@ -30,26 +30,26 @@ public:
 
 	void Update( const std::chrono::steady_clock::time_point& time, bool cpuPaused, bool& quit );
 
-	const unsigned int& GetTexture() const { return texture; }
-	const unsigned int& GetFBO() const { return FBO; }
-	const uint8_t* GetPixels() const{ return pixels; }
-	const GLFWwindow* GetWindow() const { return window; }
-	const std::chrono::steady_clock::time_point& GetLastTimeUpdate() const { return lastTimeUpdate; }
+	const unsigned int& GetTexture() const { return m_iTexture; }
+	const unsigned int& GetFBO() const { return m_iFBO; }
+	const uint8_t* GetPixels() const{ return m_pPixels; }
+	const GLFWwindow* GetWindow() const { return m_oWindow; }
+	const std::chrono::steady_clock::time_point& GetLastTimeUpdate() const { return m_iLastTimeUpdate; }
 
 	static const uint8_t CHIP8_DISPLAY_WIDTH;
 	static const uint8_t CHIP8_DISPLAY_HEIGHT;
 
 	static Display* GetInstance()
 	{
-		if (singleton == nullptr)
-			singleton = new Display;
-		return singleton;
+		if (m_pSingleton == nullptr)
+			m_pSingleton = new Display;
+		return m_pSingleton;
 	}
 
 private:
 	Display();
 	~Display();
-	static Display* singleton;
+	static Display* m_pSingleton;
 
 	int _CreateWindowChip();
 	void _InitTexture();
@@ -57,22 +57,22 @@ private:
 	void _InitRenderer();
 	void _DestroyRenderer();
 	static void _InitPixelsData();
-	static void _XORedPixelsData( int xPos, int yPos, uint8_t odata );
+	static void _XORedPixelsData( int xPos, int yPos, uint8_t oData );
 	static bool _IsPixelErase( int xPos, int yPos );
 
-	static void framebuffer_size_callback( GLFWwindow* window, int width, int height );
-	void processInput( GLFWwindow* window );
+	static void framebuffer_size_callback( GLFWwindow* m_oWindow, int width, int height );
+	void processInput( GLFWwindow* m_oWindow );
 
-	GLFWwindow* window;
-	Shader shaderProgram;
+	GLFWwindow* m_oWindow;
+	Shader m_sShaderProgram;
 
-	unsigned int texture;	
-	unsigned int VAO;
-	unsigned int VBO;
-	unsigned int EBO;
-	unsigned int FBO;
+	unsigned int m_iTexture;	
+	unsigned int m_iVAO;
+	unsigned int m_iVBO;
+	unsigned int m_iEBO;
+	unsigned int m_iFBO;
 
-	static uint8_t* pixels;
+	static uint8_t* m_pPixels;
 
-	std::chrono::steady_clock::time_point lastTimeUpdate;
+	std::chrono::steady_clock::time_point m_iLastTimeUpdate;
 };

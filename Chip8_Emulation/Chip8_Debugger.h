@@ -15,9 +15,9 @@ public:
 
 	static Chip8_Debugger* GetInstance()
 	{
-		if( singleton == nullptr )
-			singleton = new Chip8_Debugger;
-		return singleton;
+		if( m_pSingleton == nullptr )
+			m_pSingleton = new Chip8_Debugger;
+		return m_pSingleton;
 	}
 	static void ConvertHexToString( std::string& sString,const uint16_t& num,const uint16_t& num2 = 0,const uint16_t& num3 = 0 )
 	{
@@ -36,9 +36,9 @@ private:
 	template< typename T >
 	void FormatDebugData( std::string sText,const char* sFormat, const T& oData );
 
-	static Chip8_Debugger*		singleton;
+	static Chip8_Debugger*		m_pSingleton;
 
-	GLFWwindow*					window;
+	GLFWwindow*					m_oWindow;
 	const Chip8*				m_pCPU;
 	int							m_iCycleIndex;
 };

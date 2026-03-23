@@ -12,9 +12,9 @@
 Chip8::Chip8() :
 	m_iLastOpcode( 0 ),
 	m_oState( RunningState::Pause ),
-	lastTimeUpdate( std::chrono::high_resolution_clock::now() ),
-	lastTimeUpdateTimers( std::chrono::high_resolution_clock::now() ),
-	accumulator( 0.0f ),
+	m_iLastTimeUpdate( std::chrono::high_resolution_clock::now() ),
+	m_iLastTimeUpdateTimers( std::chrono::high_resolution_clock::now() ),
+	m_fAccumulator( 0.0f ),
 	m_sCurrentRomLoaded( nullptr ),
 	m_iCycle( 0 )
 {
@@ -23,13 +23,13 @@ Chip8::Chip8() :
 void Chip8::Init( const KeyAccess& key, const char* sROMToLoad )
 {
 	unsigned timeSeed = std::chrono::steady_clock::now().time_since_epoch().count();
-	rng.seed( timeSeed );
+	m_iRng.seed( timeSeed );
 
 	_LoadFont();
 	_LoadROM( sROMToLoad );
 
-	PC = START_ROM_MEMORY_ADDRESS;
-	SP = 0;
+	m_iPC = START_ROM_MEMORY_ADDRESS;
+	m_iSP = 0;
 }
 
 void Chip8::_Reset()
@@ -37,19 +37,19 @@ void Chip8::_Reset()
 	if( m_sCurrentRomLoaded == nullptr )
 		return;
 
-	I.clear();
-	delay_timer.clear();
-	sound_timer.clear();
-	accumulator = 0.f;
+	m_iI.clear();
+	m_iDelay_timer.clear();
+	m_iSound_timer.clear();
+	m_fAccumulator = 0.f;
 	m_aOpcodeHistory.clear();
 	m_iLastOpcode = 0;
 	m_iCycle = 0;
 
-	for( Data<uint8_t>* it = &memory[ 0 ]; it != &memory[ 0x1000 ]; ++it )
+	for( Data<uint8_t>* it = &m_aMemory[ 0 ]; it != &m_aMemory[ 0x1000 ]; ++it )
 		it->clear();
-	for( Data<uint8_t>* it = &registers[ 0 ]; it != &registers[ 0x10 ]; ++it )
+	for( Data<uint8_t>* it = &m_aRegisters[ 0 ]; it != &m_aRegisters[ 0x10 ]; ++it )
 		it->clear();
-	for( Data<uint16_t>* it = &stack[ 0 ]; it != &stack[ 0x10 ]; ++it )
+	for( Data<uint16_t>* it = &m_aStack[ 0 ]; it != &m_aStack[ 0x10 ]; ++it )
 		it->clear();
 
 	Chip8::KeyAccess oKey;
@@ -60,7 +60,7 @@ void Chip8::_LoadFont()
 {
 	for( uint8_t i = 0; i < 80; ++i )
 	{
-		memory[ START_FONT_MEMORY_ADDRESS + i ] = fontset[ i ];
+		m_aMemory[ START_FONT_MEMORY_ADDRESS + i ] = m_aFontset[ i ];
 	}
 }
 
@@ -94,7 +94,7 @@ void Chip8::_LoadROM( const char* sROMToLoad )
 
 		for( uint16_t i = 0; i < bytesRead; ++i )
 		{
-			memory[ START_ROM_MEMORY_ADDRESS + i ] = static_cast< uint8_t >( memblock[ i ] );
+			m_aMemory[ START_ROM_MEMORY_ADDRESS + i ] = static_cast< uint8_t >( memblock[ i ] );
 		}
 
 		delete[] memblock;
@@ -113,7 +113,7 @@ void Chip8::EmulateCycle( const KeyAccess& key, const std::chrono::steady_clock:
 
 	if( m_oState == RunningState::Pause )
 	{
-		lastTimeUpdate = time;
+		m_iLastTimeUpdate = time;
 		return;
 	}
 
@@ -124,12 +124,12 @@ void Chip8::EmulateCycle( const KeyAccess& key, const std::chrono::steady_clock:
 		bForceNextStep = true;
 	}
 
-	std::chrono::microseconds elapsed = std::chrono::duration_cast< std::chrono::microseconds >( time - lastTimeUpdate );
+	std::chrono::microseconds elapsed = std::chrono::duration_cast< std::chrono::microseconds >( time - m_iLastTimeUpdate );
 	if( elapsed >= refreshTick || bForceNextStep )
 	{
 		float refreshPerFrame = INSTRUCTIONS_PER_FRAME / 60.f;
-		accumulator += refreshPerFrame - std::floor( refreshPerFrame );
-		int opcodePerFrame = std::floor( refreshPerFrame ) + std::floor( accumulator );
+		m_fAccumulator += refreshPerFrame - std::floor( refreshPerFrame );
+		int opcodePerFrame = std::floor( refreshPerFrame ) + std::floor( m_fAccumulator );
 		for( int i = 0; i < opcodePerFrame; ++i )
 		{
 			uint16_t opcode = 0;
@@ -139,20 +139,20 @@ void Chip8::EmulateCycle( const KeyAccess& key, const std::chrono::steady_clock:
 
 			if( bForceNextStep )
 			{
-				accumulator = 0;
+				m_fAccumulator = 0;
 				break;
 			}
 		}
 
-		lastTimeUpdate += refreshTick;
-		accumulator -= std::floor( accumulator );
+		m_iLastTimeUpdate += refreshTick;
+		m_fAccumulator -= std::floor( m_fAccumulator );
 	}
 
-	elapsed = std::chrono::duration_cast< std::chrono::microseconds >( time - lastTimeUpdateTimers );
+	elapsed = std::chrono::duration_cast< std::chrono::microseconds >( time - m_iLastTimeUpdateTimers );
 	if( elapsed >= refreshTick || bForceNextStep )
 	{
 		_UpdateTimers();
-		lastTimeUpdateTimers += refreshTick;
+		m_iLastTimeUpdateTimers += refreshTick;
 	}
 }
 
@@ -163,13 +163,13 @@ void Chip8::AskForState( const KeyAccess& key, RunningState oState ) const
 
 void Chip8::_FetchOpcode( uint16_t& opcode )
 {
-	opcode = memory[ PC ];
-	uint8_t byte2 = memory[ PC + 1 ];
+	opcode = m_aMemory[ m_iPC ];
+	uint8_t byte2 = m_aMemory[ m_iPC + 1 ];
 
 	opcode = opcode << 8;
 	opcode |= byte2;
 
-	PC += 2;
+	m_iPC += 2;
 }
 
 void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
@@ -181,7 +181,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 	uint8_t N = opcode & 0x000F;
 	uint8_t X = ( opcode & 0x0F00 ) >> 8;
 	uint8_t Y = ( opcode & 0x00F0 ) >> 4;
-	Data < uint8_t>& VF = registers[ 15 ];
+	Data < uint8_t>& VF = m_aRegisters[ 15 ];
 
 	uint16_t opcodeNibble = opcode & 0xF000;
 	switch( opcodeNibble )
@@ -201,10 +201,10 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 			OpcodeInstruct = std::format( "{:04X} : RET",opcode );
 
 			//Returns from a subroutine
-			PC = stack[ SP ];
-			stack[ SP ] = 0;
-			if( SP != 0 )
-				--SP;
+			m_iPC = m_aStack[ m_iSP ];
+			m_aStack[ m_iSP ] = 0;
+			if( m_iSP != 0 )
+				--m_iSP;
 		}
 		else
 		{
@@ -217,19 +217,19 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		OpcodeInstruct = std::format( "{:04X} : JMP",opcode );
 
 		//Jumps to address NNN
-		PC = NNN;
+		m_iPC = NNN;
 	}
 	break;
 	case 0x2000:
 	{
-		if( stack[ 0 ] != 0 ) //could be simplier to use int and init the value to -1 but I want to keep 0 as start
-			++SP;
+		if( m_aStack[ 0 ] != 0 ) //could be simplier to use int and init the value to -1 but I want to keep 0 as start
+			++m_iSP;
 
 		OpcodeInstruct = std::format( "{:04X} : CALL",opcode );
 
 		//Calls subroutine at NNN
-		stack[ SP ] = PC;
-		PC = NNN;
+		m_aStack[ m_iSP ] = m_iPC;
+		m_iPC = NNN;
 	}
 	break;
 	case 0x3000:
@@ -237,8 +237,8 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		OpcodeInstruct = std::format( "{:04X} : SE VX, NN",opcode );
 
 		//Skips the next instruction if VX equals NN (usually the next instruction is a jump to skip a code block)
-		if( registers[ X ] == NN )
-			PC += 2;
+		if( m_aRegisters[ X ] == NN )
+			m_iPC += 2;
 	}
 	break;
 	case 0x4000:
@@ -246,8 +246,8 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		OpcodeInstruct = std::format( "{:04X} : SNE VX, NN",opcode );
 
 		//Skips the next instruction if VX does not equal NN (usually the next instruction is a jump to skip a code block).
-		if( registers[ X ] != NN )
-			PC += 2;
+		if( m_aRegisters[ X ] != NN )
+			m_iPC += 2;
 	}
 	break;
 	case 0x5000:
@@ -255,8 +255,8 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		OpcodeInstruct = std::format( "{:04X} : SE VX, VY",opcode );
 
 		//Skips the next instruction if VX equals VY (usually the next instruction is a jump to skip a code block).
-		if( registers[ X ] == registers[ Y ] )
-			PC += 2;
+		if( m_aRegisters[ X ] == m_aRegisters[ Y ] )
+			m_iPC += 2;
 	}
 	break;
 	case 0x6000:
@@ -264,7 +264,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		OpcodeInstruct = std::format( "{:04X} : LD VX, NN",opcode );
 
 		//Sets NN To VX
-		registers[ X ] = NN;
+		m_aRegisters[ X ] = NN;
 	}
 	break;
 	case 0x7000:
@@ -272,7 +272,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		OpcodeInstruct = std::format( "{:04X} : ADD VX, NN",opcode );
 
 		//Adds NN to VX (carry flag is not changed).
-		registers[ X ] += NN;
+		m_aRegisters[ X ] += NN;
 	}
 	break;
 	case 0x8000:
@@ -284,7 +284,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 			OpcodeInstruct = std::format( "{:04X} : LD VX, VY",opcode );
 
 			//Sets VX to the value of VY.
-			registers[ X ] = registers[ Y ];
+			m_aRegisters[ X ] = m_aRegisters[ Y ];
 		}
 		break;
 		case 1:
@@ -292,7 +292,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 			OpcodeInstruct = std::format( "{:04X} : OR VX, VY",opcode );
 
 			//Sets VX to VX or VY. (bitwise OR operation)
-			registers[ X ] |= registers[ Y ];
+			m_aRegisters[ X ] |= m_aRegisters[ Y ];
 		}
 		break;
 		case 2:
@@ -300,7 +300,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 			OpcodeInstruct = std::format( "{:04X} : AND VX, VY",opcode );
 
 			//Sets VX to VX and VY. (bitwise AND operation)
-			registers[ X ] &= registers[ Y ];
+			m_aRegisters[ X ] &= m_aRegisters[ Y ];
 		}
 		break;
 		case 3:
@@ -308,7 +308,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 			OpcodeInstruct = std::format( "{:04X} : XOR VX, VY",opcode );
 
 			//Sets VX to VX xor VY
-			registers[ X ] ^= registers[ Y ];
+			m_aRegisters[ X ] ^= m_aRegisters[ Y ];
 		}
 		break;
 		case 4:
@@ -316,8 +316,8 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 			OpcodeInstruct = std::format( "{:04X} : ADD VX, VY ( VF )",opcode );
 
 			//Adds VY to VX
-			uint16_t sum = registers[ X ] + registers[ Y ];
-			registers[ X ] = sum & 0xFF;
+			uint16_t sum = m_aRegisters[ X ] + m_aRegisters[ Y ];
+			m_aRegisters[ X ] = sum & 0xFF;
 			VF = ( sum > 0xFF ) ? 1 : 0;
 			//VF is set to 1 when there's an overflow, and to 0 when there is not.
 		}
@@ -327,8 +327,8 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 			OpcodeInstruct = std::format( "{:04X} : SUB VX, VY ( VF )",opcode );
 
 			//VY is subtracted from VX.
-			uint16_t diff = registers[ X ] - registers[ Y ];
-			registers[ X ] = diff & 0xFF;
+			uint16_t diff = m_aRegisters[ X ] - m_aRegisters[ Y ];
+			m_aRegisters[ X ] = diff & 0xFF;
 			VF = 1;
 			if( diff > 0xFF )
 				VF = 0;
@@ -340,8 +340,8 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 			OpcodeInstruct = std::format( "{:04X} : SHR VX, VY",opcode );
 
 			//If the least - significant bit of Vx is 1, then VF is set to 1, otherwise 0. Then Vx is divided by 2.
-			uint8_t LSB = ( registers[ X ] & 1 );
-			registers[ X ] >>= 1; // OR registers[ X ] = registers[ Y ] >> 1 before 1990
+			uint8_t LSB = ( m_aRegisters[ X ] & 1 );
+			m_aRegisters[ X ] >>= 1; // OR registers[ X ] = registers[ Y ] >> 1 before 1990
 			VF = LSB;
 		}
 		break;
@@ -350,8 +350,8 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 			OpcodeInstruct = std::format( "{:04X} : SUBN VX, VY",opcode );
 
 			//Sets VX equals to VY minus VX.
-			uint16_t diff = registers[ Y ] - registers[ X ];
-			registers[ X ] = diff & 0xFF;
+			uint16_t diff = m_aRegisters[ Y ] - m_aRegisters[ X ];
+			m_aRegisters[ X ] = diff & 0xFF;
 			VF = 1;
 			if( diff > 0xFF )
 				VF = 0;
@@ -363,8 +363,8 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 			OpcodeInstruct = std::format( "{:04X} : SHL VX",opcode );
 
 			// If the most-significant bit of Vx is 1, then VF is set to 1, otherwise to 0. Then Vx is multiplied by 2.
-			uint8_t MSB = ( registers[ X ] & 0x80 ) == 0x80 ? 1 : 0;
-			registers[ X ] <<= 1; // OR registers[ X ] = registers[ Y ] << 1 before 1990
+			uint8_t MSB = ( m_aRegisters[ X ] & 0x80 ) == 0x80 ? 1 : 0;
+			m_aRegisters[ X ] <<= 1; // OR registers[ X ] = registers[ Y ] << 1 before 1990
 			VF = MSB;
 		}
 		break;
@@ -378,8 +378,8 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		OpcodeInstruct = std::format( "{:04X} : SNE VX, VY",opcode );
 
 		//Skips the next instruction if VX does not equal VY. (Usually the next instruction is a jump to skip a code block)
-		if( registers[ X ] != registers[ Y ] )
-			PC += 2;
+		if( m_aRegisters[ X ] != m_aRegisters[ Y ] )
+			m_iPC += 2;
 	}
 	break;
 	case 0xA000:
@@ -387,7 +387,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		OpcodeInstruct = std::format( "{:04X} : LD I, NNN",opcode );
 
 		//Sets I to the address NNN
-		I = NNN;
+		m_iI = NNN;
 	}
 	break;
 	case 0xB000:
@@ -395,7 +395,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		OpcodeInstruct = std::format( "{:04X} : JMP V0, NNN",opcode );
 
 		//Jumps to the address NNN plus V0
-		PC = NNN + registers[ 0 ];
+		m_iPC = NNN + m_aRegisters[ 0 ];
 	}
 	break;
 	case 0xC000:
@@ -404,7 +404,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 
 		//Sets VX to the result of a bitwise and operation on a random number (Typically: 0 to 255) and NN
 		std::uniform_int_distribution<std::mt19937::result_type> dist( 0,255 );
-		registers[ X ] = dist( rng ) & NN;
+		m_aRegisters[ X ] = dist( m_iRng ) & NN;
 	}
 	break;
 	case 0xD000:
@@ -423,7 +423,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		Display::KeyDisplayAccess oKeyDisplay;
 		for( ; iYOffset < N; ++iYOffset )
 		{
-			Display::DrawPixelAtPos( oKeyDisplay, registers[ X ],registers[ Y ] + iYOffset,memory[ I + iYOffset ],bErased );
+			Display::DrawPixelAtPos( oKeyDisplay, m_aRegisters[ X ],m_aRegisters[ Y ] + iYOffset,m_aMemory[ m_iI + iYOffset ],bErased );
 			VF = bErased ? 1 : 0;
 		}
 
@@ -454,7 +454,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 			OpcodeInstruct = std::format( "{:04X} : LD VX, DT",opcode );
 
 			//Sets VX to the value of the delay timer.
-			registers[ X ] = delay_timer;
+			m_aRegisters[ X ] = m_iDelay_timer;
 			break;
 		case 0x0A:
 		{
@@ -467,26 +467,26 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 			OpcodeInstruct = std::format( "{:04X} : LD DT, VX",opcode );
 
 			//Sets the delay timer to VX
-			delay_timer = registers[ X ];
+			m_iDelay_timer = m_aRegisters[ X ];
 			break;
 		case 0x18:
 			OpcodeInstruct = std::format( "{:04X} : LD ST, VX",opcode );
 
 			//Sets the sound timer to VX
-			sound_timer = registers[ X ];
+			m_iSound_timer = m_aRegisters[ X ];
 			break;
 		case 0x1E:
 			OpcodeInstruct = std::format( "{:04X} : ADD I, VX",opcode );
 
 			//Adds VX to I. VF is not affected
-			I += registers[ X ];
+			m_iI += m_aRegisters[ X ];
 			break;
 		case 0x29:
 		{
 			OpcodeInstruct = std::format( "{:04X} : LD I, FONT( VX )",opcode );
 
 			//Sets I to the location of the sprite for the character in VX(only consider the lowest nibble). Characters 0-F (in hexadecimal) are represented by a 4x5 font.
-			I = fontset[ registers[ X ] ];
+			m_iI = m_aFontset[ m_aRegisters[ X ] ];
 		}
 		break;
 		case 0x33:
@@ -494,9 +494,9 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 			OpcodeInstruct = std::format( "{:04X} : BCD VX",opcode );
 
 			//Stores the binary-coded decimal representation of VX, with the hundreds digit in memory at location in I, the tens digit at location I+1, and the ones digit at location I+2
-			memory[ I ] = registers[ X ] / 100;
-			memory[ I + 1 ] = ( registers[ X ] / 10 ) % 10;
-			memory[ I + 2 ] = ( registers[ X ] % 100 ) % 10;
+			m_aMemory[ m_iI ] = m_aRegisters[ X ] / 100;
+			m_aMemory[ m_iI + 1 ] = ( m_aRegisters[ X ] / 10 ) % 10;
+			m_aMemory[ m_iI + 2 ] = ( m_aRegisters[ X ] % 100 ) % 10;
 		}
 		break;
 		case 0x55:
@@ -506,7 +506,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 			//Stores from V0 to VX (including VX) in memory, starting at address I. The offset from I is increased by 1 for each value written, but I itself is left unmodified
 			for( int i = 0; i <= X; ++i )
 			{
-				memory[ I + i ] = registers[ i ];
+				m_aMemory[ m_iI + i ] = m_aRegisters[ i ];
 			}
 		}
 		break;
@@ -517,7 +517,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 			//Fills from V0 to VX (including VX) with values from memory, starting at address I. The offset from I is increased by 1 for each value read, but I itself is left unmodified
 			for( int i = 0; i <= X; ++i )
 			{
-				registers[ i ] = memory[ I + i ];
+				m_aRegisters[ i ] = m_aMemory[ m_iI + i ];
 			}
 		}
 		break;
@@ -536,8 +536,8 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 
 	if( m_iLastOpcode == opcode )
 	{
-		++countBeforeStop;
-		if( countBeforeStop >= 2 )
+		++m_iCountBeforeStop;
+		if( m_iCountBeforeStop >= 2 )
 		{
 			m_oState = RunningState::Pause;
 			return;
@@ -546,17 +546,17 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 	else
 	{
 		m_iLastOpcode = opcode;
-		countBeforeStop = 0;
+		m_iCountBeforeStop = 0;
 	}
 }
 
 void Chip8::_UpdateTimers()
 {
-	if( delay_timer > 0 )
-		--delay_timer;
+	if( m_iDelay_timer > 0 )
+		--m_iDelay_timer;
 
-	if( sound_timer > 0 )
-		--sound_timer;
+	if( m_iSound_timer > 0 )
+		--m_iSound_timer;
 }
 
 void Chip8::_AddOpcodeToHistory( const char* pOpcode )
