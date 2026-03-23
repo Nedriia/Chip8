@@ -73,25 +73,26 @@ public:
 		KeyAccess(){}
 	};
 
-	void Init( const KeyAccess& oKey, const char* sROMToLoad );
-	void EmulateCycle( const KeyAccess& oKey, const std::chrono::steady_clock::time_point& iTime );
-	void AskForState( const KeyAccess& oKey,RunningState oState ) const;
+	void							Init( const KeyAccess& oKey, const char* sROMToLoad );
+	void							EmulateCycle( const KeyAccess& oKey, const std::chrono::steady_clock::time_point& iTime );
+	void							AskForState( const KeyAccess& oKey,RunningState oState ) const;
 
-	const Data< uint16_t>* GetStack() const { return m_aStack; }
-	const Data< uint8_t>* GetMemory() const { return m_aMemory; }
-	const Data< uint8_t>* GetRegisters() const { return m_aRegisters; }
-	const std::deque<std::string>& GetHistoryOpcode() const { return m_aOpcodeHistory; }
+	const Data< uint16_t>*			GetStack() const { return m_aStack; }
+	const Data< uint8_t>*			GetMemory() const { return m_aMemory; }
+	const Data< uint8_t>*			GetRegisters() const { return m_aRegisters; }
+	const std::deque<std::string>&	GetHistoryOpcode() const { return m_aOpcodeHistory; }
 
-	const Data< uint16_t>& GetI() const { return m_iI; }
-	const Data< uint16_t>& GetPC() const { return m_iPC; }
+	const Data< uint16_t>&			GetI() const { return m_iI; }
+	const Data< uint16_t>&			GetPC() const { return m_iPC; }
 
-	const Data< uint8_t>& GetSP() const { return m_iSP; }
-	const Data< uint8_t>& GetDelayTimer() const { return m_iDelay_timer; }
-	const Data< uint8_t>& GetSoundTimer() const { return m_iSound_timer; }
-	int GetCycleId() const { return m_iCycle; }
+	const Data< uint8_t>&			GetSP() const { return m_iSP; }
+	const Data< uint8_t>&			GetDelayTimer() const { return m_iDelay_timer; }
+	const Data< uint8_t>&			GetSoundTimer() const { return m_iSound_timer; }
+	int								GetCycleId() const { return m_iCycle; }
+	int								GetOpcodesLastFrame() const { return m_iOpcodesLastFrame; }
 
-	bool		IsPause() const { return m_oState == RunningState::Pause; }
-	bool		IsRunning() const { return m_oState == RunningState::Running; }
+	bool							IsPause() const { return m_oState == RunningState::Pause; }
+	bool							IsRunning() const { return m_oState == RunningState::Running; }
 
 private:
 	void _Reset( );
@@ -146,4 +147,5 @@ private:
 	float										m_fAccumulator;
 	const char*									m_sCurrentRomLoaded;
 	int											m_iCycle;
+	int											m_iOpcodesLastFrame;
 };

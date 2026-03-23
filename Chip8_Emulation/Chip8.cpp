@@ -1,13 +1,14 @@
 #include "Chip8.h"
 #include <fstream>
 #include <chrono>
+#include <assert.h>
 #include "Display.h"
 
 #define START_FONT_MEMORY_ADDRESS 0x050
 #define START_ROM_MEMORY_ADDRESS 0x200
 #define MEMORY_SIZE 4096
 #define DEFAULT_PARENT_ROM_FOLDER "..\\"
-#define INSTRUCTIONS_PER_FRAME 250.f // keep this as a float, it's use in accumulator [ 100 - 1000 ]
+#define INSTRUCTIONS_PER_SEC 250
 
 Chip8::Chip8() :
 	m_iLastOpcode( 0 ),
@@ -16,7 +17,8 @@ Chip8::Chip8() :
 	m_iLastTimeUpdateTimers( std::chrono::high_resolution_clock::now() ),
 	m_fAccumulator( 0.0f ),
 	m_sCurrentRomLoaded( nullptr ),
-	m_iCycle( 0 )
+	m_iCycle( 0 ),
+	m_iOpcodesLastFrame( 0 )
 {
 }
 
@@ -127,10 +129,13 @@ void Chip8::EmulateCycle( const KeyAccess& key, const std::chrono::steady_clock:
 	std::chrono::microseconds elapsed = std::chrono::duration_cast< std::chrono::microseconds >( time - m_iLastTimeUpdate );
 	if( elapsed >= refreshTick || bForceNextStep )
 	{
-		float refreshPerFrame = INSTRUCTIONS_PER_FRAME / 60.f;
+		float msToSec = ( REFRESH_TICK_MicroSec / 1000000.0f );
+		assert( msToSec != 0.f );
+
+		float refreshPerFrame = INSTRUCTIONS_PER_SEC / ( 1 / msToSec );
 		m_fAccumulator += refreshPerFrame - std::floor( refreshPerFrame );
-		int opcodePerFrame = std::floor( refreshPerFrame ) + std::floor( m_fAccumulator );
-		for( int i = 0; i < opcodePerFrame; ++i )
+		m_iOpcodesLastFrame = std::floor( refreshPerFrame ) + std::floor( m_fAccumulator );
+		for( int i = 0; i < m_iOpcodesLastFrame; ++i )
 		{
 			uint16_t opcode = 0;
 
@@ -139,6 +144,7 @@ void Chip8::EmulateCycle( const KeyAccess& key, const std::chrono::steady_clock:
 
 			if( bForceNextStep )
 			{
+				m_iOpcodesLastFrame = 1;
 				m_fAccumulator = 0;
 				break;
 			}
