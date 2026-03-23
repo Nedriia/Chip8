@@ -44,7 +44,10 @@ Chip8_Debugger* Chip8_Debugger::m_pSingleton = nullptr;
 Chip8_Debugger::Chip8_Debugger() :
 	m_oWindow( nullptr ),
 	m_pCPU( nullptr ),
-	m_iCycleIndex( 0 )
+	m_iCycleIndex( 0 ),
+	m_iRegisterSelected( 0 ),
+	m_iMemorySelected( 0 ),
+	m_iStackSelected( 0 )
 {}
 
 void Chip8_Debugger::Init( GLFWwindow* mainWindow,const Chip8* pCPU )
@@ -112,20 +115,19 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 				const Data<uint8_t>* it = m_pCPU->GetRegisters();
 				if( it != nullptr )
 				{
+					int iIndex = 0;
 					for( int i = 0; i < 0x10; ++i )
 					{
-						ImGui::PushID( i );
 						std::string sText= "V" + std::format( "{:X}:",i );
-						FormatDebugData( sText,"%02X",it[i] );
-						ImGui::PopID();
+						FormatDebugData( sText,"%02X",it[i], m_iRegisterSelected,iIndex );
 					}
 
 					ImGui::NewLine();
-					FormatDebugData( "I :","%#06X",m_pCPU->GetI() );
-					FormatDebugData( "SP:","%#06X",m_pCPU->GetSP() );
-					FormatDebugData( "PC:","%#06X",m_pCPU->GetPC() );
-					FormatDebugData( "DT:","%03X",m_pCPU->GetDelayTimer() );
-					FormatDebugData( "ST:","%03X",m_pCPU->GetSoundTimer() );
+					FormatDebugData( "I :","%#06X",m_pCPU->GetI(),m_iRegisterSelected,iIndex );
+					FormatDebugData( "SP:","%#06X",m_pCPU->GetSP(),m_iRegisterSelected,iIndex );
+					FormatDebugData( "PC:","%#06X",m_pCPU->GetPC(),m_iRegisterSelected,iIndex );
+					FormatDebugData( "DT:","%03X",m_pCPU->GetDelayTimer(),m_iRegisterSelected,iIndex );
+					FormatDebugData( "ST:","%03X",m_pCPU->GetSoundTimer(),m_iRegisterSelected,iIndex );
 				}
 			}
 			ImGui::EndListBox();
@@ -147,12 +149,9 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 				if( it != nullptr )
 				{
 					std::string sAdress;
+					int iIndex = 0;
 					for( int i = 0; i < 0x10; ++i )
-					{
-						ImGui::PushID( i );
-						FormatDebugData( "","%#06X",it[i] );
-						ImGui::PopID();
-					}
+						FormatDebugData( "","%#06X",it[i], m_iStackSelected, iIndex );
 				}
 			}
 			ImGui::EndListBox();
@@ -207,6 +206,7 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 				if( it != nullptr )
 				{
 					std::string sAdress;
+					int iIndex = 0;
 					for( int i = 0; i < 0x1000; i += 0x10 )
 					{
 						sAdress.clear();
@@ -219,15 +219,13 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 						bool is_selected = ( item_selected_idx == i );
 						for( int n = i; n < i + 0x10; ++n )
 						{
-							ImGui::PushID( n );
 							if( n == i + 8 )
 							{
 								ImGui::Text( "-" );
 								ImGui::SameLine();
 							}
-							FormatDebugData( "","%02X",it[ n ] );
+							FormatDebugData( "","%02X",it[ n ], m_iMemorySelected, iIndex );
 							ImGui::SameLine();
-							ImGui::PopID();
 						}
 						ImGui::PopID();
 						ImGui::NewLine();
@@ -306,13 +304,14 @@ void Chip8_Debugger::Render()
 }
 
 template< typename T >
-void Chip8_Debugger::FormatDebugData( std::string sText,const char* sFormat,const T& oData )
+void Chip8_Debugger::FormatDebugData( std::string sText,const char* sFormat,const T& oData,int& iIndexSelectable,int& iIndexPosition )
 {
 	static_assert( std::is_same_v<T,Data<uint8_t>> || std::is_same_v<T,Data<uint16_t>>,"Function is being call with an unsupported type" );
 
 	if( m_pCPU && m_iCycleIndex != m_pCPU->GetCycleId() )
 		oData.SetDataAsDirty();
 
+	ImGui::PushID( iIndexPosition );
 	if( !sText.empty() )
 	{
 		ImGui::Text( sText.c_str() );
@@ -332,6 +331,10 @@ void Chip8_Debugger::FormatDebugData( std::string sText,const char* sFormat,cons
 		snprintf( buffer,sizeof( buffer ),sFormat,val );
 	}
 	
-	ImGui::TextUnformatted( buffer );
+	bool is_selected = ( iIndexSelectable == iIndexPosition );
+	if( ImGui::Selectable( buffer,is_selected ) ){ iIndexSelectable = iIndexPosition; }
+	ImGui::PopID();
+
+	++iIndexPosition;
 	ImGui::PopStyleColor();
 }

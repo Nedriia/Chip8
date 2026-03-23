@@ -34,11 +34,15 @@ public:
 
 private:
 	template< typename T >
-	void FormatDebugData( std::string sText,const char* sFormat, const T& oData );
+	void FormatDebugData( std::string sText,const char* sFormat, const T& oData, int& iIndexSelectable, int& iIndexPosition );
 
 	static Chip8_Debugger*		m_pSingleton;
 
 	GLFWwindow*					m_oWindow;
 	const Chip8*				m_pCPU;
 	int							m_iCycleIndex;
+
+	int							m_iRegisterSelected;
+	int							m_iMemorySelected;
+	int							m_iStackSelected;
 };
