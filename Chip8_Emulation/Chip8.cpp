@@ -569,7 +569,7 @@ void Chip8::_UpdateTimers()
 void Chip8::_AddOpcodeToHistory( const char* pOpcode )
 {
 	//https://github.com/trapexit/chip-8_documentation
-	if( m_aOpcodeHistory.size() >= 0x200 )
+	if( m_aOpcodeHistory.size() >= 0x40 )
 		m_aOpcodeHistory.pop_front();
 
 	m_aOpcodeHistory.push_back( pOpcode );

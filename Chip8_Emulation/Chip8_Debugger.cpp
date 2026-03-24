@@ -61,7 +61,7 @@ void Chip8_Debugger::Init( GLFWwindow* mainWindow,const Chip8* pCPU )
 	ImGui::CreateContext();
 
 	// Setup Dear ImGui style
-	ImGui::StyleColorsDark();
+	ImGui::StyleColorsClassic();
 	//ImGui::StyleColorsLight();
 
 	// Setup scaling
@@ -103,10 +103,7 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
 
-	ImGui::SetNextWindowPos( ImVec2( 0,0 ),ImGuiCond_Always,ImVec2( 0,0 ) );
-	ImGui::SetNextWindowSize( ImVec2( 600,500 ),ImGuiCond_Once );
-	if( ImGui::Begin( "CPU",nullptr,ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
-		ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove ) )
+	if( ImGui::Begin( "CPU",nullptr ) )
 	{
 		if( m_pCPU != nullptr )
 		{
@@ -134,11 +131,8 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 		}
 	}
 	ImGui::End();
-
-	ImGui::SetNextWindowPos( ImVec2( 0,500 ),ImGuiCond_Always,ImVec2( 0,0 ) );
-	ImGui::SetNextWindowSize( ImVec2( 600,500 ),ImGuiCond_Once );
-	if( ImGui::Begin( "Stack",nullptr,ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
-		ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove ) )
+	
+	if( ImGui::Begin( "Stack",nullptr ) )
 	{
 		if( m_pCPU != nullptr )
 		{
@@ -159,17 +153,8 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 	}
 	ImGui::End();
 
+	if( ImGui::Begin( "#ID",nullptr,ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoTitleBar ) )
 	{
-		ImGui::SetNextWindowPos( ImVec2( 600,0 ),ImGuiCond_Always,ImVec2( 0,0 ) );
-		ImGui::SetNextWindowSize( ImVec2( 900,600 ),ImGuiCond_Once );
-		if( ImGui::Begin( "#ID",nullptr,ImGuiWindowFlags_NoTitleBar |
-			ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
-			ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar ) )
-		{
-			ImVec2 avail = ImVec2( ImGui::GetContentRegionAvail().x,ImGui::GetContentRegionAvail().y - 14 );
-			ImGui::Image( ( ImTextureID )( intptr_t )Display::GetInstance()->GetTexture(),avail );
-		}
-
 		float width = ImGui::GetContentRegionAvail().x;
 		const char* titleLeft = "Chip-8 Display";
 
@@ -179,21 +164,20 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 		ImGui::SameLine( width - ImGui::CalcTextSize( textPerfDebug.c_str() ).x );
 		ImGui::TextColored( ImVec4( 0.5f,0.5f,0.5f,1.0f ),"%s",textPerfDebug.c_str() );
 
-		ImGui::End();
+		ImVec2 avail = ImVec2( ImGui::GetContentRegionAvail().x,ImGui::GetContentRegionAvail().y - 14 );
+		ImGui::Image( ( ImTextureID )Display::GetInstance()->GetFBOTexture(),avail,ImVec2( 0.0f,1.0f ),ImVec2( 1.0f,0.0f ) );
 	}
 
-	ImGui::SetNextWindowPos( ImVec2( 600,600 ),ImGuiCond_Always,ImVec2( 0,0 ) );
+	ImGui::End();
+
+	/*ImGui::SetNextWindowPos( ImVec2( 600,600 ),ImGuiCond_Always,ImVec2( 0,0 ) );
 	ImGui::SetNextWindowSize( ImVec2( 300,400 ),ImGuiCond_Once );
 	if( ImGui::Begin( "Inputs",nullptr,ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
 		ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar ) )
 	{
-	}
-	ImGui::End();
-
-	ImGui::SetNextWindowPos( ImVec2( 900,600 ),ImGuiCond_Always,ImVec2( 0,0 ) );
-	ImGui::SetNextWindowSize( ImVec2( 600,400 ),ImGuiCond_Once );
-	if( ImGui::Begin( "Memory",nullptr,ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
-		ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar ) )
+	}*/
+	
+	if( ImGui::Begin( "Memory",nullptr ) )
 	{
 		if( m_pCPU != nullptr )
 		{
@@ -234,11 +218,8 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 		}
 	}
 	ImGui::End();
-
-	ImGui::SetNextWindowPos( ImVec2( 1500,0 ),ImGuiCond_Always,ImVec2( 0,0 ) );
-	ImGui::SetNextWindowSize( ImVec2( 500,1000 ),ImGuiCond_Once );
-	if( ImGui::Begin( "Opcode Decode",nullptr,ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
-		ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove ) )
+	
+	if( ImGui::Begin( "Opcode Decode",nullptr ) )
 	{
 		if( m_pCPU != nullptr )
 		{
@@ -263,7 +244,7 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 				m_pCPU->AskForState( oKey,RunningState::Reset );
 			}
 
-			if( ImGui::BeginListBox( "#",ImVec2( -FLT_MIN,54 * ImGui::GetTextLineHeightWithSpacing() ) ) )
+			if( ImGui::BeginListBox( "#",ImVec2( -FLT_MIN,35 * ImGui::GetTextLineHeightWithSpacing() ) ) )
 			{
 				for( int n = 0; n < m_pCPU->GetHistoryOpcode().size(); ++n )
 				{
@@ -328,9 +309,9 @@ void Chip8_Debugger::FormatDebugData( std::string sText,const char* sFormat,cons
 		uint16_t val = ( uint16_t )oData;
 		snprintf( buffer,sizeof( buffer ),sFormat,val );
 	}
-	
+
 	bool is_selected = ( iIndexSelectable == iIndexPosition );
-	if( ImGui::Selectable( buffer,is_selected ) ){ iIndexSelectable = iIndexPosition; }
+	if( ImGui::Selectable( buffer,is_selected ) ) { iIndexSelectable = iIndexPosition; }
 	ImGui::PopID();
 
 	++iIndexPosition;

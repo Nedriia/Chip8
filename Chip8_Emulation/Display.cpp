@@ -201,6 +201,8 @@ void Display::framebuffer_size_callback( GLFWwindow* m_pWindow,int width,int hei
 	glTexImage2D( GL_TEXTURE_2D,0,GL_RGB,width,height,0,GL_RGB,GL_UNSIGNED_BYTE,NULL );//need to reallocate texture
 
 	glBindTexture( GL_TEXTURE_2D,0 );
+
+	m_bDirtyFrame = true;
 }
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
