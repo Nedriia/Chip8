@@ -30,6 +30,7 @@ public:
 
 	void Update( const std::chrono::steady_clock::time_point& time, bool cpuPaused, bool& quit );
 
+	const unsigned int& GetFBOTexture() const { return m_iFBOTexture; }
 	const unsigned int& GetTexture() const { return m_iTexture; }
 	const unsigned int& GetFBO() const { return m_iFBO; }
 	const uint8_t* GetPixels() const{ return m_pPixels; }
@@ -66,6 +67,7 @@ private:
 	GLFWwindow* m_pWindow;
 	Shader m_sShaderProgram;
 
+	static unsigned int m_iFBOTexture;	
 	unsigned int m_iTexture;	
 	unsigned int m_iVAO;
 	unsigned int m_iVBO;

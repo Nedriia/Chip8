@@ -3,8 +3,8 @@
 #include <iostream>
 
 // settings
-const uint16_t WINDOW_WIDTH = 2000;
-const uint16_t WINDOW_HEIGHT = 1000;
+const uint16_t WINDOW_WIDTH = 1230;
+const uint16_t WINDOW_HEIGHT = 720;
 
 const uint8_t Display::CHIP8_DISPLAY_WIDTH = 64;
 const uint8_t Display::CHIP8_DISPLAY_HEIGHT = 32;
@@ -12,6 +12,7 @@ const uint8_t Display::CHIP8_DISPLAY_HEIGHT = 32;
 uint8_t* Display::m_pPixels = nullptr;
 bool Display::m_bDirtyFrame = false;
 Display* Display::m_pSingleton = nullptr;
+unsigned int Display::m_iFBOTexture = 0;
 
 float vertices[] = {
 	// positions		//Texture coords
@@ -60,10 +61,10 @@ int Display::Init( const KeyDisplayAccess& oKey,const Chip8* pCpu )
 	glfwWindowHint( GLFW_OPENGL_PROFILE,GLFW_OPENGL_CORE_PROFILE );
 
 	_CreateWindowChip();
-	//_InitRenderer(); //No more need since we are using FBO and rendering in ImGui Image
+	_InitRenderer();
 	m_pPixels = new uint8_t[ CHIP8_DISPLAY_WIDTH * CHIP8_DISPLAY_HEIGHT ];
-	_InitTexture();
-	//_InitFramebuffer();
+	_InitPixelsData();
+	_InitFramebuffer();
 
 	Chip8_Debugger::GetInstance()->Init( m_pWindow,pCpu );
 
@@ -97,21 +98,36 @@ int Display::_CreateWindowChip()
 
 void Display::_InitTexture()
 {
+	glGenTextures( 1,&m_iFBOTexture );
+	glBindTexture( GL_TEXTURE_2D,m_iFBOTexture );
+
+	glTexImage2D( GL_TEXTURE_2D,0,GL_RGB,WINDOW_WIDTH,WINDOW_HEIGHT,0,GL_RGB,GL_UNSIGNED_BYTE,NULL );
+
+	glTexParameteri( GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR );
+	glTexParameteri( GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR );
+
+	glBindTexture( GL_TEXTURE_2D,0 );
+	glFramebufferTexture2D( GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,GL_TEXTURE_2D,m_iFBOTexture,0 );
+	//*-------------------------------------------------------------------------------------------------*//
 	glGenTextures( 1,&m_iTexture );
 	glBindTexture( GL_TEXTURE_2D,m_iTexture );
+
+	glTexImage2D( GL_TEXTURE_2D,0,GL_R8,CHIP8_DISPLAY_WIDTH,CHIP8_DISPLAY_HEIGHT,0,GL_RED,GL_UNSIGNED_BYTE,NULL );
 
 	glTexParameteri( GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST );
 	glTexParameteri( GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST );
 
-	_InitPixelsData();
-	glTexImage2D( GL_TEXTURE_2D,0,GL_R8,CHIP8_DISPLAY_WIDTH,CHIP8_DISPLAY_HEIGHT,0,GL_RED,GL_UNSIGNED_BYTE,m_pPixels );
+	glBindTexture( GL_TEXTURE_2D,0 );
 }
 
 void Display::_InitFramebuffer()
 {
 	glGenFramebuffers( 1,&m_iFBO );
 	glBindFramebuffer( GL_FRAMEBUFFER,m_iFBO );
-	glFramebufferTexture2D( GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,GL_TEXTURE_2D,m_iTexture,0 ); //bind texture to framebuffer
+
+	_InitTexture();
+
+	glBindFramebuffer( GL_FRAMEBUFFER,0 );
 
 	if( glCheckFramebufferStatus( GL_FRAMEBUFFER ) != GL_FRAMEBUFFER_COMPLETE )
 		std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
@@ -179,6 +195,12 @@ void Display::framebuffer_size_callback( GLFWwindow* m_pWindow,int width,int hei
 	// make sure the viewport matches the new window dimensions; note that width and 
 	// height will be significantly larger than specified on retina displays.
 	glViewport( 0,0,width,height );
+
+	glBindTexture( GL_TEXTURE_2D,m_iFBOTexture );
+
+	glTexImage2D( GL_TEXTURE_2D,0,GL_RGB,width,height,0,GL_RGB,GL_UNSIGNED_BYTE,NULL );//need to reallocate texture
+
+	glBindTexture( GL_TEXTURE_2D,0 );
 }
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
@@ -194,9 +216,11 @@ void Display::DestroyWindow( const KeyDisplayAccess& oKey )
 	// glfw: terminate, clearing all previously allocated GLFW resources.
 	// ------------------------------------------------------------------
 	glDeleteTextures( 1,&m_iTexture );
+	glDeleteTextures( 1,&m_iFBOTexture );
 	_DestroyRenderer();
 
 	m_iTexture = 0;
+	m_iFBOTexture = 0;
 	m_iVAO = 0;
 	m_iVBO = 0;
 	m_iEBO = 0;
@@ -244,7 +268,7 @@ void Display::Update( const std::chrono::steady_clock::time_point& time,bool cpu
 		{
 			int updateThisFrame = 0;
 			const int maxUpdatePerFrame = 5; //could go up to 8 frame to catch up ( 133 ms )
-			if( elapsed > ( refreshTick * maxUpdatePerFrame ) )// too much to catch up
+			if( elapsed >= ( refreshTick * maxUpdatePerFrame ) )// too much to catch up
 			{
 				m_iLastTimeUpdate = time;
 				elapsed = std::chrono::microseconds( 0 );
@@ -264,15 +288,23 @@ void Display::Update( const std::chrono::steady_clock::time_point& time,bool cpu
 			glClearColor( 0.f,0.f,0.f,1.f );
 			glClear( GL_COLOR_BUFFER_BIT );
 
-			Chip8_Debugger::GetInstance()->Update( startElapsed );
-			Chip8_Debugger::GetInstance()->Render();
-
 			if( m_bDirtyFrame )
 			{
+				glBindFramebuffer( GL_FRAMEBUFFER,m_iFBO );
+
 				glBindTexture( GL_TEXTURE_2D,m_iTexture );
 				glTexSubImage2D( GL_TEXTURE_2D,0,0,0,CHIP8_DISPLAY_WIDTH,CHIP8_DISPLAY_HEIGHT,GL_RED,GL_UNSIGNED_BYTE,m_pPixels );
+				
+				m_sShaderProgram.Use();
+				glDrawElements( GL_TRIANGLES,6,GL_UNSIGNED_INT,0 );
+
+				glBindFramebuffer( GL_FRAMEBUFFER,0 );
+
 				m_bDirtyFrame = false;
 			}
+
+			Chip8_Debugger::GetInstance()->Update( startElapsed );
+			Chip8_Debugger::GetInstance()->Render();
 
 			glfwSwapBuffers( m_pWindow );
 		}

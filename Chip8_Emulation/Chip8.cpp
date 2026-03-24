@@ -8,12 +8,12 @@
 #define START_ROM_MEMORY_ADDRESS 0x200
 #define MEMORY_SIZE 4096
 #define DEFAULT_PARENT_ROM_FOLDER "..\\"
-#define INSTRUCTIONS_PER_SEC 250
+#define INSTRUCTIONS_PER_SEC 750
 
 Chip8::Chip8() :
 	m_iLastOpcode( 0 ),
 	m_iCountBeforeStop( 0 ),
-	m_oState( RunningState::Pause ),
+	m_oState( RunningState::Running ),
 	m_iLastTimeUpdate( std::chrono::high_resolution_clock::now() ),
 	m_iLastTimeUpdateTimers( std::chrono::high_resolution_clock::now() ),
 	m_fAccumulator( 0.0f ),

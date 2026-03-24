@@ -4,10 +4,12 @@ out vec4 FragColor;
 in vec2 TexCoord;
 
 uniform sampler2D oTexture;
+vec3 bgColor = vec3( 0.67,0.27,0.0 );
+vec3 fontColor = vec3( 1.0,0.67,0.0 );
 
 void main()
 {
-	//FragColor = vec4( oColor, 1.0f );
 	float v = texture( oTexture, TexCoord ).r;
-	FragColor = vec4( v, v, v, 1.0 );/* * vec4( oColor, 1.0f )*/;
+	vec3 color = mix( bgColor, fontColor, v );
+	FragColor = vec4( color, 1.0 );
 }
