@@ -3,23 +3,26 @@
 #include <chrono>
 #include <assert.h>
 #include "Display.h"
+#include <iostream>
+#include "Input.h"
 
 #define START_FONT_MEMORY_ADDRESS 0x050
 #define START_ROM_MEMORY_ADDRESS 0x200
 #define MEMORY_SIZE 4096
-#define DEFAULT_PARENT_ROM_FOLDER "..\\"
+#define DEFAULT_PARENT_ROM_FOLDER "..\\Roms\\"
 #define INSTRUCTIONS_PER_SEC 750
 
 Chip8::Chip8() :
 	m_iLastOpcode( 0 ),
 	m_iCountBeforeStop( 0 ),
-	m_oState( RunningState::Running ),
+	m_oState( RunningState::Pause ),
 	m_iLastTimeUpdate( std::chrono::high_resolution_clock::now() ),
 	m_iLastTimeUpdateTimers( std::chrono::high_resolution_clock::now() ),
 	m_fAccumulator( 0.0f ),
 	m_sCurrentRomLoaded( nullptr ),
 	m_iCycle( 0 ),
-	m_iOpcodesLastFrame( 0 )
+	m_iOpcodesLastFrame( 0 ),
+	m_iPreviousKeyPressed( 0xFF )
 {
 }
 
@@ -103,6 +106,10 @@ void Chip8::_LoadROM( const char* sROMToLoad )
 		delete[] memblock;
 
 		m_sCurrentRomLoaded = sROMToLoad;
+	}
+	else
+	{
+		std::cout << "ERROR::CHIP8::LOADING::FILE_NOT_FOUND " << sROMToLoad << std::endl;
 	}
 }
 
@@ -444,12 +451,16 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 			OpcodeInstruct = std::format( "{:04X} : SKP",opcode );
 
 			//Skips the next instruction if the key stored in VX(only consider the lowest nibble) is pressed (usually the next instruction is a jump to skip a code block).
+			if( Input::GetInstance()->GetKeyState( m_aRegisters[ X ] ) )
+				m_iPC += 2;
 		}
 		else if( check == 0xA1 )
 		{
 			OpcodeInstruct = std::format( "{:04X} : SKNP",opcode );
 
 			//Skips the next instruction if the key stored in VX(only consider the lowest nibble) is not pressed (usually the next instruction is a jump to skip a code block).
+			if( !Input::GetInstance()->GetKeyState( m_aRegisters[ X ] ) )
+				m_iPC += 2;
 		}
 	}
 	break;
@@ -468,6 +479,21 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 			OpcodeInstruct = std::format( "{:04X} : LD VX, KEY",opcode );
 
 			//A key press is awaited, and then stored in VX (blocking operation, all instruction halted until next key event, delay and sound timers should continue processing)
+			if( Input::GetInstance() )
+			{
+				if( m_iPreviousKeyPressed != 0xFF && Input::GetInstance()->GetKeyState( m_iPreviousKeyPressed ) == 0 )//Previous Input has been released
+				{
+					m_aRegisters[ X ] = m_iPreviousKeyPressed;
+					m_iPreviousKeyPressed = 0xFF;
+				}
+				else
+				{
+					m_iPreviousKeyPressed = Input::GetInstance()->IsAnyKeyPress();
+					m_iPC -= 2;
+				}
+			}
+			else
+				m_iPC -= 2;
 		}
 		break;
 		case 0x15:
@@ -541,7 +567,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 	if( !OpcodeInstruct.empty() )
 		_AddOpcodeToHistory( OpcodeInstruct.c_str() );
 
-	if( m_iLastOpcode == opcode )
+	if( opcode == m_iLastOpcode && ( opcode & 0xF000 ) == 0x1000 )//JMP instruction
 	{
 		++m_iCountBeforeStop;
 		if( m_iCountBeforeStop >= 2 )

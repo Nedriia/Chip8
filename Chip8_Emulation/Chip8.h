@@ -21,6 +21,7 @@ public:
 	Data& operator=( const Data& rhs ){ return Update( [ & ] { oData = rhs.oData; } ); }
 	Data& operator=( const T& rhs ){ return Update( [ & ] { oData = rhs; } ); }
 	Data& operator+=( const T& rhs ){ return Update( [ & ] { oData += rhs; } ); }
+	Data& operator-=( const T& rhs ){ return Update( [ & ] { oData -= rhs; } ); }
 	Data& operator--(){ return Update( [ & ] { --oData; } ); }
 	Data& operator++(){ return Update( [ & ] { ++oData; } ); }
 	Data& operator|=( const T& rhs ){ return Update( [ & ] { oData |= rhs; } ); }
@@ -110,7 +111,7 @@ private:
 	Data<uint16_t> m_aStack[ 0x10 ];
 	Data<uint8_t> m_iSP; //Stack pointer
 	Data<uint16_t> m_iPC; //Program counter
-
+	
 	uint16_t m_iLastOpcode;
 	uint8_t m_iCountBeforeStop;
 
@@ -148,4 +149,5 @@ private:
 	const char*									m_sCurrentRomLoaded;
 	int											m_iCycle;
 	int											m_iOpcodesLastFrame;
+	uint8_t										m_iPreviousKeyPressed;
 };

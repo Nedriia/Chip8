@@ -28,13 +28,13 @@ public:
 	static void DrawPixelAtPos( const KeyDisplayAccess& oKey, uint8_t xPos,uint8_t yPos,uint8_t oValue,bool& bErased );
 	void DestroyWindow( const KeyDisplayAccess& oKey );
 
-	void Update( const std::chrono::steady_clock::time_point& time, bool cpuPaused, bool& quit );
+	void Update( const std::chrono::steady_clock::time_point& time, bool cpuPaused );
 
 	const unsigned int& GetFBOTexture() const { return m_iFBOTexture; }
 	const unsigned int& GetTexture() const { return m_iTexture; }
 	const unsigned int& GetFBO() const { return m_iFBO; }
 	const uint8_t* GetPixels() const{ return m_pPixels; }
-	const GLFWwindow* GetWindow() const { return m_pWindow; }
+	GLFWwindow* GetWindow() const { return m_pWindow; }
 	const std::chrono::steady_clock::time_point& GetLastTimeUpdate() const { return m_iLastTimeUpdate; }
 
 	static const uint8_t CHIP8_DISPLAY_WIDTH;
@@ -62,7 +62,6 @@ private:
 	static bool _IsPixelErase( int xPos, int yPos );
 
 	static void framebuffer_size_callback( GLFWwindow* m_pWindow, int width, int height );
-	void processInput( GLFWwindow* m_pWindow );
 
 	GLFWwindow* m_pWindow;
 	Shader m_sShaderProgram;

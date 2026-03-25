@@ -205,14 +205,6 @@ void Display::framebuffer_size_callback( GLFWwindow* m_pWindow,int width,int hei
 	m_bDirtyFrame = true;
 }
 
-// process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
-// ---------------------------------------------------------------------------------------------------------
-void Display::processInput( GLFWwindow* m_pWindow )
-{
-	if( glfwGetKey( m_pWindow,GLFW_KEY_ESCAPE ) == GLFW_PRESS )
-		glfwSetWindowShouldClose( m_pWindow,true );
-}
-
 void Display::DestroyWindow( const KeyDisplayAccess& oKey )
 {
 	// glfw: terminate, clearing all previously allocated GLFW resources.
@@ -258,60 +250,52 @@ void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xPos,uint8_t 
 	}
 }
 
-void Display::Update( const std::chrono::steady_clock::time_point& time,bool cpuPaused,bool& quit )
+void Display::Update( const std::chrono::steady_clock::time_point& time,bool cpuPaused )
 {
 	// render loop
 	// -----------
-	if( !glfwWindowShouldClose( m_pWindow ) )
+	std::chrono::microseconds elapsed = std::chrono::duration_cast< std::chrono::microseconds >( time - m_iLastTimeUpdate );
+	std::chrono::microseconds startElapsed = elapsed;
+	if( elapsed >= refreshTick )
 	{
-		std::chrono::microseconds elapsed = std::chrono::duration_cast< std::chrono::microseconds >( time - m_iLastTimeUpdate );
-		std::chrono::microseconds startElapsed = elapsed;
-		if( elapsed >= refreshTick )
+		int updateThisFrame = 0;
+		const int maxUpdatePerFrame = 5; //could go up to 8 frame to catch up ( 133 ms )
+		if( elapsed >= ( refreshTick * maxUpdatePerFrame ) )// too much to catch up
 		{
-			int updateThisFrame = 0;
-			const int maxUpdatePerFrame = 5; //could go up to 8 frame to catch up ( 133 ms )
-			if( elapsed >= ( refreshTick * maxUpdatePerFrame ) )// too much to catch up
-			{
-				m_iLastTimeUpdate = time;
-				elapsed = std::chrono::microseconds( 0 );
-				return;
-			}
-
-			processInput( m_pWindow );
-
-			while( elapsed >= refreshTick && updateThisFrame < maxUpdatePerFrame )
-			{
-				m_iLastTimeUpdate += refreshTick;
-				++updateThisFrame;
-
-				elapsed = std::chrono::duration_cast< std::chrono::microseconds >( time - m_iLastTimeUpdate );
-			}
-
-			glClearColor( 0.f,0.f,0.f,1.f );
-			glClear( GL_COLOR_BUFFER_BIT );
-
-			if( m_bDirtyFrame )
-			{
-				glBindFramebuffer( GL_FRAMEBUFFER,m_iFBO );
-
-				glBindTexture( GL_TEXTURE_2D,m_iTexture );
-				glTexSubImage2D( GL_TEXTURE_2D,0,0,0,CHIP8_DISPLAY_WIDTH,CHIP8_DISPLAY_HEIGHT,GL_RED,GL_UNSIGNED_BYTE,m_pPixels );
-				
-				m_sShaderProgram.Use();
-				glDrawElements( GL_TRIANGLES,6,GL_UNSIGNED_INT,0 );
-
-				glBindFramebuffer( GL_FRAMEBUFFER,0 );
-
-				m_bDirtyFrame = false;
-			}
-
-			Chip8_Debugger::GetInstance()->Update( startElapsed );
-			Chip8_Debugger::GetInstance()->Render();
-
-			glfwSwapBuffers( m_pWindow );
+			m_iLastTimeUpdate = time;
+			elapsed = std::chrono::microseconds( 0 );
+			return;
 		}
-		glfwPollEvents();
+
+		while( elapsed >= refreshTick && updateThisFrame < maxUpdatePerFrame )
+		{
+			m_iLastTimeUpdate += refreshTick;
+			++updateThisFrame;
+
+			elapsed = std::chrono::duration_cast< std::chrono::microseconds >( time - m_iLastTimeUpdate );
+		}
+
+		glClearColor( 0.f,0.f,0.f,1.f );
+		glClear( GL_COLOR_BUFFER_BIT );
+
+		if( m_bDirtyFrame )
+		{
+			glBindFramebuffer( GL_FRAMEBUFFER,m_iFBO );
+
+			glBindTexture( GL_TEXTURE_2D,m_iTexture );
+			glTexSubImage2D( GL_TEXTURE_2D,0,0,0,CHIP8_DISPLAY_WIDTH,CHIP8_DISPLAY_HEIGHT,GL_RED,GL_UNSIGNED_BYTE,m_pPixels );
+
+			m_sShaderProgram.Use();
+			glDrawElements( GL_TRIANGLES,6,GL_UNSIGNED_INT,0 );
+
+			glBindFramebuffer( GL_FRAMEBUFFER,0 );
+
+			m_bDirtyFrame = false;
+		}
+
+		Chip8_Debugger::GetInstance()->Update( startElapsed );
+		Chip8_Debugger::GetInstance()->Render();
+
+		glfwSwapBuffers( m_pWindow );
 	}
-	else
-		quit = true;
 }

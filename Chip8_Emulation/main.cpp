@@ -2,6 +2,7 @@
 #include <windows.h>
 #include "Display.h"
 #include <chrono>
+#include "Input.h"
 
 static Chip8 m_oChip8;
 
@@ -26,7 +27,7 @@ int main( int argc,char* argv[] )
 
 	m_oChip8.Init( oKey,sROMToLoad );
 
-	if( Display::GetInstance()->Init( oKeyDisplay, &m_oChip8 ) == -1 )
+	if( Display::GetInstance()->Init( oKeyDisplay,&m_oChip8 ) == -1 )
 		return Quit();
 
 	//Loop
@@ -37,7 +38,8 @@ int main( int argc,char* argv[] )
 		std::chrono::steady_clock::time_point time = std::chrono::high_resolution_clock::now();
 
 		m_oChip8.EmulateCycle( oKey,time );
-		Display::GetInstance()->Update( time,m_oChip8.IsPause(),quit );
+		Input::GetInstance()->ProcessInput( time,quit );
+		Display::GetInstance()->Update( time,m_oChip8.IsPause() );
 	}
 
 	Quit();
