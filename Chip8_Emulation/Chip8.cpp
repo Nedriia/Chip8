@@ -13,16 +13,19 @@
 #define INSTRUCTIONS_PER_SEC 750
 
 Chip8::Chip8() :
-	m_iLastOpcode( 0 ),
-	m_iCountBeforeStop( 0 ),
-	m_oState( RunningState::Pause ),
-	m_iLastTimeUpdate( std::chrono::high_resolution_clock::now() ),
-	m_iLastTimeUpdateTimers( std::chrono::high_resolution_clock::now() ),
-	m_fAccumulator( 0.0f ),
-	m_sCurrentRomLoaded( nullptr ),
-	m_iCycle( 0 ),
-	m_iOpcodesLastFrame( 0 ),
-	m_iPreviousKeyPressed( 0xFF )
+	m_iLastOpcode( 0 )
+	,m_iCountBeforeStop( 0 )
+	,m_oState( RunningState::Pause )
+	,m_iLastTimeUpdate( std::chrono::steady_clock::now() )
+	,m_iLastTimeUpdateTimers( std::chrono::steady_clock::now() )
+	,m_fAccumulator( 0.0f )
+	,m_sCurrentRomLoaded( nullptr )
+	,m_iCycle( 0 )
+	,m_iOpcodesLastFrame( 0 )
+	,m_iPreviousKeyPressed( 0xFF )
+#ifdef QUIRK_DISPWAIT
+	,m_iTimeLastFrame{}
+#endif
 {
 }
 
@@ -152,7 +155,6 @@ void Chip8::EmulateCycle( const KeyAccess& key, const std::chrono::steady_clock:
 
 			if( bForceNextStep )
 			{
-				m_iOpcodesLastFrame = 1;
 				m_fAccumulator = 0;
 				break;
 			}
@@ -307,6 +309,9 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 
 			//Sets VX to VX or VY. (bitwise OR operation)
 			m_aRegisters[ X ] |= m_aRegisters[ Y ];
+#ifdef QUIRK_VFRESET
+			VF = 0;
+#endif
 		}
 		break;
 		case 2:
@@ -315,6 +320,9 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 
 			//Sets VX to VX and VY. (bitwise AND operation)
 			m_aRegisters[ X ] &= m_aRegisters[ Y ];
+#ifdef QUIRK_VFRESET
+			VF = 0;
+#endif
 		}
 		break;
 		case 3:
@@ -323,6 +331,9 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 
 			//Sets VX to VX xor VY
 			m_aRegisters[ X ] ^= m_aRegisters[ Y ];
+#ifdef QUIRK_VFRESET
+			VF = 0;
+#endif
 		}
 		break;
 		case 4:
@@ -423,8 +434,6 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 	break;
 	case 0xD000:
 	{
-		OpcodeInstruct = std::format( "{:04X} : DRW VX, VY",opcode );
-
 		/*Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision.
 		The interpreter reads N bytes from memory, starting at the address stored in I.
 		These bytes are then displayed as sprites on screen at coordinates (Vx, Vy). Sprites are XORed onto the existing screen.
@@ -433,6 +442,29 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		I value does not change after the execution of this instruction*/
 		bool bErased = false;
 		uint8_t iYOffset = 0;
+
+#ifdef QUIRK_DISPWAIT
+		OpcodeInstruct = std::format( "{:04X} : DRW VX, VY VBlank",opcode );
+
+		//VBlank, waiting for next frame
+		if( m_iTimeLastFrame.time_since_epoch().count() == 0 )
+		{
+			m_iTimeLastFrame = m_iLastTimeUpdateTimers;
+			m_iPC -= 2;
+			break;
+		}
+		else if( m_iLastTimeUpdateTimers >= ( m_iTimeLastFrame + refreshTick ) )
+		{
+			m_iTimeLastFrame = {};
+		}
+		else
+		{
+			m_iPC -= 2;
+			break;
+		}
+#else
+		OpcodeInstruct = std::format( "{:04X} : DRW VX, VY",opcode );
+#endif
 
 		Display::KeyDisplayAccess oKeyDisplay;
 		for( ; iYOffset < N; ++iYOffset )
@@ -539,7 +571,12 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 			//Stores from V0 to VX (including VX) in memory, starting at address I. The offset from I is increased by 1 for each value written, but I itself is left unmodified
 			for( int i = 0; i <= X; ++i )
 			{
-				m_aMemory[ m_iI + i ] = m_aRegisters[ i ];
+#ifdef QUIRK_MEMORY
+				m_aMemory[ m_iI ] = m_aRegisters[ i ];
+				++m_iI;
+#else
+				m_aMemory[ m_iI + i ] = m_aRegisters[ i ];	
+#endif
 			}
 		}
 		break;
@@ -550,7 +587,12 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 			//Fills from V0 to VX (including VX) with values from memory, starting at address I. The offset from I is increased by 1 for each value read, but I itself is left unmodified
 			for( int i = 0; i <= X; ++i )
 			{
+#ifdef QUIRK_MEMORY
+				m_aRegisters[ i ] = m_aMemory[ m_iI ];
+				++m_iI;
+#else
 				m_aRegisters[ i ] = m_aMemory[ m_iI + i ];
+#endif
 			}
 		}
 		break;
@@ -567,7 +609,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 	if( !OpcodeInstruct.empty() )
 		_AddOpcodeToHistory( OpcodeInstruct.c_str() );
 
-	if( opcode == m_iLastOpcode && ( opcode & 0xF000 ) == 0x1000 )//JMP instruction
+	if( opcode == m_iLastOpcode && opcodeNibble == 0x1000 )//JMP instruction
 	{
 		++m_iCountBeforeStop;
 		if( m_iCountBeforeStop >= 2 )

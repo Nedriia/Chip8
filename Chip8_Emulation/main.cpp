@@ -35,7 +35,7 @@ int main( int argc,char* argv[] )
 
 	while( !quit )
 	{
-		std::chrono::steady_clock::time_point time = std::chrono::high_resolution_clock::now();
+		std::chrono::steady_clock::time_point time = std::chrono::steady_clock::now();
 
 		m_oChip8.EmulateCycle( oKey,time );
 		Input::GetInstance()->ProcessInput( time,quit );

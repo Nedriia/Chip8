@@ -8,7 +8,7 @@ Input* Input::m_pSingleton = nullptr;
 Input::Input()
 	:
 	m_aInputs{ 0 },
-	m_iLastTimeUpdate( std::chrono::high_resolution_clock::now() )
+	m_iLastTimeUpdate( std::chrono::steady_clock::now() )
 {
 }
 

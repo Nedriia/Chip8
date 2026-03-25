@@ -12,6 +12,16 @@ enum class RunningState
 	Reset
 };
 
+//#define QUIRKS
+#if defined( QUIRKS )
+	#define QUIRK_VFRESET
+	#define QUIRK_MEMORY
+	#define QUIRK_DISPWAIT
+	#define QUIRK_CLIPPING
+	#define QUIRK_SHIFTING
+	#define QUIRK_JUMPING
+#endif
+
 template< typename T>
 struct Data
 {
@@ -144,10 +154,13 @@ private:
 
 	mutable RunningState						m_oState;
 	std::chrono::steady_clock::time_point		m_iLastTimeUpdate;
-	std::chrono::steady_clock::time_point		m_iLastTimeUpdateTimers;
+	std::chrono::steady_clock::time_point		m_iLastTimeUpdateTimers; //Refresh with display's rate
 	float										m_fAccumulator;
 	const char*									m_sCurrentRomLoaded;
 	int											m_iCycle;
 	int											m_iOpcodesLastFrame;
 	uint8_t										m_iPreviousKeyPressed;
+#ifdef QUIRK_DISPWAIT
+	std::chrono::steady_clock::time_point		m_iTimeLastFrame;
+#endif
 };

@@ -34,7 +34,7 @@ Display::Display() :
 	m_iVBO( 0 ),
 	m_iEBO( 0 ),
 	m_iFBO( 0 ),
-	m_iLastTimeUpdate( std::chrono::high_resolution_clock::now() )
+	m_iLastTimeUpdate( std::chrono::steady_clock::now() )
 {
 }
 
@@ -178,8 +178,8 @@ void Display::_InitPixelsData()
 void Display::_XORedPixelsData( int xPos,int yPos,uint8_t odata )
 {
 	uint8_t iPrevious = *( m_pPixels + yPos * CHIP8_DISPLAY_WIDTH + xPos );
-	*( m_pPixels + yPos * CHIP8_DISPLAY_WIDTH + xPos ) ^= odata;
-	m_bDirtyFrame |= *( m_pPixels + yPos * CHIP8_DISPLAY_WIDTH + xPos ) != iPrevious;
+	uint8_t iCurrent = ( * ( m_pPixels + yPos * CHIP8_DISPLAY_WIDTH + xPos ) ^= odata );
+	m_bDirtyFrame |= ( iCurrent != iPrevious );
 }
 
 bool Display::_IsPixelErase( int xPos,int yPos )
