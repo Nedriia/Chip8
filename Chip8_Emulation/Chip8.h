@@ -74,7 +74,6 @@ private:
 class Chip8
 {
 public:
-	Chip8();
 
 	class KeyAccess
 	{
@@ -84,9 +83,17 @@ public:
 		KeyAccess(){}
 	};
 
+	static Chip8* GetInstance()
+	{
+		if( m_pSingleton == nullptr )
+			m_pSingleton = new Chip8;
+		return m_pSingleton;
+	}
+
 	void							Init( const KeyAccess& oKey, const char* sROMToLoad );
 	void							EmulateCycle( const KeyAccess& oKey, const std::chrono::steady_clock::time_point& iTime );
 	void							AskForState( const KeyAccess& oKey,RunningState oState ) const;
+	void							DestroyCpu();
 
 	const Data< uint16_t>*			GetStack() const { return m_aStack; }
 	const Data< uint8_t>*			GetMemory() const { return m_aMemory; }
@@ -106,6 +113,10 @@ public:
 	bool							IsRunning() const { return m_oState == RunningState::Running; }
 
 private:
+
+	Chip8();
+	~Chip8();
+
 	void _Reset( );
 	void _LoadFont( );
 	void _LoadROM( const char* sROMToLoad );
@@ -160,7 +171,10 @@ private:
 	int											m_iCycle;
 	int											m_iOpcodesLastFrame;
 	uint8_t										m_iPreviousKeyPressed;
+
 #ifdef QUIRK_DISPWAIT
 	std::chrono::steady_clock::time_point		m_iTimeLastFrame;
 #endif
+
+	static Chip8* m_pSingleton;
 };

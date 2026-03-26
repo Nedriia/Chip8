@@ -12,6 +12,11 @@ Input::Input()
 {
 }
 
+Input::~Input()
+{
+	m_pSingleton = nullptr;
+}
+
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 void Input::ProcessInput( const std::chrono::steady_clock::time_point& time,bool& quit )
 {
@@ -40,6 +45,11 @@ void Input::ProcessInput( const std::chrono::steady_clock::time_point& time,bool
 	}
 	else
 		quit = true;
+}
+
+void Input::DestroyInputManager()
+{
+	delete m_pSingleton;
 }
 
 uint8_t Input::GetKeyState( uint8_t iIndex ) const

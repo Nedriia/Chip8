@@ -137,3 +137,9 @@ Chip8_Emulation/.vs/Chip8_Emulation/FileContentIndex/0c09dcff-cd5b-4908-aab2-6f5
 *.vsidx
 *.ipch
 *.vsidx
+
+*.vcxproj
+
+*.filters
+
+*.enc

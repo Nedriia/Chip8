@@ -5,12 +5,15 @@
 #include "Display.h"
 #include <iostream>
 #include "Input.h"
+#include "SoundManager.h"
 
 #define START_FONT_MEMORY_ADDRESS 0x050
 #define START_ROM_MEMORY_ADDRESS 0x200
 #define MEMORY_SIZE 4096
 #define DEFAULT_PARENT_ROM_FOLDER "..\\Roms\\"
 #define INSTRUCTIONS_PER_SEC 750
+
+Chip8* Chip8::m_pSingleton = nullptr;
 
 Chip8::Chip8() :
 	m_iLastOpcode( 0 )
@@ -27,6 +30,11 @@ Chip8::Chip8() :
 	,m_iTimeLastFrame{}
 #endif
 {
+}
+
+Chip8::~Chip8()
+{
+	m_pSingleton = nullptr;
 }
 
 void Chip8::Init( const KeyAccess& key, const char* sROMToLoad )
@@ -169,12 +177,19 @@ void Chip8::EmulateCycle( const KeyAccess& key, const std::chrono::steady_clock:
 	{
 		_UpdateTimers();
 		m_iLastTimeUpdateTimers += refreshTick;
+
+		SoundManager::GetInstance()->Manage( ( uint8_t )m_iSound_timer );
 	}
 }
 
 void Chip8::AskForState( const KeyAccess& key, RunningState oState ) const
 {
 	m_oState = oState;
+}
+
+void Chip8::DestroyCpu()
+{
+	delete m_pSingleton;
 }
 
 void Chip8::_FetchOpcode( uint16_t& opcode )
