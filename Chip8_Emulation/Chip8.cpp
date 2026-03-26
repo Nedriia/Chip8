@@ -381,7 +381,13 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 
 			//If the least - significant bit of Vx is 1, then VF is set to 1, otherwise 0. Then Vx is divided by 2.
 			uint8_t LSB = ( m_aRegisters[ X ] & 1 );
-			m_aRegisters[ X ] >>= 1; // OR registers[ X ] = registers[ Y ] >> 1 before 1990
+
+#ifdef QUIRK_SHIFTING
+			m_aRegisters[ X ] = m_aRegisters[ Y ] >> 1; //before 1990
+#else // QUIRK_SHIFTING
+			m_aRegisters[ X ] >>= 1;
+#endif
+
 			VF = LSB;
 		}
 		break;
@@ -404,7 +410,13 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 
 			// If the most-significant bit of Vx is 1, then VF is set to 1, otherwise to 0. Then Vx is multiplied by 2.
 			uint8_t MSB = ( m_aRegisters[ X ] & 0x80 ) == 0x80 ? 1 : 0;
-			m_aRegisters[ X ] <<= 1; // OR registers[ X ] = registers[ Y ] << 1 before 1990
+
+#ifdef QUIRK_SHIFTING
+			m_aRegisters[ X ] = m_aRegisters[ Y ] << 1; //before 1990
+#else // QUIRK_SHIFTING
+			m_aRegisters[ X ] <<= 1;
+#endif
+
 			VF = MSB;
 		}
 		break;
