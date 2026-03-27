@@ -234,14 +234,22 @@ void Display::ClearScreen( const KeyDisplayAccess& oKey )
 	_InitPixelsData();
 }
 
-void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xPos,uint8_t yPos,uint8_t oValue,bool& bErased )
+void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xPos,uint8_t yPos,uint8_t oValue,bool& bErased,bool bClipping )
 {
 	uint8_t ByteMask = 0x80; //uint8_t mask 0x80 --> 10000000 // 01000000 // 00100000 ...
 	uint8_t iPosLine = xPos;
 	for( ByteMask; ByteMask > 0; ByteMask >>= 1,++iPosLine )
 	{
-		iPosLine %= CHIP8_DISPLAY_WIDTH;
-		yPos %= CHIP8_DISPLAY_HEIGHT;
+		if( bClipping && iPosLine >= CHIP8_DISPLAY_WIDTH )
+		{
+			return;
+		}
+		else
+		{
+			iPosLine &= CHIP8_DISPLAY_WIDTH - 1;
+			yPos &= CHIP8_DISPLAY_HEIGHT - 1;
+		}
+
 		if( oValue & ByteMask )
 		{
 			bErased |= _IsPixelErase( iPosLine,yPos );

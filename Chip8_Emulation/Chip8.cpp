@@ -37,7 +37,7 @@ Chip8::~Chip8()
 	m_pSingleton = nullptr;
 }
 
-void Chip8::Init( const KeyAccess& key, const char* sROMToLoad )
+void Chip8::Init( const KeyAccess& key,const char* sROMToLoad )
 {
 	unsigned timeSeed = std::chrono::steady_clock::now().time_since_epoch().count();
 	m_iRng.seed( timeSeed );
@@ -70,7 +70,7 @@ void Chip8::_Reset()
 		it->clear();
 
 	Chip8::KeyAccess oKey;
-	Init( oKey, m_sCurrentRomLoaded );
+	Init( oKey,m_sCurrentRomLoaded );
 }
 
 void Chip8::_LoadFont()
@@ -124,7 +124,7 @@ void Chip8::_LoadROM( const char* sROMToLoad )
 	}
 }
 
-void Chip8::EmulateCycle( const KeyAccess& key, const std::chrono::steady_clock::time_point& time )
+void Chip8::EmulateCycle( const KeyAccess& key,const std::chrono::steady_clock::time_point& time )
 {
 	if( m_oState == RunningState::Reset )
 	{
@@ -182,7 +182,7 @@ void Chip8::EmulateCycle( const KeyAccess& key, const std::chrono::steady_clock:
 	}
 }
 
-void Chip8::AskForState( const KeyAccess& key, RunningState oState ) const
+void Chip8::AskForState( const KeyAccess& key,RunningState oState ) const
 {
 	m_oState = oState;
 }
@@ -377,14 +377,20 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		break;
 		case 6:
 		{
-			OpcodeInstruct = std::format( "{:04X} : SHR VX, VY",opcode );
-
 			//If the least - significant bit of Vx is 1, then VF is set to 1, otherwise 0. Then Vx is divided by 2.
-			uint8_t LSB = ( m_aRegisters[ X ] & 1 );
+			uint8_t LSB = 0;
 
 #ifdef QUIRK_SHIFTING
+			OpcodeInstruct = std::format( "{:04X} : SHR VX, VY",opcode );
+
+			LSB = ( m_aRegisters[ Y ] & 0x01 );
+
 			m_aRegisters[ X ] = m_aRegisters[ Y ] >> 1; //before 1990
 #else // QUIRK_SHIFTING
+			OpcodeInstruct = std::format( "{:04X} : SHR VX",opcode );
+
+			LSB = ( m_aRegisters[ X ] & 0x01 );
+
 			m_aRegisters[ X ] >>= 1;
 #endif
 
@@ -406,14 +412,21 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		break;
 		case 0xE:
 		{
+			uint8_t MSB = 0;
+
+#ifdef QUIRK_SHIFTING
+			OpcodeInstruct = std::format( "{:04X} : SHL VX, VY",opcode );
+
+			// If the most-significant bit of Vy is 1.
+			MSB = ( m_aRegisters[ Y ] & 0x80 ) == 0x80 ? 1 : 0;
+
+			m_aRegisters[ X ] = m_aRegisters[ Y ] << 1; //before 1990
+#else // QUIRK_SHIFTING
 			OpcodeInstruct = std::format( "{:04X} : SHL VX",opcode );
 
 			// If the most-significant bit of Vx is 1, then VF is set to 1, otherwise to 0. Then Vx is multiplied by 2.
-			uint8_t MSB = ( m_aRegisters[ X ] & 0x80 ) == 0x80 ? 1 : 0;
+			MSB = ( m_aRegisters[ X ] & 0x80 ) == 0x80 ? 1 : 0;
 
-#ifdef QUIRK_SHIFTING
-			m_aRegisters[ X ] = m_aRegisters[ Y ] << 1; //before 1990
-#else // QUIRK_SHIFTING
 			m_aRegisters[ X ] <<= 1;
 #endif
 
@@ -444,10 +457,14 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 	break;
 	case 0xB000:
 	{
-		OpcodeInstruct = std::format( "{:04X} : JMP V0, NNN",opcode );
-
+#ifdef QUIRK_JUMPING
 		//Jumps to the address NNN plus V0
+		OpcodeInstruct = std::format( "{:04X} : JMP V0, NNN",opcode );
 		m_iPC = NNN + m_aRegisters[ 0 ];
+#else // QUIRK_JUMPING
+		OpcodeInstruct = std::format( "{:04X} : JMP VX, NNN",opcode );
+		m_iPC = NNN + m_aRegisters[ X ];
+#endif
 	}
 	break;
 	case 0xC000:
@@ -494,9 +511,16 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 #endif
 
 		Display::KeyDisplayAccess oKeyDisplay;
+		uint8_t xPos = m_aRegisters[ X ] & ( Display::CHIP8_DISPLAY_WIDTH - 1 );
+		uint8_t yPos = m_aRegisters[ Y ] & ( Display::CHIP8_DISPLAY_HEIGHT - 1 );
+
 		for( ; iYOffset < N; ++iYOffset )
 		{
-			Display::DrawPixelAtPos( oKeyDisplay, m_aRegisters[ X ],m_aRegisters[ Y ] + iYOffset,m_aMemory[ m_iI + iYOffset ],bErased );
+#ifdef QUIRK_CLIPPING
+			Display::DrawPixelAtPos( oKeyDisplay,xPos,yPos + iYOffset,m_aMemory[ m_iI + iYOffset ],bErased,true );
+#else
+			Display::DrawPixelAtPos( oKeyDisplay,xPos,yPos + iYOffset,m_aMemory[ m_iI + iYOffset ],bErased,false );
+#endif
 			VF = bErased ? 1 : 0;
 		}
 
@@ -602,7 +626,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 				m_aMemory[ m_iI ] = m_aRegisters[ i ];
 				++m_iI;
 #else
-				m_aMemory[ m_iI + i ] = m_aRegisters[ i ];	
+				m_aMemory[ m_iI + i ] = m_aRegisters[ i ];
 #endif
 			}
 		}

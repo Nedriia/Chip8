@@ -25,7 +25,7 @@ public:
 
 	int Init( const KeyDisplayAccess& oKey, const Chip8* pCpu );
 	static void ClearScreen( const KeyDisplayAccess& oKey );
-	static void DrawPixelAtPos( const KeyDisplayAccess& oKey, uint8_t xPos,uint8_t yPos,uint8_t oValue,bool& bErased );
+	static void DrawPixelAtPos( const KeyDisplayAccess& oKey, uint8_t xPos,uint8_t yPos,uint8_t oValue,bool& bErased, bool bClipping );
 	void DestroyWindow( const KeyDisplayAccess& oKey );
 
 	void Update( const std::chrono::steady_clock::time_point& time, bool cpuPaused );

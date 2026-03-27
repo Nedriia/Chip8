@@ -28,21 +28,21 @@ struct Data
 public:
 	Data() { oData = 0; m_bNewValue = false; m_bDirty = false; }
 
-	Data& operator=( const Data& rhs ){ return Update( [ & ] { oData = rhs.oData; } ); }
-	Data& operator=( const T& rhs ){ return Update( [ & ] { oData = rhs; } ); }
-	Data& operator+=( const T& rhs ){ return Update( [ & ] { oData += rhs; } ); }
-	Data& operator-=( const T& rhs ){ return Update( [ & ] { oData -= rhs; } ); }
-	Data& operator--(){ return Update( [ & ] { --oData; } ); }
-	Data& operator++(){ return Update( [ & ] { ++oData; } ); }
-	Data& operator|=( const T& rhs ){ return Update( [ & ] { oData |= rhs; } ); }
-	Data& operator&=( const T& rhs ){ return Update( [ & ] { oData &= rhs; } ); }
-	Data& operator^=( const T& rhs ){ return Update( [ & ] { oData ^= rhs; } ); }
+	Data& operator=( const Data& rhs ) { return Update( [ & ] { oData = rhs.oData; } ); }
+	Data& operator=( const T& rhs ) { return Update( [ & ] { oData = rhs; } ); }
+	Data& operator+=( const T& rhs ) { return Update( [ & ] { oData += rhs; } ); }
+	Data& operator-=( const T& rhs ) { return Update( [ & ] { oData -= rhs; } ); }
+	Data& operator--() { return Update( [ & ] { --oData; } ); }
+	Data& operator++() { return Update( [ & ] { ++oData; } ); }
+	Data& operator|=( const T& rhs ) { return Update( [ & ] { oData |= rhs; } ); }
+	Data& operator&=( const T& rhs ) { return Update( [ & ] { oData &= rhs; } ); }
+	Data& operator^=( const T& rhs ) { return Update( [ & ] { oData ^= rhs; } ); }
 	Data& operator>>=( const T& rhs ) { return Update( [ & ] { oData >>= rhs; } ); }
 	Data& operator<<=( const T& rhs ) { return Update( [ & ] { oData <<= rhs; } ); }
 
 	operator T() const { return oData; }
 	bool HasChanged() const { return m_bNewValue; }
-	void SetDataAsDirty() const 
+	void SetDataAsDirty() const
 	{
 		if( !m_bDirty )
 			m_bDirty = true;
@@ -80,7 +80,7 @@ public:
 		friend class Chip8;
 		friend class Chip8_Debugger;
 		friend int main( int argc,char** argv );
-		KeyAccess(){}
+		KeyAccess() {}
 	};
 
 	static Chip8* GetInstance()
@@ -90,8 +90,8 @@ public:
 		return m_pSingleton;
 	}
 
-	void							Init( const KeyAccess& oKey, const char* sROMToLoad );
-	void							EmulateCycle( const KeyAccess& oKey, const std::chrono::steady_clock::time_point& iTime );
+	void							Init( const KeyAccess& oKey,const char* sROMToLoad );
+	void							EmulateCycle( const KeyAccess& oKey,const std::chrono::steady_clock::time_point& iTime );
 	void							AskForState( const KeyAccess& oKey,RunningState oState ) const;
 	void							DestroyCpu();
 
@@ -117,8 +117,8 @@ private:
 	Chip8();
 	~Chip8();
 
-	void _Reset( );
-	void _LoadFont( );
+	void _Reset();
+	void _LoadFont();
 	void _LoadROM( const char* sROMToLoad );
 
 	void _FetchOpcode( uint16_t& iOpcode );
@@ -132,7 +132,7 @@ private:
 	Data<uint16_t> m_aStack[ 0x10 ];
 	Data<uint8_t> m_iSP; //Stack pointer
 	Data<uint16_t> m_iPC; //Program counter
-	
+
 	uint16_t m_iLastOpcode;
 	uint8_t m_iCountBeforeStop;
 
