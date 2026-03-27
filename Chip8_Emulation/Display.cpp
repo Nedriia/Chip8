@@ -240,9 +240,10 @@ void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xPos,uint8_t 
 	uint8_t iPosLine = xPos;
 	for( ByteMask; ByteMask > 0; ByteMask >>= 1,++iPosLine )
 	{
-		if( bClipping && iPosLine >= CHIP8_DISPLAY_WIDTH )
+		if( bClipping )
 		{
-			return;
+			if( iPosLine >= CHIP8_DISPLAY_WIDTH )
+				return;
 		}
 		else
 		{
