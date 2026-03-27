@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
-#include <MiniAudio/miniaudio.h>
+
+#include "MiniAudio/miniaudio.h"
 
 class SoundManager
 {
