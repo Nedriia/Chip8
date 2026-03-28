@@ -3,8 +3,8 @@
 #include <iostream>
 
 // settings
-const uint16_t WINDOW_WIDTH = 1230;
-const uint16_t WINDOW_HEIGHT = 720;
+const uint16_t WINDOW_WIDTH = 1920;
+const uint16_t WINDOW_HEIGHT = 1080;
 
 const uint8_t Display::CHIP8_DISPLAY_WIDTH = 64;
 const uint8_t Display::CHIP8_DISPLAY_HEIGHT = 32;

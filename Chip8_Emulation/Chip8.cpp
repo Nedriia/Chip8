@@ -602,7 +602,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 			OpcodeInstruct = std::format( "{:04X} : LD I, FONT( VX )",opcode );
 
 			//Sets I to the location of the sprite for the character in VX(only consider the lowest nibble). Characters 0-F (in hexadecimal) are represented by a 4x5 font.
-			m_iI = m_aFontset[ m_aRegisters[ X ] ];
+			m_iI = START_FONT_MEMORY_ADDRESS + ( m_aRegisters[ X ] * 5 );
 		}
 		break;
 		case 0x33:
