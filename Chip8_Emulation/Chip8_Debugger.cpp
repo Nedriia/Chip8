@@ -78,6 +78,8 @@ void Chip8_Debugger::Init( GLFWwindow* mainWindow,const Chip8* pCPU )
 
 	if( pCPU != nullptr )
 		m_pCPU = pCPU;
+
+	ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 }
 
 void Chip8_Debugger::Update( const std::chrono::microseconds& time )
