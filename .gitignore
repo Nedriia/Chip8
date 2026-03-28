@@ -77,3 +77,7 @@
 *.json
 
 *.idb
+
+*.sln
+
+Chip8_Emulation/.vs/Chip8_Emulation/v17/.suo
