@@ -2,3 +2,7 @@
 	path = Chip8_Emulation/imgui
 	url = https://github.com/ocornut/imgui.git
 	branch = docking
+[submodule "Chip8_Emulation/imgui"]
+	path = Chip8_Emulation/imgui
+	url = https://github.com/ocornut/imgui.git
+	branch = docking
