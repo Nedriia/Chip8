@@ -97,7 +97,7 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 	}
 
 	// Start the Dear ImGui frame
-	glBindFramebuffer( GL_FRAMEBUFFER,Display::GetInstance()->GetFBO() );
+	//glBindFramebuffer( GL_FRAMEBUFFER,Display::GetInstance()->GetFBO() );
 
 	// render
 	// ------
@@ -270,7 +270,7 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 	}
 	ImGui::End();
 
-	glBindFramebuffer( GL_FRAMEBUFFER,0 );
+	//glBindFramebuffer( GL_FRAMEBUFFER,0 );
 }
 
 void Chip8_Debugger::Render()

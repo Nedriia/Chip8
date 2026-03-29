@@ -6,7 +6,7 @@
 const uint16_t WINDOW_WIDTH = 1920;
 const uint16_t WINDOW_HEIGHT = 1080;
 
-const uint8_t Display::CHIP8_DISPLAY_WIDTH = 64;
+const uint8_t Display::CHIP8_DISPLAY_WIDTH = 64; //Keep as power of two or instruction in draw opcode might give you exotic result
 const uint8_t Display::CHIP8_DISPLAY_HEIGHT = 32;
 
 uint8_t* Display::m_pPixels = nullptr;
@@ -236,25 +236,22 @@ void Display::ClearScreen( const KeyDisplayAccess& oKey )
 
 void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xPos,uint8_t yPos,uint8_t oValue,bool& bErased,bool bClipping )
 {
-	uint8_t ByteMask = 0x80; //uint8_t mask 0x80 --> 10000000 // 01000000 // 00100000 ...
-	uint8_t iPosLine = xPos;
-	for( ByteMask; ByteMask > 0; ByteMask >>= 1,++iPosLine )
+	for( uint8_t ByteMask = 0x80; ByteMask > 0; ByteMask >>= 1,++xPos )//uint8_t mask 0x80 --> 10000000 // 01000000 // 00100000 ...
 	{
 		if( bClipping )
 		{
-			if( iPosLine >= CHIP8_DISPLAY_WIDTH )
+			if( xPos >= CHIP8_DISPLAY_WIDTH || yPos >= CHIP8_DISPLAY_HEIGHT )
 				return;
 		}
 		else
 		{
-			iPosLine &= CHIP8_DISPLAY_WIDTH - 1;
-			yPos &= CHIP8_DISPLAY_HEIGHT - 1;
+			xPos &= CHIP8_DISPLAY_WIDTH - 1;
 		}
 
 		if( oValue & ByteMask )
 		{
-			bErased |= _IsPixelErase( iPosLine,yPos );
-			_XORedPixelsData( iPosLine,yPos,255 );
+			bErased |= _IsPixelErase( xPos,yPos );
+			_XORedPixelsData( xPos,yPos,255 );
 		}
 	}
 }
@@ -268,7 +265,7 @@ void Display::Update( const std::chrono::steady_clock::time_point& time,bool cpu
 	if( elapsed >= refreshTick )
 	{
 		int updateThisFrame = 0;
-		const int maxUpdatePerFrame = 5; //could go up to 8 frame to catch up ( 133 ms )
+		const int maxUpdatePerFrame = 5; //could go up to 8 frame( 133 ms )
 		if( elapsed >= ( refreshTick * maxUpdatePerFrame ) )// too much to catch up
 		{
 			m_iLastTimeUpdate = time;
@@ -280,7 +277,6 @@ void Display::Update( const std::chrono::steady_clock::time_point& time,bool cpu
 		{
 			m_iLastTimeUpdate += refreshTick;
 			++updateThisFrame;
-
 			elapsed = std::chrono::duration_cast< std::chrono::microseconds >( time - m_iLastTimeUpdate );
 		}
 

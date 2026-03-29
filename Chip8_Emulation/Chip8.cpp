@@ -11,7 +11,7 @@
 #define START_ROM_MEMORY_ADDRESS 0x200
 #define MEMORY_SIZE 4096
 #define DEFAULT_PARENT_ROM_FOLDER "..\\Roms\\"
-#define INSTRUCTIONS_PER_SEC 750
+#define INSTRUCTIONS_PER_SEC 600
 
 Chip8* Chip8::m_pSingleton = nullptr;
 
@@ -20,7 +20,6 @@ Chip8::Chip8() :
 	,m_iCountBeforeStop( 0 )
 	,m_oState( RunningState::Pause )
 	,m_iLastTimeUpdate( std::chrono::steady_clock::now() )
-	,m_iLastTimeUpdateTimers( std::chrono::steady_clock::now() )
 	,m_fAccumulator( 0.0f )
 	,m_sCurrentRomLoaded( nullptr )
 	,m_iCycle( 0 )
@@ -170,13 +169,7 @@ void Chip8::EmulateCycle( const KeyAccess& key,const std::chrono::steady_clock::
 
 		m_iLastTimeUpdate += refreshTick;
 		m_fAccumulator -= std::floor( m_fAccumulator );
-	}
 
-	elapsed = std::chrono::duration_cast< std::chrono::microseconds >( time - m_iLastTimeUpdateTimers );
-	if( elapsed >= refreshTick || bForceNextStep )
-	{
-		_UpdateTimers();
-		m_iLastTimeUpdateTimers += refreshTick;
 
 		SoundManager::GetInstance()->Manage( ( uint8_t )m_iSound_timer );
 	}
@@ -514,6 +507,7 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		uint8_t xPos = m_aRegisters[ X ] & ( Display::CHIP8_DISPLAY_WIDTH - 1 );
 		uint8_t yPos = m_aRegisters[ Y ] & ( Display::CHIP8_DISPLAY_HEIGHT - 1 );
 
+		VF = 0;
 		for( ; iYOffset < N; ++iYOffset )
 		{
 #ifdef QUIRK_CLIPPING
@@ -521,7 +515,8 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 #else
 			Display::DrawPixelAtPos( oKeyDisplay,xPos,yPos + iYOffset,m_aMemory[ m_iI + iYOffset ],bErased,false );
 #endif
-			VF = bErased ? 1 : 0;
+			if( bErased )
+				VF = 1;
 		}
 
 		break;
@@ -657,8 +652,10 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		break;
 	}
 
-	if( !OpcodeInstruct.empty() )
-		_AddOpcodeToHistory( OpcodeInstruct.c_str() );
+	if( OpcodeInstruct.empty() )
+		std::cout << "Opcode Unknown " << std::format( "{:04X}",opcode ) << std::endl;
+
+	_AddOpcodeToHistory( OpcodeInstruct.c_str() );
 
 	if( opcode == m_iLastOpcode && opcodeNibble == 0x1000 )//JMP instruction
 	{
