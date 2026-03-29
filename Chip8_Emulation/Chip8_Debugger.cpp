@@ -160,7 +160,7 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 		float width = ImGui::GetContentRegionAvail().x;
 		const char* titleLeft = "Chip-8 Display";
 
-		std::string textPerfDebug = std::format( "{} ms | {} IPF",std::chrono::duration<double,std::milli>( time ).count(),m_pCPU ? m_pCPU->GetOpcodesLastFrame() : 0 );
+		std::string textPerfDebug = std::format( "{} ms | {} IPF",std::chrono::duration<double,std::milli>( time ).count(),m_pCPU ? Chip8::INSTRUCTIONS_PER_FRAME : 0 );
 		ImGui::TextColored( ImVec4( 0.7f,0.7f,0.7f,1.0f ),"%s",titleLeft );
 
 		ImGui::SameLine( width - ImGui::CalcTextSize( textPerfDebug.c_str() ).x );

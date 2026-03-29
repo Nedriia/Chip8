@@ -11,7 +11,8 @@
 #define START_ROM_MEMORY_ADDRESS 0x200
 #define MEMORY_SIZE 4096
 #define DEFAULT_PARENT_ROM_FOLDER "..\\Roms\\"
-#define INSTRUCTIONS_PER_SEC 600
+
+const int Chip8::INSTRUCTIONS_PER_FRAME = 1000;
 
 Chip8* Chip8::m_pSingleton = nullptr;
 
@@ -20,10 +21,8 @@ Chip8::Chip8() :
 	,m_iCountBeforeStop( 0 )
 	,m_oState( RunningState::Pause )
 	,m_iLastTimeUpdate( std::chrono::steady_clock::now() )
-	,m_fAccumulator( 0.0f )
 	,m_sCurrentRomLoaded( nullptr )
 	,m_iCycle( 0 )
-	,m_iOpcodesLastFrame( 0 )
 	,m_iPreviousKeyPressed( 0xFF )
 #ifdef QUIRK_DISPWAIT
 	,m_iTimeLastFrame{}
@@ -56,7 +55,6 @@ void Chip8::_Reset()
 	m_iI.clear();
 	m_iDelay_timer.clear();
 	m_iSound_timer.clear();
-	m_fAccumulator = 0.f;
 	m_aOpcodeHistory.clear();
 	m_iLastOpcode = 0;
 	m_iCycle = 0;
@@ -147,13 +145,7 @@ void Chip8::EmulateCycle( const KeyAccess& key,const std::chrono::steady_clock::
 	std::chrono::microseconds elapsed = std::chrono::duration_cast< std::chrono::microseconds >( time - m_iLastTimeUpdate );
 	if( elapsed >= refreshTick || bForceNextStep )
 	{
-		float msToSec = ( REFRESH_TICK_MicroSec / 1000000.0f );
-		assert( msToSec != 0.f );
-
-		float refreshPerFrame = INSTRUCTIONS_PER_SEC / ( 1 / msToSec );
-		m_fAccumulator += refreshPerFrame - std::floor( refreshPerFrame );
-		m_iOpcodesLastFrame = std::floor( refreshPerFrame ) + std::floor( m_fAccumulator );
-		for( int i = 0; i < m_iOpcodesLastFrame; ++i )
+		for( int i = 0; i < INSTRUCTIONS_PER_FRAME; ++i )
 		{
 			uint16_t opcode = 0;
 
@@ -161,15 +153,10 @@ void Chip8::EmulateCycle( const KeyAccess& key,const std::chrono::steady_clock::
 			_DecodeExecute_Opcode( opcode );
 
 			if( bForceNextStep )
-			{
-				m_fAccumulator = 0;
 				break;
-			}
 		}
 
 		m_iLastTimeUpdate += refreshTick;
-		m_fAccumulator -= std::floor( m_fAccumulator );
-
 
 		SoundManager::GetInstance()->Manage( ( uint8_t )m_iSound_timer );
 	}

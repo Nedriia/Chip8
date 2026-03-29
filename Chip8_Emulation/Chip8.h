@@ -107,10 +107,11 @@ public:
 	const Data< uint8_t>&			GetDelayTimer() const { return m_iDelay_timer; }
 	const Data< uint8_t>&			GetSoundTimer() const { return m_iSound_timer; }
 	int								GetCycleId() const { return m_iCycle; }
-	int								GetOpcodesLastFrame() const { return m_iOpcodesLastFrame; }
 
 	bool							IsPause() const { return m_oState == RunningState::Pause; }
 	bool							IsRunning() const { return m_oState == RunningState::Running; }
+
+	static const int				INSTRUCTIONS_PER_FRAME;
 
 private:
 
@@ -165,10 +166,8 @@ private:
 
 	mutable RunningState						m_oState;
 	std::chrono::steady_clock::time_point		m_iLastTimeUpdate;
-	float										m_fAccumulator;
 	const char*									m_sCurrentRomLoaded;
 	int											m_iCycle;
-	int											m_iOpcodesLastFrame;
 	uint8_t										m_iPreviousKeyPressed;
 
 #ifdef QUIRK_DISPWAIT
