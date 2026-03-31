@@ -10,7 +10,6 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
-#include <stdio.h>
 #define GL_SILENCE_DEPRECATION
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #include <GLES2/gl2.h>
@@ -31,9 +30,6 @@
 #include "Chip8_Debugger.h"
 #include "Display.h"
 #include "Chip8.h"
-#include <iomanip>
-#include <format>
-#include <iostream>
 
 #define NULL_DATA_COLOR IM_COL32( 128,128,128,255 )
 #define CHANGE_DATA_COLOR IM_COL32( 255,0,0,255 )
@@ -140,8 +136,18 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 			Chip8::KeyAccess oKey;
 			Display::KeyDisplayAccess oKeyDisplay;
 
+			ImGui::Button( "Load Rom" );
+			ImGui::Separator();
+
+			if( m_pCPU->IsPause() )
+				ImGui::PushStyleColor( ImGuiCol_Button,ImVec4( 0.5f,0,0,0.62f ) );
+			else
+				ImGui::PushStyleColor( ImGuiCol_Button,ImVec4( 0.35f,0.40f,0.61f,0.62f ) );
+
 			if( ImGui::Button( "Pause" ) )
 				m_pCPU->AskForState( oKey,m_pCPU->IsPause() ? RunningState::Running : RunningState::Pause );
+			ImGui::PopStyleColor();
+
 			if( ImGui::Button( "Reset" ) )
 			{
 				Display::ClearScreen( oKeyDisplay );
@@ -149,6 +155,7 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 			}
 			if( ImGui::Button( "Step Next Frame" ) )
 				m_pCPU->AskForState( oKey,RunningState::StepNextFrame );
+			ImGui::Separator();
 
 			float fFps = 1 / ( Display::GetValueMicroSRefresh() / 1000000.0f );
 			if( ImGui::SliderFloat( "FPS",&fFps,20,120,NULL ) )
@@ -159,7 +166,6 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 			int iIPF = Chip8::GetInstructPerFrame();
 			if( ImGui::SliderInt( "IPF", &iIPF,10,2000,NULL) )
 				Chip8::SetInstructionPerFrame( iIPF );
-			//ImGui::Button( "Load Rom" );
 		}
 	}
 	ImGui::End();
@@ -216,7 +222,7 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 		float width = ImGui::GetContentRegionAvail().x;
 		const char* titleLeft = "Chip-8 Display";
 
-		std::string textPerfDebug = std::format( "{} ms | {} IPF",std::chrono::duration<double,std::milli>( time ).count(),m_pCPU ? Chip8::GetInstructPerFrame() : 0);
+		std::string textPerfDebug = std::format( "{} ms | {} IPF",std::chrono::duration<double,std::milli>( time ).count(), !m_pCPU->IsPause() ? Chip8::GetInstructPerFrame() : 0);
 		ImGui::TextColored( ImVec4( 0.7f,0.7f,0.7f,1.0f ),"%s",titleLeft );
 
 		ImGui::SameLine( width - ImGui::CalcTextSize( textPerfDebug.c_str() ).x );
