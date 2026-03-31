@@ -12,14 +12,16 @@ enum class RunningState
 	Reset
 };
 
+#ifndef QUIRKS
 #define QUIRKS
-#if defined( QUIRKS )
-	/*#define QUIRK_VFRESET
+#ifdef QUIRKS
+	#define QUIRK_VFRESET
 	#define QUIRK_MEMORY
-	#define QUIRK_DISPWAIT*/
+	#define QUIRK_DISPWAIT
 	#define QUIRK_CLIPPING
-	/*#define QUIRK_SHIFTING
-	#define QUIRK_JUMPING*/
+	#define QUIRK_SHIFTING
+	#define QUIRK_JUMPING
+#endif
 #endif
 
 template< typename T>
@@ -111,8 +113,8 @@ public:
 	bool							IsPause() const { return m_oState == RunningState::Pause; }
 	bool							IsRunning() const { return m_oState == RunningState::Running; }
 
-	static const int				GetInstructPerFrame() { return Chip8::GetInstance()->m_iInstructionsPerFrame; }
-	static void						SetInstructionPerFrame( const int iNewValue ) { Chip8::GetInstance()->m_iInstructionsPerFrame = iNewValue; }
+	static const int				GetInstructPerFrame() { return m_iInstructionsPerFrame; }
+	static void						SetInstructionPerFrame( const int iNewValue ) { m_iInstructionsPerFrame = iNewValue; }
 
 private:
 

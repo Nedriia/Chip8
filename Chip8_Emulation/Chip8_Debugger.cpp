@@ -163,6 +163,32 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 		}
 	}
 	ImGui::End();
+	if( ImGui::Begin( "Quirks",nullptr ) )
+	{
+#ifdef QUIRKS
+	#ifdef QUIRK_VFRESET
+		ImGui::Text("VFReset On");
+	#endif
+	#ifdef QUIRK_MEMORY
+		ImGui::Text( "Memory On ( Adress Register++ )" );
+	#endif
+	#ifdef QUIRK_DISPWAIT
+		ImGui::Text( "VBlank On" );
+	#endif
+	#ifdef QUIRK_CLIPPING
+		ImGui::Text( "Clipping On" );
+	#endif
+	#ifdef QUIRK_SHIFTING
+		ImGui::Text( "Shifting On ( Registers[X] = Registers[Y] >> 1 )" );
+	#endif
+	#ifdef QUIRK_JUMPING
+		ImGui::Text( "Jumping On ( NNN + Registers[0] )" );
+	#endif
+#else
+		ImGui::Text( "Wrapping On" );
+#endif
+	}
+	ImGui::End();
 
 	if( ImGui::Begin( "Stack",nullptr ) )
 	{

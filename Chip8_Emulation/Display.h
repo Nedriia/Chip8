@@ -37,11 +37,11 @@ public:
 	static const uint8_t GetWidth() { return Display::GetInstance()->m_iDisplayWidth; }
 	static const uint8_t GetHeight() { return Display::GetInstance()->m_iDisplayHeight; }
 
-	static const int GetValueMicroSRefresh() { return Display::GetInstance()->m_iValueMicroSRefresh; }
-	static const std::chrono::microseconds& GetRefreshTick() { return Display::GetInstance()->m_iCurrentTick; }
+	static const int GetValueMicroSRefresh() { return m_iValueMicroSRefresh; }
+	static const std::chrono::microseconds& GetRefreshTick() { return m_iCurrentTick; }
 
-	static void SetValueMicroSRefresh( const int iNewValue ) { Display::GetInstance()->m_iValueMicroSRefresh = iNewValue; }
-	static void SetRefreshTick( const std::chrono::microseconds& iNewValue ) { Display::GetInstance()->m_iCurrentTick = iNewValue; }
+	static void SetValueMicroSRefresh( const int iNewValue ) { m_iValueMicroSRefresh = iNewValue; }
+	static void SetRefreshTick( const std::chrono::microseconds& iNewValue ) { m_iCurrentTick = iNewValue; }
 
 	static Display* GetInstance()
 	{
