@@ -111,7 +111,8 @@ public:
 	bool							IsPause() const { return m_oState == RunningState::Pause; }
 	bool							IsRunning() const { return m_oState == RunningState::Running; }
 
-	static const int				INSTRUCTIONS_PER_FRAME;
+	static const int				GetInstructPerFrame() { return Chip8::GetInstance()->m_iInstructionsPerFrame; }
+	static void						SetInstructionPerFrame( const int iNewValue ) { Chip8::GetInstance()->m_iInstructionsPerFrame = iNewValue; }
 
 private:
 
@@ -175,4 +176,6 @@ private:
 #endif
 
 	static Chip8* m_pSingleton;
+
+	static  int						m_iInstructionsPerFrame;
 };

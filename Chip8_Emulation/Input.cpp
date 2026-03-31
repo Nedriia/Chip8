@@ -30,7 +30,7 @@ void Input::ProcessInput( const std::chrono::steady_clock::time_point& time,bool
 	if( !glfwWindowShouldClose( pWindow ) )
 	{
 		std::chrono::microseconds elapsed = std::chrono::duration_cast< std::chrono::microseconds >( time - m_iLastTimeUpdate );
-		if( elapsed >= refreshTick )
+		if( elapsed >= Display::GetRefreshTick() )
 		{
 			if( glfwGetKey( pWindow,GLFW_KEY_ESCAPE ) == GLFW_PRESS )
 				glfwSetWindowShouldClose( pWindow,true );

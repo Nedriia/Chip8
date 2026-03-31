@@ -117,8 +117,8 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 					int iIndex = 0;
 					for( int i = 0; i < 0x10; ++i )
 					{
-						std::string sText= "V" + std::format( "{:X}:",i );
-						FormatDebugData( sText,"%02X",it[i], m_iRegisterSelected,iIndex );
+						std::string sText = "V" + std::format( "{:X}:",i );
+						FormatDebugData( sText,"%02X",it[ i ],m_iRegisterSelected,iIndex );
 					}
 
 					ImGui::NewLine();
@@ -133,7 +133,37 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 		}
 	}
 	ImGui::End();
-	
+	if( ImGui::Begin( "Controls",nullptr ) )
+	{
+		if( m_pCPU != nullptr )
+		{
+			Chip8::KeyAccess oKey;
+			Display::KeyDisplayAccess oKeyDisplay;
+
+			if( ImGui::Button( "Pause" ) )
+				m_pCPU->AskForState( oKey,m_pCPU->IsPause() ? RunningState::Running : RunningState::Pause );
+			if( ImGui::Button( "Reset" ) )
+			{
+				Display::ClearScreen( oKeyDisplay );
+				m_pCPU->AskForState( oKey,RunningState::Reset );
+			}
+			if( ImGui::Button( "Step Next Frame" ) )
+				m_pCPU->AskForState( oKey,RunningState::StepNextFrame );
+
+			float fFps = 1 / ( Display::GetValueMicroSRefresh() / 1000000.0f );
+			if( ImGui::SliderFloat( "FPS",&fFps,20,120,NULL ) )
+			{
+				Display::SetValueMicroSRefresh( ( 1 / fFps ) * 1000000.0f );
+				Display::SetRefreshTick( std::chrono::microseconds(Display::GetValueMicroSRefresh() ) );
+			}
+			int iIPF = Chip8::GetInstructPerFrame();
+			if( ImGui::SliderInt( "IPF", &iIPF,10,2000,NULL) )
+				Chip8::SetInstructionPerFrame( iIPF );
+			//ImGui::Button( "Load Rom" );
+		}
+	}
+	ImGui::End();
+
 	if( ImGui::Begin( "Stack",nullptr ) )
 	{
 		if( m_pCPU != nullptr )
@@ -147,7 +177,7 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 					std::string sAdress;
 					int iIndex = 0;
 					for( int i = 0; i < 0x10; ++i )
-						FormatDebugData( "","%#06X",it[i], m_iStackSelected, iIndex );
+						FormatDebugData( "","%#06X",it[ i ],m_iStackSelected,iIndex );
 				}
 			}
 			ImGui::EndListBox();
@@ -160,7 +190,7 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 		float width = ImGui::GetContentRegionAvail().x;
 		const char* titleLeft = "Chip-8 Display";
 
-		std::string textPerfDebug = std::format( "{} ms | {} IPF",std::chrono::duration<double,std::milli>( time ).count(),m_pCPU ? Chip8::INSTRUCTIONS_PER_FRAME : 0 );
+		std::string textPerfDebug = std::format( "{} ms | {} IPF",std::chrono::duration<double,std::milli>( time ).count(),m_pCPU ? Chip8::GetInstructPerFrame() : 0);
 		ImGui::TextColored( ImVec4( 0.7f,0.7f,0.7f,1.0f ),"%s",titleLeft );
 
 		ImGui::SameLine( width - ImGui::CalcTextSize( textPerfDebug.c_str() ).x );
@@ -178,7 +208,7 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 		ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar ) )
 	{
 	}*/
-	
+
 	if( ImGui::Begin( "Memory",nullptr ) )
 	{
 		if( m_pCPU != nullptr )
@@ -208,7 +238,7 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 								ImGui::Text( "-" );
 								ImGui::SameLine();
 							}
-							FormatDebugData( "","%02X",it[ n ], m_iMemorySelected, iIndex );
+							FormatDebugData( "","%02X",it[ n ],m_iMemorySelected,iIndex );
 							ImGui::SameLine();
 						}
 						ImGui::PopID();
@@ -220,32 +250,12 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 		}
 	}
 	ImGui::End();
-	
+
 	if( ImGui::Begin( "Opcode Decode",nullptr ) )
 	{
 		if( m_pCPU != nullptr )
 		{
-			Chip8::KeyAccess oKey;
-			Display::KeyDisplayAccess oKeyDisplay;
-
 			static int item_selected_idx = 0;
-			bool bPause = m_pCPU->IsPause();
-
-			if( ImGui::Checkbox( "Pause",&bPause ) )
-				m_pCPU->AskForState( oKey,bPause ? RunningState::Pause : RunningState::Running );
-			ImGui::SameLine();
-
-			if( ImGui::Button( "Step Next Frame" ) )
-				m_pCPU->AskForState( oKey,RunningState::StepNextFrame );
-
-			ImGui::SameLine();
-
-			if( ImGui::Button( "Reset" ) )
-			{
-				Display::ClearScreen( oKeyDisplay );
-				m_pCPU->AskForState( oKey,RunningState::Reset );
-			}
-
 			if( ImGui::BeginListBox( "#",ImVec2( -FLT_MIN,35 * ImGui::GetTextLineHeightWithSpacing() ) ) )
 			{
 				for( int n = 0; n < m_pCPU->GetHistoryOpcode().size(); ++n )

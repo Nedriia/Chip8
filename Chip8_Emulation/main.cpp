@@ -31,7 +31,6 @@ int main( int argc,char* argv[] )
 	Display::KeyDisplayAccess oKeyDisplay;
 
 	Chip8::GetInstance()->Init(oKey,sROMToLoad);
-
 	if( Display::GetInstance()->Init( oKeyDisplay,Chip8::GetInstance() ) == -1 )
 		return Quit();
 

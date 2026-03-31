@@ -12,7 +12,7 @@
 #define MEMORY_SIZE 4096
 #define DEFAULT_PARENT_ROM_FOLDER "..\\Roms\\"
 
-const int Chip8::INSTRUCTIONS_PER_FRAME = 1000;
+int Chip8::m_iInstructionsPerFrame = 10;
 
 Chip8* Chip8::m_pSingleton = nullptr;
 
@@ -143,9 +143,9 @@ void Chip8::EmulateCycle( const KeyAccess& key,const std::chrono::steady_clock::
 	}
 
 	std::chrono::microseconds elapsed = std::chrono::duration_cast< std::chrono::microseconds >( time - m_iLastTimeUpdate );
-	if( elapsed >= refreshTick || bForceNextStep )
+	if( elapsed >= Display::GetRefreshTick() || bForceNextStep )
 	{
-		for( int i = 0; i < INSTRUCTIONS_PER_FRAME; ++i )
+		for( int i = 0; i < m_iInstructionsPerFrame; ++i )
 		{
 			uint16_t opcode = 0;
 
@@ -156,9 +156,10 @@ void Chip8::EmulateCycle( const KeyAccess& key,const std::chrono::steady_clock::
 				break;
 		}
 
-		m_iLastTimeUpdate += refreshTick;
-
+		_UpdateTimers();
 		SoundManager::GetInstance()->Manage( ( uint8_t )m_iSound_timer );
+
+		m_iLastTimeUpdate += Display::GetRefreshTick();
 	}
 }
 
@@ -473,11 +474,11 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 		//VBlank, waiting for next frame
 		if( m_iTimeLastFrame.time_since_epoch().count() == 0 )
 		{
-			m_iTimeLastFrame = m_iLastTimeUpdateTimers;
+			m_iTimeLastFrame = m_iLastTimeUpdate;
 			m_iPC -= 2;
 			break;
 		}
-		else if( m_iLastTimeUpdateTimers >= ( m_iTimeLastFrame + refreshTick ) )
+		else if( m_iLastTimeUpdate >= ( m_iTimeLastFrame + Display::GetRefreshTick() ) )
 		{
 			m_iTimeLastFrame = {};
 		}
@@ -491,8 +492,8 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 #endif
 
 		Display::KeyDisplayAccess oKeyDisplay;
-		uint8_t xPos = m_aRegisters[ X ] & ( Display::CHIP8_DISPLAY_WIDTH - 1 );
-		uint8_t yPos = m_aRegisters[ Y ] & ( Display::CHIP8_DISPLAY_HEIGHT - 1 );
+		uint8_t xPos = m_aRegisters[ X ] & ( Display::GetWidth() - 1 );
+		uint8_t yPos = m_aRegisters[ Y ] & ( Display::GetHeight() - 1 );
 
 		VF = 0;
 		for( ; iYOffset < N; ++iYOffset )

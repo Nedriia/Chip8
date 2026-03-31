@@ -6,13 +6,14 @@
 const uint16_t WINDOW_WIDTH = 1920;
 const uint16_t WINDOW_HEIGHT = 1080;
 
-const uint8_t Display::CHIP8_DISPLAY_WIDTH = 64; //Keep as power of two or instruction in draw opcode might give you exotic result
-const uint8_t Display::CHIP8_DISPLAY_HEIGHT = 32;
-
 uint8_t* Display::m_pPixels = nullptr;
 bool Display::m_bDirtyFrame = false;
 Display* Display::m_pSingleton = nullptr;
+
 unsigned int Display::m_iFBOTexture = 0;
+
+int Display::m_iValueMicroSRefresh = 16666;
+std::chrono::microseconds Display::m_iCurrentTick = std::chrono::microseconds( Display::m_iValueMicroSRefresh );
 
 float vertices[] = {
 	// positions		//Texture coords
@@ -34,9 +35,10 @@ Display::Display() :
 	m_iVBO( 0 ),
 	m_iEBO( 0 ),
 	m_iFBO( 0 ),
-	m_iLastTimeUpdate( std::chrono::steady_clock::now() )
-{
-}
+	m_iLastTimeUpdate( std::chrono::steady_clock::now() ),
+	m_iDisplayWidth ( 64 ),//Keep as power of two or instruction in draw opcode might give you exotic result
+	m_iDisplayHeight ( 32 )
+{}
 
 Display::~Display()
 {
@@ -62,7 +64,7 @@ int Display::Init( const KeyDisplayAccess& oKey,const Chip8* pCpu )
 
 	_CreateWindowChip();
 	_InitRenderer();
-	m_pPixels = new uint8_t[ CHIP8_DISPLAY_WIDTH * CHIP8_DISPLAY_HEIGHT ];
+	m_pPixels = new uint8_t[ m_iDisplayWidth * m_iDisplayHeight ];
 	_InitPixelsData();
 	_InitFramebuffer();
 
@@ -112,7 +114,7 @@ void Display::_InitTexture()
 	glGenTextures( 1,&m_iTexture );
 	glBindTexture( GL_TEXTURE_2D,m_iTexture );
 
-	glTexImage2D( GL_TEXTURE_2D,0,GL_R8,CHIP8_DISPLAY_WIDTH,CHIP8_DISPLAY_HEIGHT,0,GL_RED,GL_UNSIGNED_BYTE,NULL );
+	glTexImage2D( GL_TEXTURE_2D,0,GL_R8,m_iDisplayWidth,m_iDisplayHeight,0,GL_RED,GL_UNSIGNED_BYTE,NULL );
 
 	glTexParameteri( GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST );
 	glTexParameteri( GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST );
@@ -167,24 +169,24 @@ void Display::_DestroyRenderer()
 
 void Display::_InitPixelsData()
 {
-	for( int i = 0; i < CHIP8_DISPLAY_HEIGHT; ++i )
+	for( int i = 0; i < Display::GetHeight(); ++i )
 	{
-		for( int j = 0; j < CHIP8_DISPLAY_WIDTH; ++j )
-			*( m_pPixels + i * CHIP8_DISPLAY_WIDTH + j ) = 0;
+		for( int j = 0; j < Display::GetWidth(); ++j )
+			*( m_pPixels + i * Display::GetWidth() + j ) = 0;
 	}
 	m_bDirtyFrame = true;
 }
 
 void Display::_XORedPixelsData( int xPos,int yPos,uint8_t odata )
 {
-	uint8_t iPrevious = *( m_pPixels + yPos * CHIP8_DISPLAY_WIDTH + xPos );
-	uint8_t iCurrent = ( * ( m_pPixels + yPos * CHIP8_DISPLAY_WIDTH + xPos ) ^= odata );
+	uint8_t iPrevious = *( m_pPixels + yPos * Display::GetWidth() + xPos );
+	uint8_t iCurrent = ( * ( m_pPixels + yPos * Display::GetWidth() + xPos ) ^= odata );
 	m_bDirtyFrame |= ( iCurrent != iPrevious );
 }
 
 bool Display::_IsPixelErase( int xPos,int yPos )
 {
-	return *( m_pPixels + yPos * CHIP8_DISPLAY_WIDTH + xPos ) == 255;
+	return *( m_pPixels + yPos * Display::GetWidth() + xPos ) == 255;
 }
 
 
@@ -240,12 +242,12 @@ void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xPos,uint8_t 
 	{
 		if( bClipping )
 		{
-			if( xPos >= CHIP8_DISPLAY_WIDTH || yPos >= CHIP8_DISPLAY_HEIGHT )
+			if( xPos >= Display::GetWidth() || yPos >= Display::GetHeight() )
 				return;
 		}
 		else
 		{
-			xPos &= CHIP8_DISPLAY_WIDTH - 1;
+			xPos &= Display::GetWidth() - 1;
 		}
 
 		if( oValue & ByteMask )
@@ -262,20 +264,20 @@ void Display::Update( const std::chrono::steady_clock::time_point& time,bool cpu
 	// -----------
 	std::chrono::microseconds elapsed = std::chrono::duration_cast< std::chrono::microseconds >( time - m_iLastTimeUpdate );
 	std::chrono::microseconds startElapsed = elapsed;
-	if( elapsed >= refreshTick )
+	if( elapsed >= m_iCurrentTick )
 	{
 		int updateThisFrame = 0;
 		const int maxUpdatePerFrame = 5; //could go up to 8 frame( 133 ms )
-		if( elapsed >= ( refreshTick * maxUpdatePerFrame ) )// too much to catch up
+		if( elapsed >= ( m_iCurrentTick * maxUpdatePerFrame ) )// too much to catch up
 		{
 			m_iLastTimeUpdate = time;
 			elapsed = std::chrono::microseconds( 0 );
 			return;
 		}
 
-		while( elapsed >= refreshTick && updateThisFrame < maxUpdatePerFrame )
+		while( elapsed >= m_iCurrentTick && updateThisFrame < maxUpdatePerFrame )
 		{
-			m_iLastTimeUpdate += refreshTick;
+			m_iLastTimeUpdate += m_iCurrentTick;
 			++updateThisFrame;
 			elapsed = std::chrono::duration_cast< std::chrono::microseconds >( time - m_iLastTimeUpdate );
 		}
@@ -288,7 +290,7 @@ void Display::Update( const std::chrono::steady_clock::time_point& time,bool cpu
 			glBindFramebuffer( GL_FRAMEBUFFER,m_iFBO );
 
 			glBindTexture( GL_TEXTURE_2D,m_iTexture );
-			glTexSubImage2D( GL_TEXTURE_2D,0,0,0,CHIP8_DISPLAY_WIDTH,CHIP8_DISPLAY_HEIGHT,GL_RED,GL_UNSIGNED_BYTE,m_pPixels );
+			glTexSubImage2D( GL_TEXTURE_2D,0,0,0,Display::GetWidth(),Display::GetHeight(),GL_RED,GL_UNSIGNED_BYTE,m_pPixels );
 
 			m_sShaderProgram.Use();
 			glDrawElements( GL_TRIANGLES,6,GL_UNSIGNED_INT,0 );
