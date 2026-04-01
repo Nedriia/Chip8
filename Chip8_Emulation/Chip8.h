@@ -17,7 +17,7 @@ enum class RunningState
 #ifdef QUIRKS
 	#define QUIRK_VFRESET
 	#define QUIRK_MEMORY
-	#define QUIRK_DISPWAIT
+	//#define QUIRK_DISPWAIT
 	#define QUIRK_CLIPPING
 	#define QUIRK_SHIFTING
 	#define QUIRK_JUMPING
@@ -115,6 +115,8 @@ public:
 
 	static const int				GetInstructPerFrame() { return m_iInstructionsPerFrame; }
 	static void						SetInstructionPerFrame( const int iNewValue ) { m_iInstructionsPerFrame = iNewValue; }
+
+	const char*						GetCurrentRomLoaded() const { return m_sCurrentRomLoaded; }
 
 private:
 
