@@ -14,7 +14,7 @@ int Quit()
 	Display::GetInstance()->DestroyWindow( oKeyDisplay );
 	SoundManager::GetInstance()->DestroySoundManager();
 	Chip8::GetInstance()->DestroyCpu();
-	
+
 	return -1;
 }
 
@@ -24,13 +24,10 @@ int main( int argc,char* argv[] )
 	if( argc >= 1 )
 		sROMToLoad = argv[ 1 ];
 
-	if( sROMToLoad == nullptr )
-		Quit();
-
 	Chip8::KeyAccess oKey;
 	Display::KeyDisplayAccess oKeyDisplay;
 
-	Chip8::GetInstance()->Init(oKey,sROMToLoad);
+	Chip8::GetInstance()->Init( oKey,sROMToLoad );
 	if( Display::GetInstance()->Init( oKeyDisplay,Chip8::GetInstance() ) == -1 )
 		return Quit();
 

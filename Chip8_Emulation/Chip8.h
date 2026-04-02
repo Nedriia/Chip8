@@ -117,6 +117,7 @@ public:
 	static void						SetInstructionPerFrame( const int iNewValue ) { m_iInstructionsPerFrame = iNewValue; }
 
 	const char*						GetCurrentRomLoaded() const { return m_sCurrentRomLoaded; }
+	void							SetRomToLoad( const KeyAccess& oKey, const std::string& sSrc );
 
 private:
 
@@ -171,7 +172,7 @@ private:
 
 	mutable RunningState						m_oState;
 	std::chrono::steady_clock::time_point		m_iLastTimeUpdate;
-	const char*									m_sCurrentRomLoaded;
+	const char*									m_sCurrentRomLoaded;//Don't set that without SetRomToLoad function
 	int											m_iCycle;
 	uint8_t										m_iPreviousKeyPressed;
 

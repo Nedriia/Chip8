@@ -6,6 +6,7 @@
 #include <iostream>
 #include "Input.h"
 #include "SoundManager.h"
+#include <string.h>
 
 #define START_FONT_MEMORY_ADDRESS 0x050
 #define START_ROM_MEMORY_ADDRESS 0x200
@@ -15,6 +16,17 @@
 int Chip8::m_iInstructionsPerFrame = 10;
 
 Chip8* Chip8::m_pSingleton = nullptr;
+
+void Chip8::SetRomToLoad( const KeyAccess& oKey,const std::string& sSrc )
+{
+	delete[] m_sCurrentRomLoaded;
+
+	size_t iSize = sSrc.length() + 1;
+	char* sDest = new char[iSize];
+	strcpy_s( sDest,iSize,sSrc.c_str() );
+
+	m_sCurrentRomLoaded = sDest;
+}
 
 Chip8::Chip8() :
 	m_iLastOpcode( 0 )
@@ -59,6 +71,9 @@ void Chip8::_Reset()
 	m_iLastOpcode = 0;
 	m_iCycle = 0;
 
+	Display::KeyDisplayAccess oKeyDisplay;
+	Display::ClearScreen( oKeyDisplay );
+
 	for( Data<uint8_t>* it = &m_aMemory[ 0 ]; it != &m_aMemory[ 0x1000 ]; ++it )
 		it->clear();
 	for( Data<uint8_t>* it = &m_aRegisters[ 0 ]; it != &m_aRegisters[ 0x10 ]; ++it )
@@ -80,10 +95,22 @@ void Chip8::_LoadFont()
 
 void Chip8::_LoadROM( const char* sROMToLoad )
 {
-	//TODO : Add Check here if command not empty
-	std::string sPath = DEFAULT_PARENT_ROM_FOLDER;
-	std::ifstream file( sPath + sROMToLoad,std::ios::binary | std::ios::in | std::ios::ate );
+	int iIndex = 0;
+	while( sROMToLoad[ iIndex ] != '\0' )
+	{
+		if( sROMToLoad[ iIndex ] == '\\' )
+		{
+			iIndex = -1;
+			break;
+		}
+		else
+			++iIndex;
+	}
+	std::string sPath = sROMToLoad;
+	if( iIndex > 0 )
+		sPath = std::string( DEFAULT_PARENT_ROM_FOLDER ) + sROMToLoad;
 
+	std::ifstream file( sPath,std::ios::binary | std::ios::in | std::ios::ate );
 	if( file.is_open() )
 	{
 		std::streamsize size = file.tellg();
@@ -113,7 +140,8 @@ void Chip8::_LoadROM( const char* sROMToLoad )
 
 		delete[] memblock;
 
-		m_sCurrentRomLoaded = sROMToLoad;
+		KeyAccess oKey;
+		SetRomToLoad( oKey,sROMToLoad );
 	}
 	else
 	{
@@ -170,6 +198,7 @@ void Chip8::AskForState( const KeyAccess& key,RunningState oState ) const
 
 void Chip8::DestroyCpu()
 {
+	delete[] m_sCurrentRomLoaded;
 	delete m_pSingleton;
 }
 

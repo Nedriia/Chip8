@@ -31,6 +31,11 @@
 #include "Display.h"
 #include "Chip8.h"
 
+#include <windows.h>
+#include <commdlg.h>
+#include <string>
+#include <iostream>
+
 #define NULL_DATA_COLOR IM_COL32( 128,128,128,255 )
 #define CHANGE_DATA_COLOR IM_COL32( 255,0,0,255 )
 #define DEFAULT_DATA_COLOR IM_COL32( 255,255,255,180 )
@@ -139,8 +144,30 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 
 			if( ImGui::Button( "Load Rom" ) )
 			{
-				
+				OPENFILENAMEA ofn;
+				char szFile[ 260 ];
+				HANDLE hf;
+
+				// Initialize OPENFILENAME
+				ZeroMemory( &ofn,sizeof( ofn ) );
+				ofn.lStructSize = sizeof( ofn );
+				ofn.lpstrFile = szFile;
+				ofn.lpstrFile[ 0 ] = '\0';
+				ofn.nMaxFile = sizeof( szFile );
+				ofn.lpstrFilter = "All\0*.*\0Text\0*.TXT\0";
+				ofn.nFilterIndex = 1;
+				ofn.lpstrFileTitle = NULL;
+				ofn.nMaxFileTitle = 0;
+				ofn.lpstrInitialDir = NULL;
+				ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+
+				if( GetOpenFileNameA( &ofn ) )
+				{
+					Chip8::GetInstance()->SetRomToLoad( oKey, szFile );
+					Chip8::GetInstance()->AskForState( oKey, RunningState::Reset );
+				}
 			}
+
 			ImGui::Separator();
 
 			if( m_pCPU->IsPause() )
@@ -148,16 +175,13 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 			else
 				ImGui::PushStyleColor( ImGuiCol_Button,ImVec4( 0.35f,0.40f,0.61f,0.62f ) );
 
-			if( ImGui::Button( "Pause" ) )
+			if( ImGui::Button( "Pause" ) && m_pCPU->GetCurrentRomLoaded() != nullptr )
 				m_pCPU->AskForState( oKey,m_pCPU->IsPause() ? RunningState::Running : RunningState::Pause );
 			ImGui::PopStyleColor();
 
 			if( ImGui::Button( "Reset" ) )
-			{
-				Display::ClearScreen( oKeyDisplay );
 				m_pCPU->AskForState( oKey,RunningState::Reset );
-			}
-			if( ImGui::Button( "Step Next Frame" ) )
+			if( ImGui::Button( "Step Next Frame" ) && m_pCPU->GetCurrentRomLoaded() != nullptr )
 				m_pCPU->AskForState( oKey,RunningState::StepNextFrame );
 			ImGui::Separator();
 
@@ -227,7 +251,7 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 		const char* titleLeft = "Display :";
 
 		std::string textPerfDebug = std::format( "{} ms | {} IPF",std::chrono::duration<double,std::milli>( time ).count(),!m_pCPU->IsPause() ? Chip8::GetInstructPerFrame() : 0 );
-		ImGui::TextColored( ImVec4( 0.7f,0.7f,0.7f,1.0f ),"%s %s %s",titleLeft,m_pCPU->IsPause() ? "( Pause )" : "( Running )",m_pCPU->GetCurrentRomLoaded() );
+		ImGui::TextColored( ImVec4( 0.7f,0.7f,0.7f,1.0f ),"%s %s %s",titleLeft,m_pCPU->IsPause() ? "( Pause )" : "( Running )", m_pCPU->GetCurrentRomLoaded() == nullptr ? "None" : m_pCPU->GetCurrentRomLoaded());
 
 		ImGui::SameLine( width - ImGui::CalcTextSize( textPerfDebug.c_str() ).x );
 		ImGui::TextColored( ImVec4( 0.5f,0.5f,0.5f,1.0f ),"%s",textPerfDebug.c_str() );
