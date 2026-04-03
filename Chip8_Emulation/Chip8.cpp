@@ -95,19 +95,11 @@ void Chip8::_LoadFont()
 
 void Chip8::_LoadROM( const char* sROMToLoad )
 {
-	int iIndex = 0;
-	while( sROMToLoad[ iIndex ] != '\0' )
-	{
-		if( sROMToLoad[ iIndex ] == '\\' )
-		{
-			iIndex = -1;
-			break;
-		}
-		else
-			++iIndex;
-	}
+	if( sROMToLoad == nullptr )
+		return;
+
 	std::string sPath = sROMToLoad;
-	if( iIndex > 0 )
+	if( std::strchr( sROMToLoad,'\\' ) == nullptr )
 		sPath = std::string( DEFAULT_PARENT_ROM_FOLDER ) + sROMToLoad;
 
 	std::ifstream file( sPath,std::ios::binary | std::ios::in | std::ios::ate );
