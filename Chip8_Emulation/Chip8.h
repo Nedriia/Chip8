@@ -185,23 +185,26 @@ private:
 
 	static  int						m_iInstructionsPerFrame;
 
-	typedef void ( Chip8::*function_opcode )( const uint16_t opcode );
-	std::array< function_opcode, 0x10 > m_aMainTable;
-	std::array< function_opcode, 0x10 > m_aTable0x0;
-	std::array< function_opcode, 0x10 > m_aTable0x8;
-	std::array< function_opcode, 0x10 > m_aTable0xE;
-	std::array< function_opcode, 0xFF > m_aTable256;
-	void Dispatch_0opc( const uint16_t opcode );
-	void Dispatch_8opc( const uint16_t opcode );
-	void Dispatch_Eopc( const uint16_t opcode );
-	void Dispatch_Fopc( const uint16_t opcode );
+	typedef void ( Chip8::*fct_opcode )( const uint16_t opcode );
+	//Opcodes array
+	std::array< fct_opcode, 0x10 > m_aMainTable;
+	std::array< fct_opcode, 0x10 > m_a0x0_Table;
+	std::array< fct_opcode, 0x10 > m_a0x8_Table;
+	std::array< fct_opcode, 0x10 > m_a0xE_Table;
+	std::array< fct_opcode, 0xFF > m_a0xF_Table;
+	//Functions
+	void x0_Dispatch( const uint16_t opcode );
+	void x8_Dispatch( const uint16_t opcode );
+	void xE_Dispatch( const uint16_t opcode );
+	void xF_Dispatch( const uint16_t opcode );
 
-	//Opcodes Functions
+	//Opcodes
 	void CLS( const uint16_t opcode );
 	void RET( const uint16_t opcode );
+	void CALL( const uint16_t opcode );
+
 	void JMP( const uint16_t opcode );
 	void JMP_NNN( const uint16_t opcode );
-	void CALL( const uint16_t opcode );
 
 	void SNE_VX_NN( const uint16_t opcode );
 	void SNE_VX_VY( const uint16_t opcode );
@@ -225,16 +228,17 @@ private:
 	void ADD_I_VX( const uint16_t opcode );
 
 	void SUB_VX_VY( const uint16_t opcode );
+	void SUBN_VX_VY( const uint16_t opcode );
 
 	void OR( const uint16_t opcode );
 	void AND( const uint16_t opcode );
 	void XOR( const uint16_t opcode );
 	void SHR( const uint16_t opcode );
-	void SUBN( const uint16_t opcode );
 	void SHL( const uint16_t opcode );
 	void RND( const uint16_t opcode );
 	void DRAW( const uint16_t opcode );
+	void BCD( const uint16_t opcode );
+
 	void SKP( const uint16_t opcode );
 	void SKNP( const uint16_t opcode );
-	void BCD( const uint16_t opcode );
 };

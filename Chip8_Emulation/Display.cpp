@@ -300,8 +300,10 @@ void Display::Update( const std::chrono::steady_clock::time_point& time,bool cpu
 			m_bDirtyFrame = false;
 		}
 
+#ifdef DEBUG_INFO
 		Chip8_Debugger::GetInstance()->Update( startElapsed );
 		Chip8_Debugger::GetInstance()->Render();
+#endif
 
 		glfwSwapBuffers( m_pWindow );
 	}
