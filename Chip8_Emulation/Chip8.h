@@ -3,6 +3,7 @@
 #include <random>
 #include <deque>
 #include <chrono>
+#include <array>
 
 enum class RunningState
 {
@@ -13,7 +14,7 @@ enum class RunningState
 };
 
 #ifndef QUIRKS
-#define QUIRKS
+//#define QUIRKS
 #ifdef QUIRKS
 	#define QUIRK_VFRESET
 	#define QUIRK_MEMORY
@@ -183,4 +184,57 @@ private:
 	static Chip8* m_pSingleton;
 
 	static  int						m_iInstructionsPerFrame;
+
+	typedef void ( Chip8::*function_opcode )( const uint16_t opcode );
+	std::array< function_opcode, 0x10 > m_aMainTable;
+	std::array< function_opcode, 0x10 > m_aTable0x0;
+	std::array< function_opcode, 0x10 > m_aTable0x8;
+	std::array< function_opcode, 0x10 > m_aTable0xE;
+	std::array< function_opcode, 0xFF > m_aTable256;
+	void Dispatch_0opc( const uint16_t opcode );
+	void Dispatch_8opc( const uint16_t opcode );
+	void Dispatch_Eopc( const uint16_t opcode );
+	void Dispatch_Fopc( const uint16_t opcode );
+
+	//Opcodes Functions
+	void CLS( const uint16_t opcode );
+	void RET( const uint16_t opcode );
+	void JMP( const uint16_t opcode );
+	void JMP_NNN( const uint16_t opcode );
+	void CALL( const uint16_t opcode );
+
+	void SNE_VX_NN( const uint16_t opcode );
+	void SNE_VX_VY( const uint16_t opcode );
+
+	void SE_VX_NN( const uint16_t opcode );
+	void SE_VX_VY( const uint16_t opcode );
+
+	void LD_VX_NN( const uint16_t opcode );
+	void LD_VX_VY( const uint16_t opcode );
+	void LD_I_NNN( const uint16_t opcode );
+	void LD_VX_DT( const uint16_t opcode );
+	void LD_DT_VX( const uint16_t opcode );
+	void LD_VX_KEY( const uint16_t opcode );
+	void LD_ST_VX( const uint16_t opcode );
+	void LD_I_FONT( const uint16_t opcode );
+	void LD_I_VX( const uint16_t opcode );
+	void LD_VX_I( const uint16_t opcode );
+
+	void ADD_VX_NN( const uint16_t opcode );
+	void ADD_VX_VY( const uint16_t opcode );
+	void ADD_I_VX( const uint16_t opcode );
+
+	void SUB_VX_VY( const uint16_t opcode );
+
+	void OR( const uint16_t opcode );
+	void AND( const uint16_t opcode );
+	void XOR( const uint16_t opcode );
+	void SHR( const uint16_t opcode );
+	void SUBN( const uint16_t opcode );
+	void SHL( const uint16_t opcode );
+	void RND( const uint16_t opcode );
+	void DRAW( const uint16_t opcode );
+	void SKP( const uint16_t opcode );
+	void SKNP( const uint16_t opcode );
+	void BCD( const uint16_t opcode );
 };

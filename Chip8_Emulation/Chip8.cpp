@@ -22,7 +22,7 @@ void Chip8::SetRomToLoad( const KeyAccess& oKey,const std::string& sSrc )
 	delete[] m_sCurrentRomLoaded;
 
 	size_t iSize = sSrc.length() + 1;
-	char* sDest = new char[iSize];
+	char* sDest = new char[ iSize ];
 	strcpy_s( sDest,iSize,sSrc.c_str() );
 
 	m_sCurrentRomLoaded = sDest;
@@ -40,6 +40,52 @@ Chip8::Chip8() :
 	,m_iTimeLastFrame{}
 #endif
 {
+	m_aMainTable[ 0x0 ] = { &Chip8::Dispatch_0opc };
+	m_aMainTable[ 0x1 ] = { &Chip8::JMP };
+	m_aMainTable[ 0x2 ] = { &Chip8::CALL };
+	m_aMainTable[ 0x3 ] = { &Chip8::SE_VX_NN };
+	m_aMainTable[ 0x4 ] = { &Chip8::SNE_VX_NN };
+	m_aMainTable[ 0x5 ] = { &Chip8::SE_VX_VY };
+	m_aMainTable[ 0x6 ] = { &Chip8::LD_VX_NN };
+	m_aMainTable[ 0x7 ] = { &Chip8::ADD_VX_NN };
+	m_aMainTable[ 0x8 ] = { &Chip8::Dispatch_8opc };
+	m_aMainTable[ 0x9 ] = { &Chip8::SNE_VX_VY };
+	m_aMainTable[ 0xA ] = { &Chip8::LD_I_NNN };
+	m_aMainTable[ 0xB ] = { &Chip8::JMP_NNN };
+	m_aMainTable[ 0xC ] = { &Chip8::RND };
+	m_aMainTable[ 0xD ] = { &Chip8::DRAW };
+	m_aMainTable[ 0xE ] = { &Chip8::Dispatch_Eopc };
+	m_aMainTable[ 0xF ] = { &Chip8::Dispatch_Fopc };
+
+	//0x0000
+	m_aTable0x0[ 0x0 ] = { &Chip8::CLS };
+	m_aTable0x0[ 0xE ] = { &Chip8::RET };
+
+	//0x8000
+	m_aTable0x8[0x0] = { &Chip8::LD_VX_VY };
+	m_aTable0x8[0x1] = { &Chip8::OR };
+	m_aTable0x8[0x2] = { &Chip8::AND };
+	m_aTable0x8[0x3] = { &Chip8::XOR };
+	m_aTable0x8[0x4] = { &Chip8::ADD_VX_VY };
+	m_aTable0x8[0x5] = { &Chip8::SUB_VX_VY };
+	m_aTable0x8[0x6] = { &Chip8::SHR };
+	m_aTable0x8[0x7] = { &Chip8::SUBN };
+	m_aTable0x8[0xE] = { &Chip8::SHL };
+
+	//0xE000
+	m_aTable0xE[ 0x9 ] = { &Chip8::SKP };
+	m_aTable0xE[ 0xA ] = { &Chip8::SKNP };
+
+	//0xF000
+	m_aTable256[ 0x7 ]  = { &Chip8::LD_VX_DT };
+	m_aTable256[ 0x0A ] = { &Chip8::LD_VX_KEY };
+	m_aTable256[ 0x15 ] = { &Chip8::LD_DT_VX };
+	m_aTable256[ 0x18 ] = { &Chip8::LD_ST_VX };
+	m_aTable256[ 0x1E ] = { &Chip8::ADD_I_VX };
+	m_aTable256[ 0x29 ] = { &Chip8::LD_I_FONT };
+	m_aTable256[ 0x33 ] = { &Chip8::BCD };
+	m_aTable256[ 0x55 ] = { &Chip8::LD_I_VX };
+	m_aTable256[ 0x65 ] = { &Chip8::LD_VX_I };
 }
 
 Chip8::~Chip8()
@@ -207,479 +253,31 @@ void Chip8::_FetchOpcode( uint16_t& opcode )
 
 void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 {
-	std::string OpcodeInstruct;
+	uint8_t iIndex = ( opcode & 0xF000 ) >> 12;
+	uint8_t iRow = ( opcode & 0x000F );
+	( this->*m_aMainTable[ iIndex ] )( opcode );
+	//else
+		//std::cout << "Opcode Unknown " << opcode << std::endl;*/
 
-	uint16_t NNN = opcode & 0x0FFF;
-	uint8_t NN = opcode & 0x00FF;
-	uint8_t N = opcode & 0x000F;
-	uint8_t X = ( opcode & 0x0F00 ) >> 8;
-	uint8_t Y = ( opcode & 0x00F0 ) >> 4;
-	Data < uint8_t>& VF = m_aRegisters[ 15 ];
+	//if( OpcodeInstruct.empty() )
+	//	std::cout << "Opcode Unknown " << std::format( "{:04X}",opcode ) << std::endl;
 
-	uint16_t opcodeNibble = opcode & 0xF000;
-	switch( opcodeNibble )
-	{
-	case 0x0000:
-	{
-		uint16_t check = opcode & 0x00FF;
-		if( check == 0xE0 )
-		{
-			OpcodeInstruct = std::format( "{:04X}  : CLS",opcode );
+	//_AddOpcodeToHistory( OpcodeInstruct.c_str() );
 
-			Display::KeyDisplayAccess oKeyDisplay;
-			Display::ClearScreen( oKeyDisplay );
-		}
-		else if( check == 0xEE )
-		{
-			OpcodeInstruct = std::format( "{:04X} : RET",opcode );
-
-			//Returns from a subroutine
-			m_iPC = m_aStack[ m_iSP ];
-			m_aStack[ m_iSP ] = 0;
-			if( m_iSP != 0 )
-				--m_iSP;
-		}
-		else
-		{
-			//Calls machine code routine (RCA 1802 for COSMAC VIP) at address NNN. Not necessary for most ROMs.
-		}
-	}
-	break;
-	case 0x1000:
-	{
-		OpcodeInstruct = std::format( "{:04X} : JMP",opcode );
-
-		//Jumps to address NNN
-		m_iPC = NNN;
-	}
-	break;
-	case 0x2000:
-	{
-		if( m_aStack[ 0 ] != 0 ) //could be simplier to use int and init the value to -1 but I want to keep 0 as start
-			++m_iSP;
-
-		OpcodeInstruct = std::format( "{:04X} : CALL",opcode );
-
-		//Calls subroutine at NNN
-		m_aStack[ m_iSP ] = m_iPC;
-		m_iPC = NNN;
-	}
-	break;
-	case 0x3000:
-	{
-		OpcodeInstruct = std::format( "{:04X} : SE VX, NN",opcode );
-
-		//Skips the next instruction if VX equals NN (usually the next instruction is a jump to skip a code block)
-		if( m_aRegisters[ X ] == NN )
-			m_iPC += 2;
-	}
-	break;
-	case 0x4000:
-	{
-		OpcodeInstruct = std::format( "{:04X} : SNE VX, NN",opcode );
-
-		//Skips the next instruction if VX does not equal NN (usually the next instruction is a jump to skip a code block).
-		if( m_aRegisters[ X ] != NN )
-			m_iPC += 2;
-	}
-	break;
-	case 0x5000:
-	{
-		OpcodeInstruct = std::format( "{:04X} : SE VX, VY",opcode );
-
-		//Skips the next instruction if VX equals VY (usually the next instruction is a jump to skip a code block).
-		if( m_aRegisters[ X ] == m_aRegisters[ Y ] )
-			m_iPC += 2;
-	}
-	break;
-	case 0x6000:
-	{
-		OpcodeInstruct = std::format( "{:04X} : LD VX, NN",opcode );
-
-		//Sets NN To VX
-		m_aRegisters[ X ] = NN;
-	}
-	break;
-	case 0x7000:
-	{
-		OpcodeInstruct = std::format( "{:04X} : ADD VX, NN",opcode );
-
-		//Adds NN to VX (carry flag is not changed).
-		m_aRegisters[ X ] += NN;
-	}
-	break;
-	case 0x8000:
-	{
-		switch( opcode & 0x000F )
-		{
-		case 0:
-		{
-			OpcodeInstruct = std::format( "{:04X} : LD VX, VY",opcode );
-
-			//Sets VX to the value of VY.
-			m_aRegisters[ X ] = m_aRegisters[ Y ];
-		}
-		break;
-		case 1:
-		{
-			OpcodeInstruct = std::format( "{:04X} : OR VX, VY",opcode );
-
-			//Sets VX to VX or VY. (bitwise OR operation)
-			m_aRegisters[ X ] |= m_aRegisters[ Y ];
-#ifdef QUIRK_VFRESET
-			VF = 0;
-#endif
-		}
-		break;
-		case 2:
-		{
-			OpcodeInstruct = std::format( "{:04X} : AND VX, VY",opcode );
-
-			//Sets VX to VX and VY. (bitwise AND operation)
-			m_aRegisters[ X ] &= m_aRegisters[ Y ];
-#ifdef QUIRK_VFRESET
-			VF = 0;
-#endif
-		}
-		break;
-		case 3:
-		{
-			OpcodeInstruct = std::format( "{:04X} : XOR VX, VY",opcode );
-
-			//Sets VX to VX xor VY
-			m_aRegisters[ X ] ^= m_aRegisters[ Y ];
-#ifdef QUIRK_VFRESET
-			VF = 0;
-#endif
-		}
-		break;
-		case 4:
-		{
-			OpcodeInstruct = std::format( "{:04X} : ADD VX, VY ( VF )",opcode );
-
-			//Adds VY to VX
-			uint16_t sum = m_aRegisters[ X ] + m_aRegisters[ Y ];
-			m_aRegisters[ X ] = sum & 0xFF;
-			VF = ( sum > 0xFF ) ? 1 : 0;
-			//VF is set to 1 when there's an overflow, and to 0 when there is not.
-		}
-		break;
-		case 5:
-		{
-			OpcodeInstruct = std::format( "{:04X} : SUB VX, VY ( VF )",opcode );
-
-			//VY is subtracted from VX.
-			uint16_t diff = m_aRegisters[ X ] - m_aRegisters[ Y ];
-			m_aRegisters[ X ] = diff & 0xFF;
-			VF = 1;
-			if( diff > 0xFF )
-				VF = 0;
-			// VF is set to 0 when there's an underflow, and 1 when there is not. (i.e. VF set to 1 if VX >= VY and 0 if not)
-		}
-		break;
-		case 6:
-		{
-			//If the least - significant bit of Vx is 1, then VF is set to 1, otherwise 0. Then Vx is divided by 2.
-			uint8_t LSB = 0;
-
-#ifdef QUIRK_SHIFTING
-			OpcodeInstruct = std::format( "{:04X} : SHR VX, VY",opcode );
-
-			LSB = ( m_aRegisters[ Y ] & 0x01 );
-
-			m_aRegisters[ X ] = m_aRegisters[ Y ] >> 1; //before 1990
-#else // QUIRK_SHIFTING
-			OpcodeInstruct = std::format( "{:04X} : SHR VX",opcode );
-
-			LSB = ( m_aRegisters[ X ] & 0x01 );
-
-			m_aRegisters[ X ] >>= 1;
-#endif
-
-			VF = LSB;
-		}
-		break;
-		case 7:
-		{
-			OpcodeInstruct = std::format( "{:04X} : SUBN VX, VY",opcode );
-
-			//Sets VX equals to VY minus VX.
-			uint16_t diff = m_aRegisters[ Y ] - m_aRegisters[ X ];
-			m_aRegisters[ X ] = diff & 0xFF;
-			VF = 1;
-			if( diff > 0xFF )
-				VF = 0;
-			// VF is set to 0 when there's an underflow, and 1 when there is not. (i.e. VF set to 1 if VY >= VX).
-		}
-		break;
-		case 0xE:
-		{
-			uint8_t MSB = 0;
-
-#ifdef QUIRK_SHIFTING
-			OpcodeInstruct = std::format( "{:04X} : SHL VX, VY",opcode );
-
-			// If the most-significant bit of Vy is 1.
-			MSB = ( m_aRegisters[ Y ] & 0x80 ) == 0x80 ? 1 : 0;
-
-			m_aRegisters[ X ] = m_aRegisters[ Y ] << 1; //before 1990
-#else // QUIRK_SHIFTING
-			OpcodeInstruct = std::format( "{:04X} : SHL VX",opcode );
-
-			// If the most-significant bit of Vx is 1, then VF is set to 1, otherwise to 0. Then Vx is multiplied by 2.
-			MSB = ( m_aRegisters[ X ] & 0x80 ) == 0x80 ? 1 : 0;
-
-			m_aRegisters[ X ] <<= 1;
-#endif
-
-			VF = MSB;
-		}
-		break;
-		default:
-			break;
-		}
-	}
-	break;
-	case 0x9000:
-	{
-		OpcodeInstruct = std::format( "{:04X} : SNE VX, VY",opcode );
-
-		//Skips the next instruction if VX does not equal VY. (Usually the next instruction is a jump to skip a code block)
-		if( m_aRegisters[ X ] != m_aRegisters[ Y ] )
-			m_iPC += 2;
-	}
-	break;
-	case 0xA000:
-	{
-		OpcodeInstruct = std::format( "{:04X} : LD I, NNN",opcode );
-
-		//Sets I to the address NNN
-		m_iI = NNN;
-	}
-	break;
-	case 0xB000:
-	{
-#ifdef QUIRK_JUMPING
-		//Jumps to the address NNN plus V0
-		OpcodeInstruct = std::format( "{:04X} : JMP V0, NNN",opcode );
-		m_iPC = NNN + m_aRegisters[ 0 ];
-#else // QUIRK_JUMPING
-		OpcodeInstruct = std::format( "{:04X} : JMP VX, NNN",opcode );
-		m_iPC = NNN + m_aRegisters[ X ];
-#endif
-	}
-	break;
-	case 0xC000:
-	{
-		OpcodeInstruct = std::format( "{:04X} : RND VX, NN",opcode );
-
-		//Sets VX to the result of a bitwise and operation on a random number (Typically: 0 to 255) and NN
-		std::uniform_int_distribution<std::mt19937::result_type> dist( 0,255 );
-		m_aRegisters[ X ] = dist( m_iRng ) & NN;
-	}
-	break;
-	case 0xD000:
-	{
-		/*Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision.
-		The interpreter reads N bytes from memory, starting at the address stored in I.
-		These bytes are then displayed as sprites on screen at coordinates (Vx, Vy). Sprites are XORed onto the existing screen.
-		If this causes any pixels to be erased, VF is set to 1, otherwise it is set to 0.
-		If the sprite is positioned so part of it is outside the coordinates of the display, it wraps around to the opposite side of the screen
-		I value does not change after the execution of this instruction*/
-		bool bErased = false;
-		uint8_t iYOffset = 0;
-
-#ifdef QUIRK_DISPWAIT
-		OpcodeInstruct = std::format( "{:04X} : DRW VX, VY VBlank",opcode );
-
-		//VBlank, waiting for next frame
-		if( m_iTimeLastFrame.time_since_epoch().count() == 0 )
-		{
-			m_iTimeLastFrame = m_iLastTimeUpdate;
-			m_iPC -= 2;
-			break;
-		}
-		else if( m_iLastTimeUpdate >= ( m_iTimeLastFrame + Display::GetRefreshTick() ) )
-		{
-			m_iTimeLastFrame = {};
-		}
-		else
-		{
-			m_iPC -= 2;
-			break;
-		}
-#else
-		OpcodeInstruct = std::format( "{:04X} : DRW VX, VY",opcode );
-#endif
-
-		Display::KeyDisplayAccess oKeyDisplay;
-		uint8_t xPos = m_aRegisters[ X ] & ( Display::GetWidth() - 1 );
-		uint8_t yPos = m_aRegisters[ Y ] & ( Display::GetHeight() - 1 );
-
-		VF = 0;
-		for( ; iYOffset < N; ++iYOffset )
-		{
-#ifdef QUIRK_CLIPPING
-			Display::DrawPixelAtPos( oKeyDisplay,xPos,yPos + iYOffset,m_aMemory[ m_iI + iYOffset ],bErased,true );
-#else
-			Display::DrawPixelAtPos( oKeyDisplay,xPos,yPos + iYOffset,m_aMemory[ m_iI + iYOffset ],bErased,false );
-#endif
-			if( bErased )
-				VF = 1;
-		}
-
-		break;
-	}
-	case 0xE000:
-	{
-		uint16_t check = opcode & 0x00FF;
-		if( check == 0x9E )
-		{
-			OpcodeInstruct = std::format( "{:04X} : SKP",opcode );
-
-			//Skips the next instruction if the key stored in VX(only consider the lowest nibble) is pressed (usually the next instruction is a jump to skip a code block).
-			if( Input::GetInstance()->GetKeyState( m_aRegisters[ X ] ) )
-				m_iPC += 2;
-		}
-		else if( check == 0xA1 )
-		{
-			OpcodeInstruct = std::format( "{:04X} : SKNP",opcode );
-
-			//Skips the next instruction if the key stored in VX(only consider the lowest nibble) is not pressed (usually the next instruction is a jump to skip a code block).
-			if( !Input::GetInstance()->GetKeyState( m_aRegisters[ X ] ) )
-				m_iPC += 2;
-		}
-	}
-	break;
-	case 0xF000:
-	{
-		switch( opcode & 0x00FF )
-		{
-		case 7:
-			OpcodeInstruct = std::format( "{:04X} : LD VX, DT",opcode );
-
-			//Sets VX to the value of the delay timer.
-			m_aRegisters[ X ] = m_iDelay_timer;
-			break;
-		case 0x0A:
-		{
-			OpcodeInstruct = std::format( "{:04X} : LD VX, KEY",opcode );
-
-			//A key press is awaited, and then stored in VX (blocking operation, all instruction halted until next key event, delay and sound timers should continue processing)
-			if( Input::GetInstance() )
-			{
-				if( m_iPreviousKeyPressed != 0xFF && Input::GetInstance()->GetKeyState( m_iPreviousKeyPressed ) == 0 )//Previous Input has been released
-				{
-					m_aRegisters[ X ] = m_iPreviousKeyPressed;
-					m_iPreviousKeyPressed = 0xFF;
-				}
-				else
-				{
-					m_iPreviousKeyPressed = Input::GetInstance()->IsAnyKeyPress();
-					m_iPC -= 2;
-				}
-			}
-			else
-				m_iPC -= 2;
-		}
-		break;
-		case 0x15:
-			OpcodeInstruct = std::format( "{:04X} : LD DT, VX",opcode );
-
-			//Sets the delay timer to VX
-			m_iDelay_timer = m_aRegisters[ X ];
-			break;
-		case 0x18:
-			OpcodeInstruct = std::format( "{:04X} : LD ST, VX",opcode );
-
-			//Sets the sound timer to VX
-			m_iSound_timer = m_aRegisters[ X ];
-			break;
-		case 0x1E:
-			OpcodeInstruct = std::format( "{:04X} : ADD I, VX",opcode );
-
-			//Adds VX to I. VF is not affected
-			m_iI += m_aRegisters[ X ];
-			break;
-		case 0x29:
-		{
-			OpcodeInstruct = std::format( "{:04X} : LD I, FONT( VX )",opcode );
-
-			//Sets I to the location of the sprite for the character in VX(only consider the lowest nibble). Characters 0-F (in hexadecimal) are represented by a 4x5 font.
-			m_iI = START_FONT_MEMORY_ADDRESS + ( m_aRegisters[ X ] * 5 );
-		}
-		break;
-		case 0x33:
-		{
-			OpcodeInstruct = std::format( "{:04X} : BCD VX",opcode );
-
-			//Stores the binary-coded decimal representation of VX, with the hundreds digit in memory at location in I, the tens digit at location I+1, and the ones digit at location I+2
-			m_aMemory[ m_iI ] = m_aRegisters[ X ] / 100;
-			m_aMemory[ m_iI + 1 ] = ( m_aRegisters[ X ] / 10 ) % 10;
-			m_aMemory[ m_iI + 2 ] = ( m_aRegisters[ X ] % 100 ) % 10;
-		}
-		break;
-		case 0x55:
-		{
-			OpcodeInstruct = std::format( "{:04X} : LD [I], VX",opcode );
-
-			//Stores from V0 to VX (including VX) in memory, starting at address I. The offset from I is increased by 1 for each value written, but I itself is left unmodified
-			for( int i = 0; i <= X; ++i )
-			{
-#ifdef QUIRK_MEMORY
-				m_aMemory[ m_iI ] = m_aRegisters[ i ];
-				++m_iI;
-#else
-				m_aMemory[ m_iI + i ] = m_aRegisters[ i ];
-#endif
-			}
-		}
-		break;
-		case 0x65:
-		{
-			OpcodeInstruct = std::format( "{:04X} : LD VX, [I]",opcode );
-
-			//Fills from V0 to VX (including VX) with values from memory, starting at address I. The offset from I is increased by 1 for each value read, but I itself is left unmodified
-			for( int i = 0; i <= X; ++i )
-			{
-#ifdef QUIRK_MEMORY
-				m_aRegisters[ i ] = m_aMemory[ m_iI ];
-				++m_iI;
-#else
-				m_aRegisters[ i ] = m_aMemory[ m_iI + i ];
-#endif
-			}
-		}
-		break;
-		default:
-			break;
-		}
-	}
-	break;
-
-	default:
-		break;
-	}
-
-	if( OpcodeInstruct.empty() )
-		std::cout << "Opcode Unknown " << std::format( "{:04X}",opcode ) << std::endl;
-
-	_AddOpcodeToHistory( OpcodeInstruct.c_str() );
-
-	if( opcode == m_iLastOpcode && opcodeNibble == 0x1000 )//JMP instruction
-	{
-		++m_iCountBeforeStop;
-		if( m_iCountBeforeStop >= 2 )
-		{
-			m_oState = RunningState::Pause;
-			return;
-		}
-	}
-	else
-	{
-		m_iLastOpcode = opcode;
-		m_iCountBeforeStop = 0;
-	}
+	//if( opcode == m_iLastOpcode && opcodeNibble == 0x1000 )//JMP instruction
+	//{
+	//	++m_iCountBeforeStop;
+	//	if( m_iCountBeforeStop >= 2 )
+	//	{
+	//		m_oState = RunningState::Pause;
+	//		return;
+	//	}
+	//}
+	//else
+	//{
+	//	m_iLastOpcode = opcode;
+	//	m_iCountBeforeStop = 0;
+	//}
 }
 
 void Chip8::_UpdateTimers()
@@ -699,4 +297,505 @@ void Chip8::_AddOpcodeToHistory( const char* pOpcode )
 
 	m_aOpcodeHistory.push_back( pOpcode );
 	++m_iCycle;
+}
+
+//Chip8::FunctionTree::FunctionTree()
+//{
+//	array[0] = { CLS };
+//	//m_aOpcodes[ 0x0 ] = { OR };
+////	/*m_aOpcodes[ 0x8 ] = { 0x0,0x1,0x2,0x3,0x4,0x5,0x6,0x7,0xE };
+////	m_aOpcodes[ 0xE ] = { 0x9E,0xA1 };
+////	m_aOpcodes[ 0xF ] = { 0x70,0x0A,0x15,0x18,0x1E,0x29,0x33,0x55,0x65 };*/
+//}
+
+void Chip8::Dispatch_8opc( const uint16_t opcode )
+{
+	( this->*m_aTable0x8[ opcode & 0x000F ] )( opcode );
+}
+
+void Chip8::Dispatch_Fopc( const uint16_t opcode )
+{
+	( this->*m_aTable256[ opcode & 0x00FF ] )( opcode );
+	//TODO : check if iIndex outside of table
+}
+
+void Chip8::Dispatch_Eopc( const uint16_t opcode )
+{
+	( this->*m_aTable0xE[ ( opcode & 0x00F0 ) >> 4 ] )( opcode );
+}
+
+void Chip8::Dispatch_0opc( const uint16_t opcode )
+{
+	( this->*m_aTable0x0[ opcode & 0x000F ] )( opcode );
+}
+
+void Chip8::CLS( uint16_t opcode )
+{
+	Display::KeyDisplayAccess oKeyDisplay;
+	Display::ClearScreen( oKeyDisplay );
+	
+	_AddOpcodeToHistory( std::format( "{:04X}  : CLS",opcode ).c_str() );
+}
+
+void Chip8::RET( uint16_t opcode )
+{
+	//std::string OpcodeInstruct = std::format( "{:04X} : RET",opcode );
+
+	//Returns from a subroutine
+	m_iPC = m_aStack[ m_iSP ];
+	m_aStack[ m_iSP ] = 0;
+	if( m_iSP != 0 )
+		--m_iSP;
+
+	//_AddOpcodeToHistory( OpcodeInstruct.c_str() );
+}
+
+void Chip8::JMP( const uint16_t opcode )
+{
+	uint16_t NNN = opcode & 0x0FFF;
+
+	//Jumps to address NNN
+	m_iPC = NNN;
+}
+
+void Chip8::JMP_NNN( const uint16_t opcode )
+{
+	uint16_t NNN = opcode & 0x0FFF;
+
+#ifdef QUIRK_JUMPING
+	//Jumps to the address NNN plus V0
+	//OpcodeInstruct = std::format( "{:04X} : JMP V0, NNN",opcode );
+	m_iPC = NNN + m_aRegisters[ 0 ];
+#else // QUIRK_JUMPING
+	uint8_t X = ( opcode & 0x0F00 ) >> 8;
+	//OpcodeInstruct = std::format( "{:04X} : JMP VX, NNN",opcode );
+	m_iPC = NNN + m_aRegisters[ X ];
+#endif
+}
+
+void Chip8::CALL( const uint16_t opcode )
+{
+	uint16_t NNN = opcode & 0x0FFF;
+
+	if( m_aStack[ 0 ] != 0 ) //could be simplier to use int and init the value to -1 but I want to keep 0 as start
+		++m_iSP;
+
+	//Calls subroutine at NNN
+	m_aStack[ m_iSP ] = m_iPC;
+	m_iPC = NNN;
+}
+
+void Chip8::SNE_VX_NN( const uint16_t opcode )
+{
+	uint8_t NN = opcode & 0x00FF;
+	uint8_t X = ( opcode & 0x0F00 ) >> 8;
+
+	//Skips the next instruction if VX does not equal NN (usually the next instruction is a jump to skip a code block).
+	if( m_aRegisters[ X ] != NN )
+		m_iPC += 2;
+}
+
+void Chip8::SNE_VX_VY( const uint16_t opcode )
+{
+	uint8_t X = ( opcode & 0x0F00 ) >> 8;
+	uint8_t Y = ( opcode & 0x00F0 ) >> 4;
+
+	//OpcodeInstruct = std::format( "{:04X} : SNE VX, VY",opcode );
+
+	//Skips the next instruction if VX does not equal VY. (Usually the next instruction is a jump to skip a code block)
+	if( m_aRegisters[ X ] != m_aRegisters[ Y ] )
+		m_iPC += 2;
+}
+
+void Chip8::SE_VX_NN( const uint16_t opcode )
+{
+	uint8_t NN = opcode & 0x00FF;
+	uint8_t X = ( opcode & 0x0F00 ) >> 8;
+
+	//Skips the next instruction if VX equals NN (usually the next instruction is a jump to skip a code block)
+	if( m_aRegisters[ X ] == NN )
+		m_iPC += 2;
+
+}
+
+void Chip8::SE_VX_VY( const uint16_t opcode )
+{
+	uint8_t X = ( opcode & 0x0F00 ) >> 8;
+	uint8_t Y = ( opcode & 0x00F0 ) >> 4;
+
+	//Skips the next instruction if VX equals VY (usually the next instruction is a jump to skip a code block).
+	if( m_aRegisters[ X ] == m_aRegisters[ Y ] )
+		m_iPC += 2;
+}
+
+void Chip8::LD_VX_NN( const uint16_t opcode )
+{
+	uint8_t NN = opcode & 0x00FF;
+	uint8_t X = ( opcode & 0x0F00 ) >> 8;
+
+	//Sets NN To VX
+	m_aRegisters[ X ] = NN;
+}
+
+void Chip8::LD_VX_VY( const uint16_t opcode )
+{
+	//OpcodeInstruct = std::format( "{:04X} : LD VX, VY",opcode );
+	uint8_t X = ( opcode & 0x0F00 ) >> 8;
+	uint8_t Y = ( opcode & 0x00F0 ) >> 4;
+
+	//Sets VX to the value of VY.
+	m_aRegisters[ X ] = m_aRegisters[ Y ];
+}
+
+void Chip8::LD_I_NNN( const uint16_t opcode )
+{
+	uint16_t NNN = opcode & 0x0FFF;
+	//OpcodeInstruct = std::format( "{:04X} : LD I, NNN",opcode );
+
+	//Sets I to the address NNN
+	m_iI = NNN;
+}
+
+void Chip8::LD_VX_DT( const uint16_t opcode )
+{
+	uint8_t X = ( opcode & 0x0F00 ) >> 8;
+	//OpcodeInstruct = std::format( "{:04X} : LD VX, DT",opcode );
+
+	//Sets VX to the value of the delay timer.
+	m_aRegisters[ X ] = m_iDelay_timer;
+}
+
+void Chip8::LD_DT_VX( const uint16_t opcode )
+{
+	uint8_t X = ( opcode & 0x0F00 ) >> 8;
+	//OpcodeInstruct = std::format( "{:04X} : LD DT, VX",opcode );
+
+	//Sets the delay timer to VX
+	m_iDelay_timer = m_aRegisters[ X ];
+}
+
+void Chip8::LD_VX_KEY( const uint16_t opcode )
+{
+	uint8_t X = ( opcode & 0x0F00 ) >> 8;
+	//OpcodeInstruct = std::format( "{:04X} : LD VX, KEY",opcode );
+
+	//A key press is awaited, and then stored in VX (blocking operation, all instruction halted until next key event, delay and sound timers should continue processing)
+	if( Input::GetInstance() )
+	{
+		if( m_iPreviousKeyPressed != 0xFF && Input::GetInstance()->GetKeyState( m_iPreviousKeyPressed ) == 0 )//Previous Input has been released
+		{
+			m_aRegisters[ X ] = m_iPreviousKeyPressed;
+			m_iPreviousKeyPressed = 0xFF;
+		}
+		else
+		{
+			m_iPreviousKeyPressed = Input::GetInstance()->IsAnyKeyPress();
+			m_iPC -= 2;
+		}
+	}
+	else
+		m_iPC -= 2;
+}
+
+void Chip8::LD_ST_VX( const uint16_t opcode )
+{
+	uint8_t X = ( opcode & 0x0F00 ) >> 8;
+	//OpcodeInstruct = std::format( "{:04X} : LD ST, VX",opcode );
+
+	//Sets the sound timer to VX
+	m_iSound_timer = m_aRegisters[ X ];
+}
+
+void Chip8::LD_I_FONT( const uint16_t opcode )
+{
+	uint8_t X = ( opcode & 0x0F00 ) >> 8;
+	//OpcodeInstruct = std::format( "{:04X} : LD I, FONT( VX )",opcode );
+
+	//Sets I to the location of the sprite for the character in VX(only consider the lowest nibble). Characters 0-F (in hexadecimal) are represented by a 4x5 font.
+	m_iI = START_FONT_MEMORY_ADDRESS + ( m_aRegisters[ X ] * 5 );
+}
+
+void Chip8::LD_I_VX( const uint16_t opcode )
+{
+	uint8_t X = ( opcode & 0x0F00 ) >> 8;
+	//OpcodeInstruct = std::format( "{:04X} : LD [I], VX",opcode );
+
+	//Stores from V0 to VX (including VX) in memory, starting at address I. The offset from I is increased by 1 for each value written, but I itself is left unmodified
+	for( int i = 0; i <= X; ++i )
+	{
+#ifdef QUIRK_MEMORY
+		m_aMemory[ m_iI ] = m_aRegisters[ i ];
+		++m_iI;
+#else
+		m_aMemory[ m_iI + i ] = m_aRegisters[ i ];
+#endif
+	}
+}
+
+void Chip8::LD_VX_I( const uint16_t opcode )
+{
+	uint8_t X = ( opcode & 0x0F00 ) >> 8;
+	//OpcodeInstruct = std::format( "{:04X} : LD VX, [I]",opcode );
+
+	//Fills from V0 to VX (including VX) with values from memory, starting at address I. The offset from I is increased by 1 for each value read, but I itself is left unmodified
+	for( int i = 0; i <= X; ++i )
+	{
+#ifdef QUIRK_MEMORY
+		m_aRegisters[ i ] = m_aMemory[ m_iI ];
+		++m_iI;
+#else
+		m_aRegisters[ i ] = m_aMemory[ m_iI + i ];
+#endif
+	}
+}
+
+void Chip8::ADD_VX_NN( const uint16_t opcode )
+{
+	uint8_t NN = opcode & 0x00FF;
+	uint8_t X = ( opcode & 0x0F00 ) >> 8;
+
+	//Adds NN to VX (carry flag is not changed).
+	m_aRegisters[ X ] += NN;
+}
+
+void Chip8::ADD_VX_VY( const uint16_t opcode )
+{
+	//OpcodeInstruct = std::format( "{:04X} : ADD VX, VY ( VF )",opcode );
+	uint8_t X = ( opcode & 0x0F00 ) >> 8;
+	uint8_t Y = ( opcode & 0x00F0 ) >> 4;
+	//Adds VY to VX
+	uint16_t sum = m_aRegisters[ X ] + m_aRegisters[ Y ];
+	m_aRegisters[ X ] = sum & 0xFF;
+	Data < uint8_t>& VF = m_aRegisters[ 15 ];
+	VF = ( sum > 0xFF ) ? 1 : 0;
+	//VF is set to 1 when there's an overflow, and to 0 when there is not.
+}
+
+void Chip8::ADD_I_VX( const uint16_t opcode )
+{
+	uint8_t X = ( opcode & 0x0F00 ) >> 8;
+	//OpcodeInstruct = std::format( "{:04X} : ADD I, VX",opcode );
+
+	//Adds VX to I. VF is not affected
+	m_iI += m_aRegisters[ X ];
+}
+
+void Chip8::SUB_VX_VY( const uint16_t opcode )
+{
+	uint8_t X = ( opcode & 0x0F00 ) >> 8;
+	uint8_t Y = ( opcode & 0x00F0 ) >> 4;
+	Data < uint8_t>& VF = m_aRegisters[ 15 ];
+	//OpcodeInstruct = std::format( "{:04X} : SUB VX, VY ( VF )",opcode );
+
+	//VY is subtracted from VX.
+	uint16_t diff = m_aRegisters[ X ] - m_aRegisters[ Y ];
+	m_aRegisters[ X ] = diff & 0xFF;
+	VF = 1;
+	if( diff > 0xFF )
+		VF = 0;
+	// VF is set to 0 when there's an underflow, and 1 when there is not. (i.e. VF set to 1 if VX >= VY and 0 if not)
+}
+
+void Chip8::SHR( const uint16_t opcode )
+{
+	uint8_t X = ( opcode & 0x0F00 ) >> 8;
+	uint8_t Y = ( opcode & 0x00F0 ) >> 4;
+	Data < uint8_t>& VF = m_aRegisters[ 15 ];
+
+	//If the least - significant bit of Vx is 1, then VF is set to 1, otherwise 0. Then Vx is divided by 2.
+	uint8_t LSB = 0;
+
+#ifdef QUIRK_SHIFTING
+	//OpcodeInstruct = std::format( "{:04X} : SHR VX, VY",opcode );
+
+	LSB = ( m_aRegisters[ Y ] & 0x01 );
+
+	m_aRegisters[ X ] = m_aRegisters[ Y ] >> 1; //before 1990
+#else // QUIRK_SHIFTING
+	//OpcodeInstruct = std::format( "{:04X} : SHR VX",opcode );
+
+	LSB = ( m_aRegisters[ X ] & 0x01 );
+
+	m_aRegisters[ X ] >>= 1;
+#endif
+
+	VF = LSB;
+}
+
+void Chip8::SUBN( const uint16_t opcode )
+{
+	uint8_t X = ( opcode & 0x0F00 ) >> 8;
+	uint8_t Y = ( opcode & 0x00F0 ) >> 4;
+	Data < uint8_t>& VF = m_aRegisters[ 15 ];
+	//OpcodeInstruct = std::format( "{:04X} : SUBN VX, VY",opcode );
+
+	//Sets VX equals to VY minus VX.
+	uint16_t diff = m_aRegisters[ Y ] - m_aRegisters[ X ];
+	m_aRegisters[ X ] = diff & 0xFF;
+	VF = 1;
+	if( diff > 0xFF )
+		VF = 0;
+	// VF is set to 0 when there's an underflow, and 1 when there is not. (i.e. VF set to 1 if VY >= VX).
+}
+
+void Chip8::SHL( const uint16_t opcode )
+{
+	uint8_t X = ( opcode & 0x0F00 ) >> 8;
+	uint8_t Y = ( opcode & 0x00F0 ) >> 4;
+	Data < uint8_t>& VF = m_aRegisters[ 15 ];
+
+	uint8_t MSB = 0;
+
+#ifdef QUIRK_SHIFTING
+	//OpcodeInstruct = std::format( "{:04X} : SHL VX, VY",opcode );
+
+	// If the most-significant bit of Vy is 1.
+	MSB = ( m_aRegisters[ Y ] & 0x80 ) == 0x80 ? 1 : 0;
+
+	m_aRegisters[ X ] = m_aRegisters[ Y ] << 1; //before 1990
+#else // QUIRK_SHIFTING
+	//OpcodeInstruct = std::format( "{:04X} : SHL VX",opcode );
+
+	// If the most-significant bit of Vx is 1, then VF is set to 1, otherwise to 0. Then Vx is multiplied by 2.
+	MSB = ( m_aRegisters[ X ] & 0x80 ) == 0x80 ? 1 : 0;
+
+	m_aRegisters[ X ] <<= 1;
+#endif
+
+	VF = MSB;
+}
+
+void Chip8::RND( const uint16_t opcode )
+{
+	uint8_t NN = opcode & 0x00FF;
+	uint8_t X = ( opcode & 0x0F00 ) >> 8;
+	//OpcodeInstruct = std::format( "{:04X} : RND VX, NN",opcode );
+
+	//Sets VX to the result of a bitwise and operation on a random number (Typically: 0 to 255) and NN
+	std::uniform_int_distribution<std::mt19937::result_type> dist( 0,255 );
+	m_aRegisters[ X ] = dist( m_iRng ) & NN;
+}
+
+void Chip8::DRAW( const uint16_t opcode )
+{
+	uint8_t N = opcode & 0x000F;
+	uint8_t X = ( opcode & 0x0F00 ) >> 8;
+	uint8_t Y = ( opcode & 0x00F0 ) >> 4;
+	Data < uint8_t>& VF = m_aRegisters[ 15 ];
+	/*Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision.
+	The interpreter reads N bytes from memory, starting at the address stored in I.
+	These bytes are then displayed as sprites on screen at coordinates (Vx, Vy). Sprites are XORed onto the existing screen.
+	If this causes any pixels to be erased, VF is set to 1, otherwise it is set to 0.
+	If the sprite is positioned so part of it is outside the coordinates of the display, it wraps around to the opposite side of the screen
+	I value does not change after the execution of this instruction*/
+	bool bErased = false;
+	uint8_t iYOffset = 0;
+
+#ifdef QUIRK_DISPWAIT
+	//OpcodeInstruct = std::format( "{:04X} : DRW VX, VY VBlank",opcode );
+
+	//VBlank, waiting for next frame
+	if( m_iTimeLastFrame.time_since_epoch().count() == 0 )
+	{
+		m_iTimeLastFrame = m_iLastTimeUpdate;
+		m_iPC -= 2;
+	}
+	else if( m_iLastTimeUpdate >= ( m_iTimeLastFrame + Display::GetRefreshTick() ) )
+	{
+		m_iTimeLastFrame = {};
+	}
+	else
+	{
+		m_iPC -= 2;
+	}
+#else
+	//OpcodeInstruct = std::format( "{:04X} : DRW VX, VY",opcode );
+#endif
+
+	Display::KeyDisplayAccess oKeyDisplay;
+	uint8_t xPos = m_aRegisters[ X ] & ( Display::GetWidth() - 1 );
+	uint8_t yPos = m_aRegisters[ Y ] & ( Display::GetHeight() - 1 );
+
+	VF = 0;
+	for( ; iYOffset < N; ++iYOffset )
+	{
+#ifdef QUIRK_CLIPPING
+		Display::DrawPixelAtPos( oKeyDisplay,xPos,yPos + iYOffset,m_aMemory[ m_iI + iYOffset ],bErased,true );
+#else
+		Display::DrawPixelAtPos( oKeyDisplay,xPos,yPos + iYOffset,m_aMemory[ m_iI + iYOffset ],bErased,false );
+#endif
+		if( bErased )
+			VF = 1;
+	}
+}
+
+void Chip8::SKP( const uint16_t opcode )
+{
+	uint8_t X = ( opcode & 0x0F00 ) >> 8;
+	//OpcodeInstruct = std::format( "{:04X} : SKP",opcode );
+
+	//Skips the next instruction if the key stored in VX(only consider the lowest nibble) is pressed (usually the next instruction is a jump to skip a code block).
+	if( Input::GetInstance()->GetKeyState( m_aRegisters[ X ] ) )
+		m_iPC += 2;
+}
+
+void Chip8::SKNP( const uint16_t opcode )
+{
+	uint8_t X = ( opcode & 0x0F00 ) >> 8;
+	//OpcodeInstruct = std::format( "{:04X} : SKNP",opcode );
+
+	//Skips the next instruction if the key stored in VX(only consider the lowest nibble) is not pressed (usually the next instruction is a jump to skip a code block).
+	if( !Input::GetInstance()->GetKeyState( m_aRegisters[ X ] ) )
+		m_iPC += 2;
+}
+
+void Chip8::BCD( const uint16_t opcode )
+{
+	uint8_t X = ( opcode & 0x0F00 ) >> 8;
+	//OpcodeInstruct = std::format( "{:04X} : BCD VX",opcode );
+
+	//Stores the binary-coded decimal representation of VX, with the hundreds digit in memory at location in I, the tens digit at location I+1, and the ones digit at location I+2
+	m_aMemory[ m_iI ] = m_aRegisters[ X ] / 100;
+	m_aMemory[ m_iI + 1 ] = ( m_aRegisters[ X ] / 10 ) % 10;
+	m_aMemory[ m_iI + 2 ] = ( m_aRegisters[ X ] % 100 ) % 10;
+}
+
+void Chip8::OR( const uint16_t opcode )
+{
+	//OpcodeInstruct = std::format( "{:04X} : OR VX, VY",opcode );
+	uint8_t X = ( opcode & 0x0F00 ) >> 8;
+	uint8_t Y = ( opcode & 0x00F0 ) >> 4;
+
+	//Sets VX to VX or VY. (bitwise OR operation)
+	m_aRegisters[ X ] |= m_aRegisters[ Y ];
+#ifdef QUIRK_VFRESET
+	Data < uint8_t>& VF = m_aRegisters[ 15 ];
+	VF = 0;
+#endif
+}
+
+void Chip8::AND( const uint16_t opcode )
+{
+	//OpcodeInstruct = std::format( "{:04X} : AND VX, VY",opcode );
+	uint8_t X = ( opcode & 0x0F00 ) >> 8;
+	uint8_t Y = ( opcode & 0x00F0 ) >> 4;
+	//Sets VX to VX and VY. (bitwise AND operation)
+	m_aRegisters[ X ] &= m_aRegisters[ Y ];
+#ifdef QUIRK_VFRESET
+	Data < uint8_t>& VF = m_aRegisters[ 15 ];
+	VF = 0;
+#endif
+}
+
+void Chip8::XOR( const uint16_t opcode )
+{
+	//OpcodeInstruct = std::format( "{:04X} : XOR VX, VY",opcode );
+	uint8_t X = ( opcode & 0x0F00 ) >> 8;
+	uint8_t Y = ( opcode & 0x00F0 ) >> 4;
+	//Sets VX to VX xor VY
+	m_aRegisters[ X ] ^= m_aRegisters[ Y ];
+#ifdef QUIRK_VFRESET
+	Data < uint8_t>& VF = m_aRegisters[ 15 ];
+	VF = 0;
+#endif
 }
