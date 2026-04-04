@@ -197,6 +197,8 @@ private:
 	void x8_Dispatch( const uint16_t opcode );
 	void xE_Dispatch( const uint16_t opcode );
 	void xF_Dispatch( const uint16_t opcode );
+	template< typename T, size_t N >
+	void CheckOpcodeAndExec( const uint16_t opcode, const T iNibble, const std::array<fct_opcode,N>& aTable );
 
 	//Opcodes
 	void CLS( const uint16_t opcode );

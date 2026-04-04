@@ -40,7 +40,7 @@ Chip8::Chip8() :
 	,m_iTimeLastFrame{}
 #endif
 {
-	m_aMainTable[ 0x0 ] = { &Chip8::Dispatch_0opc };
+	m_aMainTable[ 0x0 ] = { &Chip8::x0_Dispatch };
 	m_aMainTable[ 0x1 ] = { &Chip8::JMP };
 	m_aMainTable[ 0x2 ] = { &Chip8::CALL };
 	m_aMainTable[ 0x3 ] = { &Chip8::SE_VX_NN };
@@ -48,44 +48,44 @@ Chip8::Chip8() :
 	m_aMainTable[ 0x5 ] = { &Chip8::SE_VX_VY };
 	m_aMainTable[ 0x6 ] = { &Chip8::LD_VX_NN };
 	m_aMainTable[ 0x7 ] = { &Chip8::ADD_VX_NN };
-	m_aMainTable[ 0x8 ] = { &Chip8::Dispatch_8opc };
+	m_aMainTable[ 0x8 ] = { &Chip8::x8_Dispatch };
 	m_aMainTable[ 0x9 ] = { &Chip8::SNE_VX_VY };
 	m_aMainTable[ 0xA ] = { &Chip8::LD_I_NNN };
 	m_aMainTable[ 0xB ] = { &Chip8::JMP_NNN };
 	m_aMainTable[ 0xC ] = { &Chip8::RND };
 	m_aMainTable[ 0xD ] = { &Chip8::DRAW };
-	m_aMainTable[ 0xE ] = { &Chip8::Dispatch_Eopc };
-	m_aMainTable[ 0xF ] = { &Chip8::Dispatch_Fopc };
+	m_aMainTable[ 0xE ] = { &Chip8::xE_Dispatch };
+	m_aMainTable[ 0xF ] = { &Chip8::xF_Dispatch };
 
 	//0x0000
-	m_aTable0x0[ 0x0 ] = { &Chip8::CLS };
-	m_aTable0x0[ 0xE ] = { &Chip8::RET };
+	m_a0x0_Table[ 0x0 ] = { &Chip8::CLS };
+	m_a0x0_Table[ 0xE ] = { &Chip8::RET };
 
 	//0x8000
-	m_aTable0x8[0x0] = { &Chip8::LD_VX_VY };
-	m_aTable0x8[0x1] = { &Chip8::OR };
-	m_aTable0x8[0x2] = { &Chip8::AND };
-	m_aTable0x8[0x3] = { &Chip8::XOR };
-	m_aTable0x8[0x4] = { &Chip8::ADD_VX_VY };
-	m_aTable0x8[0x5] = { &Chip8::SUB_VX_VY };
-	m_aTable0x8[0x6] = { &Chip8::SHR };
-	m_aTable0x8[0x7] = { &Chip8::SUBN };
-	m_aTable0x8[0xE] = { &Chip8::SHL };
+	m_a0x8_Table[0x0] = { &Chip8::LD_VX_VY };
+	m_a0x8_Table[0x1] = { &Chip8::OR };
+	m_a0x8_Table[0x2] = { &Chip8::AND };
+	m_a0x8_Table[0x3] = { &Chip8::XOR };
+	m_a0x8_Table[0x4] = { &Chip8::ADD_VX_VY };
+	m_a0x8_Table[0x5] = { &Chip8::SUB_VX_VY };
+	m_a0x8_Table[0x6] = { &Chip8::SHR };
+	m_a0x8_Table[0x7] = { &Chip8::SUBN_VX_VY };
+	m_a0x8_Table[0xE] = { &Chip8::SHL };
 
 	//0xE000
-	m_aTable0xE[ 0x9 ] = { &Chip8::SKP };
-	m_aTable0xE[ 0xA ] = { &Chip8::SKNP };
+	m_a0xE_Table[ 0x9 ] = { &Chip8::SKP };
+	m_a0xE_Table[ 0xA ] = { &Chip8::SKNP };
 
-	//0xF000
-	m_aTable256[ 0x7 ]  = { &Chip8::LD_VX_DT };
-	m_aTable256[ 0x0A ] = { &Chip8::LD_VX_KEY };
-	m_aTable256[ 0x15 ] = { &Chip8::LD_DT_VX };
-	m_aTable256[ 0x18 ] = { &Chip8::LD_ST_VX };
-	m_aTable256[ 0x1E ] = { &Chip8::ADD_I_VX };
-	m_aTable256[ 0x29 ] = { &Chip8::LD_I_FONT };
-	m_aTable256[ 0x33 ] = { &Chip8::BCD };
-	m_aTable256[ 0x55 ] = { &Chip8::LD_I_VX };
-	m_aTable256[ 0x65 ] = { &Chip8::LD_VX_I };
+	//0xF000 - size 0xFF
+	m_a0xF_Table[ 0x7 ]  = { &Chip8::LD_VX_DT };
+	m_a0xF_Table[ 0x0A ] = { &Chip8::LD_VX_KEY };
+	m_a0xF_Table[ 0x15 ] = { &Chip8::LD_DT_VX };
+	m_a0xF_Table[ 0x18 ] = { &Chip8::LD_ST_VX };
+	m_a0xF_Table[ 0x1E ] = { &Chip8::ADD_I_VX };
+	m_a0xF_Table[ 0x29 ] = { &Chip8::LD_I_FONT };
+	m_a0xF_Table[ 0x33 ] = { &Chip8::BCD };
+	m_a0xF_Table[ 0x55 ] = { &Chip8::LD_I_VX };
+	m_a0xF_Table[ 0x65 ] = { &Chip8::LD_VX_I };
 }
 
 Chip8::~Chip8()
@@ -291,42 +291,49 @@ void Chip8::_UpdateTimers()
 
 void Chip8::_AddOpcodeToHistory( const char* pOpcode )
 {
+#ifdef DEBUG_INFO
 	//https://github.com/trapexit/chip-8_documentation
 	if( m_aOpcodeHistory.size() >= 0x40 )
 		m_aOpcodeHistory.pop_front();
 
 	m_aOpcodeHistory.push_back( pOpcode );
 	++m_iCycle;
+#endif
 }
 
-//Chip8::FunctionTree::FunctionTree()
-//{
-//	array[0] = { CLS };
-//	//m_aOpcodes[ 0x0 ] = { OR };
-////	/*m_aOpcodes[ 0x8 ] = { 0x0,0x1,0x2,0x3,0x4,0x5,0x6,0x7,0xE };
-////	m_aOpcodes[ 0xE ] = { 0x9E,0xA1 };
-////	m_aOpcodes[ 0xF ] = { 0x70,0x0A,0x15,0x18,0x1E,0x29,0x33,0x55,0x65 };*/
-//}
-
-void Chip8::Dispatch_8opc( const uint16_t opcode )
+void Chip8::x0_Dispatch( const uint16_t opcode )
 {
-	( this->*m_aTable0x8[ opcode & 0x000F ] )( opcode );
+	uint8_t iLastNibble = opcode & 0x000F;
+	CheckOpcodeAndExec( opcode, iLastNibble,m_a0x0_Table );
 }
 
-void Chip8::Dispatch_Fopc( const uint16_t opcode )
+void Chip8::x8_Dispatch( const uint16_t opcode )
 {
-	( this->*m_aTable256[ opcode & 0x00FF ] )( opcode );
-	//TODO : check if iIndex outside of table
+	uint8_t iLastNibble = opcode & 0x000F;
+	CheckOpcodeAndExec( opcode,iLastNibble,m_a0x8_Table );
 }
 
-void Chip8::Dispatch_Eopc( const uint16_t opcode )
+void Chip8::xE_Dispatch( const uint16_t opcode )
 {
-	( this->*m_aTable0xE[ ( opcode & 0x00F0 ) >> 4 ] )( opcode );
+	uint8_t iThirdNibble = ( opcode & 0x00F0 ) >> 4;
+	CheckOpcodeAndExec( opcode,iThirdNibble,m_a0xE_Table );
 }
 
-void Chip8::Dispatch_0opc( const uint16_t opcode )
+void Chip8::xF_Dispatch( const uint16_t opcode )
 {
-	( this->*m_aTable0x0[ opcode & 0x000F ] )( opcode );
+	uint16_t iLastNibbles = opcode & 0x00FF;
+	CheckOpcodeAndExec( opcode,iLastNibbles,m_a0xF_Table );
+}
+
+template< typename T,size_t N >
+void Chip8::CheckOpcodeAndExec( const uint16_t opcode,const T iNibble,const std::array<fct_opcode,N>& aTable )
+{
+	if( iNibble >= aTable.size() )
+		std::cout << "ERROR::TRY_TO_ACCESS_INDEX_BIGGER_THAN_TABLE_SIZE ( " << iNibble << " ) " << std::hex << opcode << std::endl;
+	else if( aTable[ iNibble ] == nullptr )
+		std::cout << "ERROR::OPCODE_UNKNOWN_" << std::hex << opcode << std::endl;
+	else
+		( this->*aTable[ iNibble ] )( opcode );
 }
 
 void Chip8::CLS( uint16_t opcode )
@@ -339,15 +346,13 @@ void Chip8::CLS( uint16_t opcode )
 
 void Chip8::RET( uint16_t opcode )
 {
-	//std::string OpcodeInstruct = std::format( "{:04X} : RET",opcode );
-
 	//Returns from a subroutine
 	m_iPC = m_aStack[ m_iSP ];
 	m_aStack[ m_iSP ] = 0;
 	if( m_iSP != 0 )
 		--m_iSP;
 
-	//_AddOpcodeToHistory( OpcodeInstruct.c_str() );
+	_AddOpcodeToHistory( std::format( "{:04X} : RET",opcode ).c_str() );
 }
 
 void Chip8::JMP( const uint16_t opcode )
@@ -356,21 +361,24 @@ void Chip8::JMP( const uint16_t opcode )
 
 	//Jumps to address NNN
 	m_iPC = NNN;
+
+	_AddOpcodeToHistory( std::format( "{:04X}  : JMP",opcode ).c_str() );
 }
 
 void Chip8::JMP_NNN( const uint16_t opcode )
 {
+	std::string OpcodeInstruct;
 	uint16_t NNN = opcode & 0x0FFF;
-
 #ifdef QUIRK_JUMPING
 	//Jumps to the address NNN plus V0
-	//OpcodeInstruct = std::format( "{:04X} : JMP V0, NNN",opcode );
+	OpcodeInstruct = std::format( "{:04X} : JMP V0, NNN",opcode );
 	m_iPC = NNN + m_aRegisters[ 0 ];
 #else // QUIRK_JUMPING
 	uint8_t X = ( opcode & 0x0F00 ) >> 8;
-	//OpcodeInstruct = std::format( "{:04X} : JMP VX, NNN",opcode );
+	OpcodeInstruct = std::format( "{:04X} : JMP VX, NNN",opcode );
 	m_iPC = NNN + m_aRegisters[ X ];
 #endif
+	_AddOpcodeToHistory( OpcodeInstruct.c_str() );
 }
 
 void Chip8::CALL( const uint16_t opcode )
@@ -383,6 +391,8 @@ void Chip8::CALL( const uint16_t opcode )
 	//Calls subroutine at NNN
 	m_aStack[ m_iSP ] = m_iPC;
 	m_iPC = NNN;
+
+	_AddOpcodeToHistory( std::format( "{:04X} : CALL",opcode ).c_str() );
 }
 
 void Chip8::SNE_VX_NN( const uint16_t opcode )
@@ -393,6 +403,8 @@ void Chip8::SNE_VX_NN( const uint16_t opcode )
 	//Skips the next instruction if VX does not equal NN (usually the next instruction is a jump to skip a code block).
 	if( m_aRegisters[ X ] != NN )
 		m_iPC += 2;
+
+	_AddOpcodeToHistory( std::format( "{:04X} : SNE VX, NN",opcode ).c_str() );
 }
 
 void Chip8::SNE_VX_VY( const uint16_t opcode )
@@ -400,11 +412,11 @@ void Chip8::SNE_VX_VY( const uint16_t opcode )
 	uint8_t X = ( opcode & 0x0F00 ) >> 8;
 	uint8_t Y = ( opcode & 0x00F0 ) >> 4;
 
-	//OpcodeInstruct = std::format( "{:04X} : SNE VX, VY",opcode );
-
 	//Skips the next instruction if VX does not equal VY. (Usually the next instruction is a jump to skip a code block)
 	if( m_aRegisters[ X ] != m_aRegisters[ Y ] )
 		m_iPC += 2;
+
+	_AddOpcodeToHistory( std::format( "{:04X} : SNE VX, VY",opcode ).c_str() );
 }
 
 void Chip8::SE_VX_NN( const uint16_t opcode )
@@ -416,6 +428,7 @@ void Chip8::SE_VX_NN( const uint16_t opcode )
 	if( m_aRegisters[ X ] == NN )
 		m_iPC += 2;
 
+	_AddOpcodeToHistory( std::format( "{:04X} : SNE VX, NN",opcode ).c_str() );
 }
 
 void Chip8::SE_VX_VY( const uint16_t opcode )
@@ -426,6 +439,8 @@ void Chip8::SE_VX_VY( const uint16_t opcode )
 	//Skips the next instruction if VX equals VY (usually the next instruction is a jump to skip a code block).
 	if( m_aRegisters[ X ] == m_aRegisters[ Y ] )
 		m_iPC += 2;
+
+	_AddOpcodeToHistory( std::format( "{:04X} : SE VX, VY",opcode ).c_str() );
 }
 
 void Chip8::LD_VX_NN( const uint16_t opcode )
@@ -435,49 +450,54 @@ void Chip8::LD_VX_NN( const uint16_t opcode )
 
 	//Sets NN To VX
 	m_aRegisters[ X ] = NN;
+
+	_AddOpcodeToHistory( std::format( "{:04X} : LD VX, NN",opcode ).c_str() );
 }
 
 void Chip8::LD_VX_VY( const uint16_t opcode )
 {
-	//OpcodeInstruct = std::format( "{:04X} : LD VX, VY",opcode );
 	uint8_t X = ( opcode & 0x0F00 ) >> 8;
 	uint8_t Y = ( opcode & 0x00F0 ) >> 4;
 
 	//Sets VX to the value of VY.
 	m_aRegisters[ X ] = m_aRegisters[ Y ];
+
+	_AddOpcodeToHistory( std::format( "{:04X} : LD VX, VY",opcode ).c_str() );
 }
 
 void Chip8::LD_I_NNN( const uint16_t opcode )
 {
 	uint16_t NNN = opcode & 0x0FFF;
-	//OpcodeInstruct = std::format( "{:04X} : LD I, NNN",opcode );
 
 	//Sets I to the address NNN
 	m_iI = NNN;
+
+	_AddOpcodeToHistory( std::format( "{:04X} : LD I, NNN",opcode ).c_str() );
 }
 
 void Chip8::LD_VX_DT( const uint16_t opcode )
 {
 	uint8_t X = ( opcode & 0x0F00 ) >> 8;
-	//OpcodeInstruct = std::format( "{:04X} : LD VX, DT",opcode );
 
 	//Sets VX to the value of the delay timer.
 	m_aRegisters[ X ] = m_iDelay_timer;
+
+	_AddOpcodeToHistory( std::format( "{:04X} : LD VX, DT",opcode ).c_str() );
 }
 
 void Chip8::LD_DT_VX( const uint16_t opcode )
 {
 	uint8_t X = ( opcode & 0x0F00 ) >> 8;
-	//OpcodeInstruct = std::format( "{:04X} : LD DT, VX",opcode );
 
 	//Sets the delay timer to VX
 	m_iDelay_timer = m_aRegisters[ X ];
+
+	_AddOpcodeToHistory( std::format( "{:04X} : LD DT, VX",opcode ).c_str() );
 }
 
 void Chip8::LD_VX_KEY( const uint16_t opcode )
 {
 	uint8_t X = ( opcode & 0x0F00 ) >> 8;
-	//OpcodeInstruct = std::format( "{:04X} : LD VX, KEY",opcode );
 
 	//A key press is awaited, and then stored in VX (blocking operation, all instruction halted until next key event, delay and sound timers should continue processing)
 	if( Input::GetInstance() )
@@ -495,30 +515,33 @@ void Chip8::LD_VX_KEY( const uint16_t opcode )
 	}
 	else
 		m_iPC -= 2;
+
+	_AddOpcodeToHistory( std::format( "{:04X} : LD VX, KEY",opcode ).c_str() );
 }
 
 void Chip8::LD_ST_VX( const uint16_t opcode )
 {
 	uint8_t X = ( opcode & 0x0F00 ) >> 8;
-	//OpcodeInstruct = std::format( "{:04X} : LD ST, VX",opcode );
 
 	//Sets the sound timer to VX
 	m_iSound_timer = m_aRegisters[ X ];
+
+	_AddOpcodeToHistory( std::format( "{:04X} : LD ST, VX",opcode ).c_str() );
 }
 
 void Chip8::LD_I_FONT( const uint16_t opcode )
 {
 	uint8_t X = ( opcode & 0x0F00 ) >> 8;
-	//OpcodeInstruct = std::format( "{:04X} : LD I, FONT( VX )",opcode );
 
 	//Sets I to the location of the sprite for the character in VX(only consider the lowest nibble). Characters 0-F (in hexadecimal) are represented by a 4x5 font.
 	m_iI = START_FONT_MEMORY_ADDRESS + ( m_aRegisters[ X ] * 5 );
+
+	_AddOpcodeToHistory( std::format( "{:04X} : LD I, FONT( VX )",opcode ).c_str() );
 }
 
 void Chip8::LD_I_VX( const uint16_t opcode )
 {
 	uint8_t X = ( opcode & 0x0F00 ) >> 8;
-	//OpcodeInstruct = std::format( "{:04X} : LD [I], VX",opcode );
 
 	//Stores from V0 to VX (including VX) in memory, starting at address I. The offset from I is increased by 1 for each value written, but I itself is left unmodified
 	for( int i = 0; i <= X; ++i )
@@ -530,12 +553,13 @@ void Chip8::LD_I_VX( const uint16_t opcode )
 		m_aMemory[ m_iI + i ] = m_aRegisters[ i ];
 #endif
 	}
+
+	_AddOpcodeToHistory( std::format( "{:04X} : LD [I], VX",opcode ).c_str() );
 }
 
 void Chip8::LD_VX_I( const uint16_t opcode )
 {
 	uint8_t X = ( opcode & 0x0F00 ) >> 8;
-	//OpcodeInstruct = std::format( "{:04X} : LD VX, [I]",opcode );
 
 	//Fills from V0 to VX (including VX) with values from memory, starting at address I. The offset from I is increased by 1 for each value read, but I itself is left unmodified
 	for( int i = 0; i <= X; ++i )
@@ -547,6 +571,8 @@ void Chip8::LD_VX_I( const uint16_t opcode )
 		m_aRegisters[ i ] = m_aMemory[ m_iI + i ];
 #endif
 	}
+
+	_AddOpcodeToHistory( std::format( "{:04X} : LD VX, [I]",opcode ).c_str() );
 }
 
 void Chip8::ADD_VX_NN( const uint16_t opcode )
@@ -556,11 +582,12 @@ void Chip8::ADD_VX_NN( const uint16_t opcode )
 
 	//Adds NN to VX (carry flag is not changed).
 	m_aRegisters[ X ] += NN;
+
+	_AddOpcodeToHistory( std::format( "{:04X} : ADD VX, NN",opcode ).c_str() );
 }
 
 void Chip8::ADD_VX_VY( const uint16_t opcode )
 {
-	//OpcodeInstruct = std::format( "{:04X} : ADD VX, VY ( VF )",opcode );
 	uint8_t X = ( opcode & 0x0F00 ) >> 8;
 	uint8_t Y = ( opcode & 0x00F0 ) >> 4;
 	//Adds VY to VX
@@ -569,15 +596,18 @@ void Chip8::ADD_VX_VY( const uint16_t opcode )
 	Data < uint8_t>& VF = m_aRegisters[ 15 ];
 	VF = ( sum > 0xFF ) ? 1 : 0;
 	//VF is set to 1 when there's an overflow, and to 0 when there is not.
+
+	_AddOpcodeToHistory( std::format( "{:04X} : ADD VX, VY ( VF )",opcode ).c_str() );
 }
 
 void Chip8::ADD_I_VX( const uint16_t opcode )
 {
 	uint8_t X = ( opcode & 0x0F00 ) >> 8;
-	//OpcodeInstruct = std::format( "{:04X} : ADD I, VX",opcode );
 
 	//Adds VX to I. VF is not affected
 	m_iI += m_aRegisters[ X ];
+
+	_AddOpcodeToHistory( std::format( "{:04X} : ADD I, VX",opcode ).c_str() );
 }
 
 void Chip8::SUB_VX_VY( const uint16_t opcode )
@@ -585,7 +615,6 @@ void Chip8::SUB_VX_VY( const uint16_t opcode )
 	uint8_t X = ( opcode & 0x0F00 ) >> 8;
 	uint8_t Y = ( opcode & 0x00F0 ) >> 4;
 	Data < uint8_t>& VF = m_aRegisters[ 15 ];
-	//OpcodeInstruct = std::format( "{:04X} : SUB VX, VY ( VF )",opcode );
 
 	//VY is subtracted from VX.
 	uint16_t diff = m_aRegisters[ X ] - m_aRegisters[ Y ];
@@ -594,6 +623,8 @@ void Chip8::SUB_VX_VY( const uint16_t opcode )
 	if( diff > 0xFF )
 		VF = 0;
 	// VF is set to 0 when there's an underflow, and 1 when there is not. (i.e. VF set to 1 if VX >= VY and 0 if not)
+
+	_AddOpcodeToHistory( std::format( "{:04X} : SUB VX, VY ( VF )",opcode ).c_str() );
 }
 
 void Chip8::SHR( const uint16_t opcode )
@@ -605,14 +636,15 @@ void Chip8::SHR( const uint16_t opcode )
 	//If the least - significant bit of Vx is 1, then VF is set to 1, otherwise 0. Then Vx is divided by 2.
 	uint8_t LSB = 0;
 
+	std::string OpcodeInstruct;
 #ifdef QUIRK_SHIFTING
-	//OpcodeInstruct = std::format( "{:04X} : SHR VX, VY",opcode );
+	OpcodeInstruct = std::format( "{:04X} : SHR VX, VY",opcode );
 
 	LSB = ( m_aRegisters[ Y ] & 0x01 );
 
 	m_aRegisters[ X ] = m_aRegisters[ Y ] >> 1; //before 1990
 #else // QUIRK_SHIFTING
-	//OpcodeInstruct = std::format( "{:04X} : SHR VX",opcode );
+	OpcodeInstruct = std::format( "{:04X} : SHR VX",opcode );
 
 	LSB = ( m_aRegisters[ X ] & 0x01 );
 
@@ -620,14 +652,15 @@ void Chip8::SHR( const uint16_t opcode )
 #endif
 
 	VF = LSB;
+
+	_AddOpcodeToHistory( OpcodeInstruct.c_str() );
 }
 
-void Chip8::SUBN( const uint16_t opcode )
+void Chip8::SUBN_VX_VY( const uint16_t opcode )
 {
 	uint8_t X = ( opcode & 0x0F00 ) >> 8;
 	uint8_t Y = ( opcode & 0x00F0 ) >> 4;
 	Data < uint8_t>& VF = m_aRegisters[ 15 ];
-	//OpcodeInstruct = std::format( "{:04X} : SUBN VX, VY",opcode );
 
 	//Sets VX equals to VY minus VX.
 	uint16_t diff = m_aRegisters[ Y ] - m_aRegisters[ X ];
@@ -636,6 +669,8 @@ void Chip8::SUBN( const uint16_t opcode )
 	if( diff > 0xFF )
 		VF = 0;
 	// VF is set to 0 when there's an underflow, and 1 when there is not. (i.e. VF set to 1 if VY >= VX).
+
+	_AddOpcodeToHistory( std::format( "{:04X} : SUBN VX, VY",opcode ).c_str() );
 }
 
 void Chip8::SHL( const uint16_t opcode )
@@ -646,15 +681,16 @@ void Chip8::SHL( const uint16_t opcode )
 
 	uint8_t MSB = 0;
 
+	std::string OpcodeInstruct;
 #ifdef QUIRK_SHIFTING
-	//OpcodeInstruct = std::format( "{:04X} : SHL VX, VY",opcode );
+	OpcodeInstruct = std::format( "{:04X} : SHL VX, VY",opcode );
 
 	// If the most-significant bit of Vy is 1.
 	MSB = ( m_aRegisters[ Y ] & 0x80 ) == 0x80 ? 1 : 0;
 
 	m_aRegisters[ X ] = m_aRegisters[ Y ] << 1; //before 1990
 #else // QUIRK_SHIFTING
-	//OpcodeInstruct = std::format( "{:04X} : SHL VX",opcode );
+	OpcodeInstruct = std::format( "{:04X} : SHL VX",opcode );
 
 	// If the most-significant bit of Vx is 1, then VF is set to 1, otherwise to 0. Then Vx is multiplied by 2.
 	MSB = ( m_aRegisters[ X ] & 0x80 ) == 0x80 ? 1 : 0;
@@ -663,17 +699,20 @@ void Chip8::SHL( const uint16_t opcode )
 #endif
 
 	VF = MSB;
+
+	_AddOpcodeToHistory( OpcodeInstruct.c_str() );
 }
 
 void Chip8::RND( const uint16_t opcode )
 {
 	uint8_t NN = opcode & 0x00FF;
 	uint8_t X = ( opcode & 0x0F00 ) >> 8;
-	//OpcodeInstruct = std::format( "{:04X} : RND VX, NN",opcode );
 
 	//Sets VX to the result of a bitwise and operation on a random number (Typically: 0 to 255) and NN
 	std::uniform_int_distribution<std::mt19937::result_type> dist( 0,255 );
 	m_aRegisters[ X ] = dist( m_iRng ) & NN;
+
+	_AddOpcodeToHistory( std::format( "{:04X} : RND VX, NN",opcode ).c_str() );
 }
 
 void Chip8::DRAW( const uint16_t opcode )
@@ -691,8 +730,9 @@ void Chip8::DRAW( const uint16_t opcode )
 	bool bErased = false;
 	uint8_t iYOffset = 0;
 
+	std::string OpcodeInstruct;
 #ifdef QUIRK_DISPWAIT
-	//OpcodeInstruct = std::format( "{:04X} : DRW VX, VY VBlank",opcode );
+	OpcodeInstruct = std::format( "{:04X} : DRW VX, VY VBlank",opcode );
 
 	//VBlank, waiting for next frame
 	if( m_iTimeLastFrame.time_since_epoch().count() == 0 )
@@ -709,7 +749,7 @@ void Chip8::DRAW( const uint16_t opcode )
 		m_iPC -= 2;
 	}
 #else
-	//OpcodeInstruct = std::format( "{:04X} : DRW VX, VY",opcode );
+	OpcodeInstruct = std::format( "{:04X} : DRW VX, VY",opcode );
 #endif
 
 	Display::KeyDisplayAccess oKeyDisplay;
@@ -727,42 +767,46 @@ void Chip8::DRAW( const uint16_t opcode )
 		if( bErased )
 			VF = 1;
 	}
+
+	_AddOpcodeToHistory( OpcodeInstruct.c_str() );
 }
 
 void Chip8::SKP( const uint16_t opcode )
 {
 	uint8_t X = ( opcode & 0x0F00 ) >> 8;
-	//OpcodeInstruct = std::format( "{:04X} : SKP",opcode );
 
 	//Skips the next instruction if the key stored in VX(only consider the lowest nibble) is pressed (usually the next instruction is a jump to skip a code block).
 	if( Input::GetInstance()->GetKeyState( m_aRegisters[ X ] ) )
 		m_iPC += 2;
+
+	_AddOpcodeToHistory( std::format( "{:04X} : SKP",opcode ).c_str() );
 }
 
 void Chip8::SKNP( const uint16_t opcode )
 {
 	uint8_t X = ( opcode & 0x0F00 ) >> 8;
-	//OpcodeInstruct = std::format( "{:04X} : SKNP",opcode );
 
 	//Skips the next instruction if the key stored in VX(only consider the lowest nibble) is not pressed (usually the next instruction is a jump to skip a code block).
 	if( !Input::GetInstance()->GetKeyState( m_aRegisters[ X ] ) )
 		m_iPC += 2;
+
+	_AddOpcodeToHistory( std::format( "{:04X} : SKNP",opcode ).c_str() );
 }
 
 void Chip8::BCD( const uint16_t opcode )
 {
 	uint8_t X = ( opcode & 0x0F00 ) >> 8;
-	//OpcodeInstruct = std::format( "{:04X} : BCD VX",opcode );
 
 	//Stores the binary-coded decimal representation of VX, with the hundreds digit in memory at location in I, the tens digit at location I+1, and the ones digit at location I+2
 	m_aMemory[ m_iI ] = m_aRegisters[ X ] / 100;
 	m_aMemory[ m_iI + 1 ] = ( m_aRegisters[ X ] / 10 ) % 10;
 	m_aMemory[ m_iI + 2 ] = ( m_aRegisters[ X ] % 100 ) % 10;
+
+	_AddOpcodeToHistory( std::format( "{:04X} : BCD",opcode ).c_str() );
 }
 
 void Chip8::OR( const uint16_t opcode )
 {
-	//OpcodeInstruct = std::format( "{:04X} : OR VX, VY",opcode );
 	uint8_t X = ( opcode & 0x0F00 ) >> 8;
 	uint8_t Y = ( opcode & 0x00F0 ) >> 4;
 
@@ -772,11 +816,12 @@ void Chip8::OR( const uint16_t opcode )
 	Data < uint8_t>& VF = m_aRegisters[ 15 ];
 	VF = 0;
 #endif
+
+	_AddOpcodeToHistory( std::format( "{:04X} : OR VX, VY",opcode ).c_str() );
 }
 
 void Chip8::AND( const uint16_t opcode )
 {
-	//OpcodeInstruct = std::format( "{:04X} : AND VX, VY",opcode );
 	uint8_t X = ( opcode & 0x0F00 ) >> 8;
 	uint8_t Y = ( opcode & 0x00F0 ) >> 4;
 	//Sets VX to VX and VY. (bitwise AND operation)
@@ -785,11 +830,12 @@ void Chip8::AND( const uint16_t opcode )
 	Data < uint8_t>& VF = m_aRegisters[ 15 ];
 	VF = 0;
 #endif
+
+	_AddOpcodeToHistory( std::format( "{:04X} : AND VX, VY",opcode ).c_str() );
 }
 
 void Chip8::XOR( const uint16_t opcode )
 {
-	//OpcodeInstruct = std::format( "{:04X} : XOR VX, VY",opcode );
 	uint8_t X = ( opcode & 0x0F00 ) >> 8;
 	uint8_t Y = ( opcode & 0x00F0 ) >> 4;
 	//Sets VX to VX xor VY
@@ -798,4 +844,6 @@ void Chip8::XOR( const uint16_t opcode )
 	Data < uint8_t>& VF = m_aRegisters[ 15 ];
 	VF = 0;
 #endif
+
+	_AddOpcodeToHistory( std::format( "{:04X} : XOR VX, VY",opcode ).c_str() );
 }
