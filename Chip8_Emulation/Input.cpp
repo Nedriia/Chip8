@@ -55,7 +55,7 @@ uint8_t Input::GetKeyState( uint8_t iIndex ) const
 {
 	if( iIndex >= 0x10 )
 	{
-		std::cout << "What you're trying to achieve shouldn't be done" << std::endl;
+		std::cerr << "INPUT::OUT_OF_RANGE" << std::endl;
 		return 0;
 	}
 
@@ -127,7 +127,7 @@ void Input::CheckInputState( const uint8_t iKey, GLFWwindow* pWindow )
 			iInputId = GLFW_KEY_F;
 			break;
 		default:
-			std::cout << "ERROR::Input:: Key not implemented" << std::endl;
+			std::cerr << "INPUT::KEY_NOT_IMPLEMENTED" << std::endl;
 			break;
 	}
 

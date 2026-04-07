@@ -66,7 +66,7 @@ void SoundManager::Init()
 
 	if( ma_device_init( NULL,&deviceConfig,&device ) != MA_SUCCESS )
 	{
-		std::cout << "SOUNDMANAGER::FAILED_TO_INITIALIZE_DEVICE" << std::endl;
+		std::cerr << "SOUNDMANAGER::FAILED_TO_INITIALIZE_DEVICE" << std::endl;
 		return;
 	}
 
@@ -75,7 +75,7 @@ void SoundManager::Init()
 
 	if( ma_device_start( &device ) != MA_SUCCESS )
 	{
-		std::cout << "SOUNDMANAGER::FAILED_TO_START_PLAYBACK_DEVICE" << std::endl;
+		std::cerr << "SOUNDMANAGER::FAILED_TO_START_PLAYBACK_DEVICE" << std::endl;
 		ma_device_uninit( &device );
 		return;
 	}

@@ -12,6 +12,7 @@
 #define START_ROM_MEMORY_ADDRESS 0x200
 #define MEMORY_SIZE 4096
 #define DEFAULT_PARENT_ROM_FOLDER "..\\Roms\\"
+#define JMPCHECK_BEFORE_ENDING 4
 
 int Chip8::m_iInstructionsPerFrame = 10;
 
@@ -183,7 +184,7 @@ void Chip8::_LoadROM( const char* sROMToLoad )
 	}
 	else
 	{
-		std::cout << "ERROR::CHIP8::LOADING::FILE_NOT_FOUND " << sROMToLoad << std::endl;
+		std::cerr << "ERROR::CHIP8::LOADING::FILE_NOT_FOUND " << sROMToLoad << std::endl;
 	}
 }
 
@@ -218,7 +219,7 @@ void Chip8::EmulateCycle( const KeyAccess& key,const std::chrono::steady_clock::
 			_FetchOpcode( opcode );
 			_DecodeExecute_Opcode( opcode );
 
-			if( bForceNextStep )
+			if( _IsEndReached( opcode ) || bForceNextStep )
 				break;
 		}
 
@@ -256,28 +257,6 @@ void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 	uint8_t iIndex = ( opcode & 0xF000 ) >> 12;
 	uint8_t iRow = ( opcode & 0x000F );
 	( this->*m_aMainTable[ iIndex ] )( opcode );
-	//else
-		//std::cout << "Opcode Unknown " << opcode << std::endl;*/
-
-	//if( OpcodeInstruct.empty() )
-	//	std::cout << "Opcode Unknown " << std::format( "{:04X}",opcode ) << std::endl;
-
-	//_AddOpcodeToHistory( OpcodeInstruct.c_str() );
-
-	//if( opcode == m_iLastOpcode && opcodeNibble == 0x1000 )//JMP instruction
-	//{
-	//	++m_iCountBeforeStop;
-	//	if( m_iCountBeforeStop >= 2 )
-	//	{
-	//		m_oState = RunningState::Pause;
-	//		return;
-	//	}
-	//}
-	//else
-	//{
-	//	m_iLastOpcode = opcode;
-	//	m_iCountBeforeStop = 0;
-	//}
 }
 
 void Chip8::_UpdateTimers()
@@ -299,6 +278,26 @@ void Chip8::_AddOpcodeToHistory( const char* pOpcode )
 	m_aOpcodeHistory.push_back( pOpcode );
 	++m_iCycle;
 #endif
+}
+
+bool Chip8::_IsEndReached( const uint16_t iOpcode )
+{
+	if( iOpcode == m_iLastOpcode && ( iOpcode & 0xF000 ) == 0x1000 )
+	{
+		++m_iCountBeforeStop;
+		if( m_iCountBeforeStop >= JMPCHECK_BEFORE_ENDING )
+		{
+			m_oState = RunningState::Pause;
+			return true;
+		}
+	}
+	else
+	{
+		m_iLastOpcode = iOpcode;
+		m_iCountBeforeStop = 0;
+	}
+
+	return false;
 }
 
 void Chip8::x0_Dispatch( const uint16_t opcode )
@@ -329,9 +328,9 @@ template< typename T,size_t N >
 void Chip8::CheckOpcodeAndExec( const uint16_t opcode,const T iNibble,const std::array<fct_opcode,N>& aTable )
 {
 	if( iNibble >= aTable.size() )
-		std::cout << "ERROR::TRY_TO_ACCESS_INDEX_BIGGER_THAN_TABLE_SIZE ( " << iNibble << " ) " << std::hex << opcode << std::endl;
+		std::cerr << "ERROR::TRY_TO_ACCESS_INDEX_BIGGER_THAN_TABLE_SIZE ( " << iNibble << " ) " << std::hex << opcode << std::endl;
 	else if( aTable[ iNibble ] == nullptr )
-		std::cout << "ERROR::OPCODE_UNKNOWN_" << std::hex << opcode << std::endl;
+		std::cerr << "ERROR::OPCODE_UNKNOWN_" << std::hex << opcode << std::endl;
 	else
 		( this->*aTable[ iNibble ] )( opcode );
 }
@@ -717,6 +716,30 @@ void Chip8::RND( const uint16_t opcode )
 
 void Chip8::DRAW( const uint16_t opcode )
 {
+	std::string OpcodeInstruct;
+#ifdef QUIRK_DISPWAIT
+	OpcodeInstruct = std::format( "{:04X} : DRW VX, VY VBlank",opcode );
+
+	//VBlank, waiting for next frame
+	if( m_iTimeLastFrame.time_since_epoch().count() == 0 )
+	{
+		m_iTimeLastFrame = m_iLastTimeUpdate;
+		m_iPC -= 2;
+		return;
+	}
+	if( m_iLastTimeUpdate >= ( m_iTimeLastFrame + Display::GetRefreshTick() ) )
+	{
+		m_iTimeLastFrame = {};
+	}
+	else
+	{
+		m_iPC -= 2;
+		return;
+	}
+#else
+	OpcodeInstruct = std::format( "{:04X} : DRW VX, VY",opcode );
+#endif
+
 	uint8_t N = opcode & 0x000F;
 	uint8_t X = ( opcode & 0x0F00 ) >> 8;
 	uint8_t Y = ( opcode & 0x00F0 ) >> 4;
@@ -729,28 +752,6 @@ void Chip8::DRAW( const uint16_t opcode )
 	I value does not change after the execution of this instruction*/
 	bool bErased = false;
 	uint8_t iYOffset = 0;
-
-	std::string OpcodeInstruct;
-#ifdef QUIRK_DISPWAIT
-	OpcodeInstruct = std::format( "{:04X} : DRW VX, VY VBlank",opcode );
-
-	//VBlank, waiting for next frame
-	if( m_iTimeLastFrame.time_since_epoch().count() == 0 )
-	{
-		m_iTimeLastFrame = m_iLastTimeUpdate;
-		m_iPC -= 2;
-	}
-	else if( m_iLastTimeUpdate >= ( m_iTimeLastFrame + Display::GetRefreshTick() ) )
-	{
-		m_iTimeLastFrame = {};
-	}
-	else
-	{
-		m_iPC -= 2;
-	}
-#else
-	OpcodeInstruct = std::format( "{:04X} : DRW VX, VY",opcode );
-#endif
 
 	Display::KeyDisplayAccess oKeyDisplay;
 	uint8_t xPos = m_aRegisters[ X ] & ( Display::GetWidth() - 1 );

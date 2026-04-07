@@ -80,7 +80,7 @@ int Display::_CreateWindowChip()
 	m_pWindow = glfwCreateWindow( WINDOW_WIDTH,WINDOW_HEIGHT,"Chip8 Emulator",nullptr,nullptr );
 	if( m_pWindow == nullptr )
 	{
-		std::cout << "Failed to create GLFW window" << std::endl;
+		std::cerr << "DISPLAY::FAILED_TO_CREATE_GLFW_WINDOW" << std::endl;
 		glfwTerminate();
 		return -1;
 	}
@@ -91,7 +91,7 @@ int Display::_CreateWindowChip()
 	// ---------------------------------------
 	if( !gladLoadGLLoader( ( GLADloadproc )glfwGetProcAddress ) )
 	{
-		std::cout << "Failed to initialize GLAD" << std::endl;
+		std::cerr << "DISPLAY::GLAD_FAILED_TO_INIT" << std::endl;
 		return -1;
 	}
 
@@ -132,7 +132,7 @@ void Display::_InitFramebuffer()
 	glBindFramebuffer( GL_FRAMEBUFFER,0 );
 
 	if( glCheckFramebufferStatus( GL_FRAMEBUFFER ) != GL_FRAMEBUFFER_COMPLETE )
-		std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
+		std::cerr << "DISPLAY::FRAMEBUFFER_NOT_COMPLETE" << std::endl;
 }
 
 void Display::_InitRenderer()

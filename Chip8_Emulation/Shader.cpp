@@ -35,7 +35,7 @@ Shader::Shader( const char* VertexPath, const char* FragmentPath )
 	}
 	catch( std::ifstream::failure e )
 	{
-		std::cout << "ERROR::SHADER::FILE_NOT_SUCCESFULLY_READ" << std::endl;
+		std::cerr << "ERROR::SHADER::FILE_FAILED_ON_READ" << std::endl;
 	}
 
 	const char* vShaderCode = vertexCode.c_str();
@@ -53,7 +53,7 @@ Shader::Shader( const char* VertexPath, const char* FragmentPath )
 	if( !success )
 	{
 		glGetShaderInfoLog( vertexShader, 512, nullptr, infolog );
-		std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infolog << std::endl;
+		std::cerr << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infolog << std::endl;
 	}
 
 	fragmentShader = glCreateShader( GL_FRAGMENT_SHADER );
@@ -63,7 +63,7 @@ Shader::Shader( const char* VertexPath, const char* FragmentPath )
 	if( !success )
 	{
 		glGetShaderInfoLog( fragmentShader, 512, nullptr, infolog );
-		std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infolog << std::endl;
+		std::cerr << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infolog << std::endl;
 	}
 
 	//Shader Program
@@ -75,7 +75,7 @@ Shader::Shader( const char* VertexPath, const char* FragmentPath )
 	if( !success )
 	{
 		glGetProgramInfoLog( ID, 512, nullptr, infolog );
-		std::cout << "ERROR::SHADER::PROGRAM::LINK_FAILED\n" << infolog << std::endl;
+		std::cerr << "ERROR::SHADER::PROGRAM::LINK_FAILED\n" << infolog << std::endl;
 	}
 
 	//glPolygonMode( GL_FRONT_AND_BACK, GL_LINE ); //Wireframe

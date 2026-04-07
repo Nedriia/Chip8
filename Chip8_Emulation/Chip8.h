@@ -14,11 +14,11 @@ enum class RunningState
 };
 
 #ifndef QUIRKS
-//#define QUIRKS
+#define QUIRKS
 #ifdef QUIRKS
 	#define QUIRK_VFRESET
 	#define QUIRK_MEMORY
-	//#define QUIRK_DISPWAIT
+	#define QUIRK_DISPWAIT
 	#define QUIRK_CLIPPING
 	#define QUIRK_SHIFTING
 	#define QUIRK_JUMPING
@@ -133,6 +133,7 @@ private:
 	void _DecodeExecute_Opcode( const uint16_t iOpcode );
 	void _UpdateTimers();
 	void _AddOpcodeToHistory( const char* pOpcode );
+	bool _IsEndReached( const uint16_t iOpcode );
 
 	Data<uint8_t> m_aMemory[ 0x1000 ];
 	Data<uint8_t> m_aRegisters[ 0x10 ];
