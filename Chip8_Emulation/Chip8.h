@@ -18,7 +18,7 @@ enum class RunningState
 #ifdef QUIRKS
 	#define QUIRK_VFRESET
 	#define QUIRK_MEMORY
-	#define QUIRK_DISPWAIT
+	//#define QUIRK_DISPWAIT
 	#define QUIRK_CLIPPING
 	#define QUIRK_SHIFTING
 	#define QUIRK_JUMPING

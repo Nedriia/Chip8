@@ -32,7 +32,11 @@ void Chip8::SetRomToLoad( const KeyAccess& oKey,const std::string& sSrc )
 Chip8::Chip8() :
 	m_iLastOpcode( 0 )
 	,m_iCountBeforeStop( 0 )
+#ifdef DEBUG_INFO
 	,m_oState( RunningState::Pause )
+#else
+	,m_oState( RunningState::Running )
+#endif
 	,m_iLastTimeUpdate( std::chrono::steady_clock::now() )
 	,m_sCurrentRomLoaded( nullptr )
 	,m_iCycle( 0 )
@@ -255,8 +259,7 @@ void Chip8::_FetchOpcode( uint16_t& opcode )
 void Chip8::_DecodeExecute_Opcode( const uint16_t opcode )
 {
 	uint8_t iIndex = ( opcode & 0xF000 ) >> 12;
-	uint8_t iRow = ( opcode & 0x000F );
-	( this->*m_aMainTable[ iIndex ] )( opcode );
+	CheckOpcodeAndExec( opcode,iIndex,m_aMainTable );
 }
 
 void Chip8::_UpdateTimers()

@@ -100,6 +100,7 @@ int Display::_CreateWindowChip()
 
 void Display::_InitTexture()
 {
+#ifdef DEBUG_INFO
 	glGenTextures( 1,&m_iFBOTexture );
 	glBindTexture( GL_TEXTURE_2D,m_iFBOTexture );
 
@@ -110,6 +111,7 @@ void Display::_InitTexture()
 
 	glBindTexture( GL_TEXTURE_2D,0 );
 	glFramebufferTexture2D( GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,GL_TEXTURE_2D,m_iFBOTexture,0 );
+#endif
 	//*-------------------------------------------------------------------------------------------------*//
 	glGenTextures( 1,&m_iTexture );
 	glBindTexture( GL_TEXTURE_2D,m_iTexture );
@@ -124,15 +126,19 @@ void Display::_InitTexture()
 
 void Display::_InitFramebuffer()
 {
+#ifdef DEBUG_INFO
 	glGenFramebuffers( 1,&m_iFBO );
 	glBindFramebuffer( GL_FRAMEBUFFER,m_iFBO );
+#endif
 
 	_InitTexture();
 
+#ifdef DEBUG_INFO
 	glBindFramebuffer( GL_FRAMEBUFFER,0 );
 
 	if( glCheckFramebufferStatus( GL_FRAMEBUFFER ) != GL_FRAMEBUFFER_COMPLETE )
 		std::cerr << "DISPLAY::FRAMEBUFFER_NOT_COMPLETE" << std::endl;
+#endif
 }
 
 void Display::_InitRenderer()
@@ -198,6 +204,7 @@ void Display::framebuffer_size_callback( GLFWwindow* m_pWindow,int width,int hei
 	// height will be significantly larger than specified on retina displays.
 	glViewport( 0,0,width,height );
 
+#ifdef DEBUG_INFO
 	glBindTexture( GL_TEXTURE_2D,m_iFBOTexture );
 
 	glTexImage2D( GL_TEXTURE_2D,0,GL_RGB,width,height,0,GL_RGB,GL_UNSIGNED_BYTE,NULL );//need to reallocate texture
@@ -205,6 +212,7 @@ void Display::framebuffer_size_callback( GLFWwindow* m_pWindow,int width,int hei
 	glBindTexture( GL_TEXTURE_2D,0 );
 
 	m_bDirtyFrame = true;
+#endif
 }
 
 void Display::DestroyWindow( const KeyDisplayAccess& oKey )
@@ -287,22 +295,32 @@ void Display::Update( const std::chrono::steady_clock::time_point& time,bool cpu
 
 		if( m_bDirtyFrame )
 		{
+#ifdef DEBUG_INFO
 			glBindFramebuffer( GL_FRAMEBUFFER,m_iFBO );
-
+#endif
 			glBindTexture( GL_TEXTURE_2D,m_iTexture );
 			glTexSubImage2D( GL_TEXTURE_2D,0,0,0,Display::GetWidth(),Display::GetHeight(),GL_RED,GL_UNSIGNED_BYTE,m_pPixels );
 
 			m_sShaderProgram.Use();
+
+#ifndef DEBUG_INFO
+			glBindVertexArray( m_iVAO );
+#endif // !DEBUG_INFO
+
 			glDrawElements( GL_TRIANGLES,6,GL_UNSIGNED_INT,0 );
 
+#ifdef DEBUG_INFO
 			glBindFramebuffer( GL_FRAMEBUFFER,0 );
-
+#endif
 			m_bDirtyFrame = false;
 		}
 
 #ifdef DEBUG_INFO
 		Chip8_Debugger::GetInstance()->Update( startElapsed );
 		Chip8_Debugger::GetInstance()->Render();
+#else
+		std::string sPerfDebug = std::format( "Chip8 Emulator : {} ms",std::chrono::duration<double,std::milli>( startElapsed ).count() );
+		glfwSetWindowTitle( m_pWindow,sPerfDebug.c_str() );
 #endif
 
 		glfwSwapBuffers( m_pWindow );
