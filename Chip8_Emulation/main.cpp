@@ -26,9 +26,12 @@ int main( int argc,char* argv[] )
 
 	Chip8::KeyAccess oKey;
 	Display::KeyDisplayAccess oKeyDisplay;
+	Chip8* m_pCpuInstance = Chip8::GetInstance();
+	Display* m_pDisplayInstance = Display::GetInstance();
+	Input* m_pInputInstance = Input::GetInstance();
 
-	Chip8::GetInstance()->Init( oKey,sROMToLoad );
-	if( Display::GetInstance()->Init( oKeyDisplay,Chip8::GetInstance() ) == -1 )
+	m_pCpuInstance->Init( oKey,sROMToLoad );
+	if( m_pDisplayInstance->Init( oKeyDisplay,m_pCpuInstance ) == -1 )
 		return Quit();
 
 	SoundManager::GetInstance()->Init();
@@ -40,9 +43,9 @@ int main( int argc,char* argv[] )
 	{
 		std::chrono::steady_clock::time_point time = std::chrono::steady_clock::now();
 
-		Chip8::GetInstance()->EmulateCycle( oKey,time );
-		Input::GetInstance()->ProcessInput( time,quit );
-		Display::GetInstance()->Update( time,Chip8::GetInstance()->IsPause() );
+		m_pCpuInstance->EmulateCycle( oKey,time );
+		m_pInputInstance->ProcessInput( time,quit );
+		m_pDisplayInstance->Update( time,m_pCpuInstance->IsPause() );
 	}
 
 	Quit();

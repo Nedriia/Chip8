@@ -5,7 +5,7 @@
 #include "Shader.h"
 #include <chrono>
 
-//#define DEBUG_INFO
+#define DEBUG_INFO
 
 class Chip8;
 class Display
@@ -26,7 +26,7 @@ public:
 	static void DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xPos,uint8_t yPos,uint8_t oValue,bool& bErased,bool bClipping );
 	void DestroyWindow( const KeyDisplayAccess& oKey );
 
-	void Update( const std::chrono::steady_clock::time_point& time,bool cpuPaused );
+	void Update( const std::chrono::steady_clock::time_point& time,const bool cpuPaused );
 
 	const unsigned int& GetFBOTexture() const { return m_iFBOTexture; }
 	const unsigned int& GetTexture() const { return m_iTexture; }

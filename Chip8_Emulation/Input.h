@@ -31,5 +31,4 @@ private:
 
 	uint8_t m_aInputs[ 0x10 ];
 	std::chrono::steady_clock::time_point m_iLastTimeUpdate;
-
 };

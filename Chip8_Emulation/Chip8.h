@@ -4,6 +4,9 @@
 #include <deque>
 #include <chrono>
 #include <array>
+#include "SoundManager.h"
+#include "Input.h"
+#include "Display.h"
 
 enum class RunningState
 {
@@ -14,15 +17,15 @@ enum class RunningState
 };
 
 #ifndef QUIRKS
-#define QUIRKS
-#ifdef QUIRKS
-	#define QUIRK_VFRESET
-	#define QUIRK_MEMORY
-	//#define QUIRK_DISPWAIT
-	#define QUIRK_CLIPPING
-	#define QUIRK_SHIFTING
-	#define QUIRK_JUMPING
-#endif
+//#define QUIRKS
+	#ifdef QUIRKS
+		#define QUIRK_VFRESET
+		#define QUIRK_MEMORY
+		#define QUIRK_DISPWAIT
+		#define QUIRK_CLIPPING
+		#define QUIRK_SHIFTING
+		#define QUIRK_JUMPING
+	#endif
 #endif
 
 template< typename T>
@@ -129,11 +132,13 @@ private:
 	void _LoadFont();
 	void _LoadROM( const char* sROMToLoad );
 
-	void _FetchOpcode( uint16_t& iOpcode );
-	void _DecodeExecute_Opcode( const uint16_t iOpcode );
+	void _FetchOpcode();
+	void _DecodeExecute_Opcode();
 	void _UpdateTimers();
+#ifdef DEBUG_INFO
 	void _AddOpcodeToHistory( const char* pOpcode );
-	bool _IsEndReached( const uint16_t iOpcode );
+#endif
+	bool _IsEndReached();
 
 	Data<uint8_t> m_aMemory[ 0x1000 ];
 	Data<uint8_t> m_aRegisters[ 0x10 ];
@@ -141,6 +146,7 @@ private:
 	Data<uint16_t> m_aStack[ 0x10 ];
 	Data<uint8_t> m_iSP; //Stack pointer
 	Data<uint16_t> m_iPC; //Program counter
+	uint16_t m_iCurrentOpcode;
 
 	uint16_t m_iLastOpcode;
 	uint8_t m_iCountBeforeStop;
@@ -182,11 +188,10 @@ private:
 	std::chrono::steady_clock::time_point		m_iTimeLastFrame;
 #endif
 
-	static Chip8* m_pSingleton;
+	static Chip8*								m_pSingleton;
+	static  int									m_iInstructionsPerFrame;
 
-	static  int						m_iInstructionsPerFrame;
-
-	typedef void ( Chip8::*fct_opcode )( const uint16_t opcode );
+	typedef void ( Chip8::*fct_opcode )();
 	//Opcodes array
 	std::array< fct_opcode, 0x10 > m_aMainTable;
 	std::array< fct_opcode, 0x10 > m_a0x0_Table;
@@ -194,54 +199,61 @@ private:
 	std::array< fct_opcode, 0x10 > m_a0xE_Table;
 	std::array< fct_opcode, 0xFF > m_a0xF_Table;
 	//Functions
-	void x0_Dispatch( const uint16_t opcode );
-	void x8_Dispatch( const uint16_t opcode );
-	void xE_Dispatch( const uint16_t opcode );
-	void xF_Dispatch( const uint16_t opcode );
+	void x0_Dispatch();
+	void x8_Dispatch();
+	void xE_Dispatch();
+	void xF_Dispatch();
 	template< typename T, size_t N >
-	void CheckOpcodeAndExec( const uint16_t opcode, const T iNibble, const std::array<fct_opcode,N>& aTable );
+	void CheckOpcodeAndExec( const T iNibble, const std::array<fct_opcode,N>& aTable );
 
 	//Opcodes
-	void CLS( const uint16_t opcode );
-	void RET( const uint16_t opcode );
-	void CALL( const uint16_t opcode );
+	void CLS();
+	void RET();
+	void CALL();
 
-	void JMP( const uint16_t opcode );
-	void JMP_NNN( const uint16_t opcode );
+	void JMP();
+	void JMP_NNN();
 
-	void SNE_VX_NN( const uint16_t opcode );
-	void SNE_VX_VY( const uint16_t opcode );
+	void SNE_VX_NN();
+	void SNE_VX_VY();
 
-	void SE_VX_NN( const uint16_t opcode );
-	void SE_VX_VY( const uint16_t opcode );
+	void SE_VX_NN();
+	void SE_VX_VY();
 
-	void LD_VX_NN( const uint16_t opcode );
-	void LD_VX_VY( const uint16_t opcode );
-	void LD_I_NNN( const uint16_t opcode );
-	void LD_VX_DT( const uint16_t opcode );
-	void LD_DT_VX( const uint16_t opcode );
-	void LD_VX_KEY( const uint16_t opcode );
-	void LD_ST_VX( const uint16_t opcode );
-	void LD_I_FONT( const uint16_t opcode );
-	void LD_I_VX( const uint16_t opcode );
-	void LD_VX_I( const uint16_t opcode );
+	void LD_VX_NN();
+	void LD_VX_VY();
+	void LD_I_NNN();
+	void LD_VX_DT();
+	void LD_DT_VX();
+	void LD_VX_KEY();
+	void LD_ST_VX();
+	void LD_I_FONT();
+	void LD_I_VX();
+	void LD_VX_I();
 
-	void ADD_VX_NN( const uint16_t opcode );
-	void ADD_VX_VY( const uint16_t opcode );
-	void ADD_I_VX( const uint16_t opcode );
+	void ADD_VX_NN();
+	void ADD_VX_VY();
+	void ADD_I_VX();
 
-	void SUB_VX_VY( const uint16_t opcode );
-	void SUBN_VX_VY( const uint16_t opcode );
+	void SUB_VX_VY();
+	void SUBN_VX_VY();
 
-	void OR( const uint16_t opcode );
-	void AND( const uint16_t opcode );
-	void XOR( const uint16_t opcode );
-	void SHR( const uint16_t opcode );
-	void SHL( const uint16_t opcode );
-	void RND( const uint16_t opcode );
-	void DRAW( const uint16_t opcode );
-	void BCD( const uint16_t opcode );
+	void OR();
+	void AND();
+	void XOR();
+	void SHR();
+	void SHL();
+	void RND();
+	void DRAW();
+	void BCD();
 
-	void SKP( const uint16_t opcode );
-	void SKNP( const uint16_t opcode );
+	void SKP();
+	void SKNP();
+
+#ifdef DEBUG_INFO
+	std::string m_sOpcodeInstruct;
+#endif
+
+	const Input* m_pInputInstance;
+	SoundManager* m_pSoundManagerInstance;
 };

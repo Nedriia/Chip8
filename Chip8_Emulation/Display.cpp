@@ -266,7 +266,7 @@ void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xPos,uint8_t 
 	}
 }
 
-void Display::Update( const std::chrono::steady_clock::time_point& time,bool cpuPaused )
+void Display::Update( const std::chrono::steady_clock::time_point& time, const bool cpuPaused )
 {
 	// render loop
 	// -----------
