@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <chrono>
+#include "Display.h"
 
 struct GLFWwindow;
 class Input
@@ -31,4 +32,5 @@ private:
 
 	uint8_t m_aInputs[ 0x10 ];
 	std::chrono::steady_clock::time_point m_iLastTimeUpdate;
+	const Display* m_pDisplayInstance;
 };

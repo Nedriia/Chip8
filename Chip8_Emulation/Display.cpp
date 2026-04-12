@@ -15,6 +15,9 @@ unsigned int Display::m_iFBOTexture = 0;
 int Display::m_iValueMicroSRefresh = 16666;
 std::chrono::microseconds Display::m_iCurrentTick = std::chrono::microseconds( Display::m_iValueMicroSRefresh );
 
+uint8_t Display::m_iDisplayWidth = 64;//Keep as power of two or instruction in draw opcode might give you exotic result
+uint8_t Display::m_iDisplayHeight = 32;
+
 float vertices[] = {
 	// positions		//Texture coords
 	1.f, 1.0f, 0.0f,	1.0f, 0.0f,		// top right
@@ -35,9 +38,7 @@ Display::Display() :
 	m_iVBO( 0 ),
 	m_iEBO( 0 ),
 	m_iFBO( 0 ),
-	m_iLastTimeUpdate( std::chrono::steady_clock::now() ),
-	m_iDisplayWidth ( 64 ),//Keep as power of two or instruction in draw opcode might give you exotic result
-	m_iDisplayHeight ( 32 )
+	m_iLastTimeUpdate( std::chrono::steady_clock::now() )
 {}
 
 Display::~Display()
@@ -68,7 +69,9 @@ int Display::Init( const KeyDisplayAccess& oKey,const Chip8* pCpu )
 	_InitPixelsData();
 	_InitFramebuffer();
 
+#ifdef DEBUG_INFO
 	Chip8_Debugger::GetInstance()->Init( m_pWindow,pCpu );
+#endif
 
 	return 0;
 }
@@ -250,12 +253,12 @@ void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xPos,uint8_t 
 	{
 		if( bClipping )
 		{
-			if( xPos >= Display::GetWidth() || yPos >= Display::GetHeight() )
+			if( xPos >= m_iDisplayWidth || yPos >= m_iDisplayHeight )
 				return;
 		}
 		else
 		{
-			xPos &= Display::GetWidth() - 1;
+			xPos &= m_iDisplayWidth - 1;
 		}
 
 		if( oValue & ByteMask )

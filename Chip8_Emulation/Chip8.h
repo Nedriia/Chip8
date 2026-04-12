@@ -17,11 +17,11 @@ enum class RunningState
 };
 
 #ifndef QUIRKS
-//#define QUIRKS
+#define QUIRKS
 	#ifdef QUIRKS
 		#define QUIRK_VFRESET
 		#define QUIRK_MEMORY
-		#define QUIRK_DISPWAIT
+		//#define QUIRK_DISPWAIT
 		#define QUIRK_CLIPPING
 		#define QUIRK_SHIFTING
 		#define QUIRK_JUMPING
@@ -48,6 +48,7 @@ public:
 
 	operator T() const { return oData; }
 	bool HasChanged() const { return m_bNewValue; }
+#ifdef DEBUG_INFO
 	void SetDataAsDirty() const
 	{
 		if( !m_bDirty )
@@ -58,6 +59,7 @@ public:
 			m_bNewValue = false;
 		}
 	}
+#endif
 	bool IsNULL() const { return oData == 0; }
 	void clear() { oData = 0; m_bNewValue = false; }
 
@@ -68,11 +70,15 @@ private:
 	template< typename F>
 	Data& Update( F operation )
 	{
+#ifdef DEBUG_INFO
 		T previous = oData;
+#endif
 		operation();
+#ifdef DEBUG_INFO
 		m_bNewValue = ( previous != oData );
 		if( m_bNewValue )
 			m_bDirty = false;
+#endif
 		return *this;
 	}
 };
@@ -199,56 +205,62 @@ private:
 	std::array< fct_opcode, 0x10 > m_a0xE_Table;
 	std::array< fct_opcode, 0xFF > m_a0xF_Table;
 	//Functions
-	void x0_Dispatch();
-	void x8_Dispatch();
-	void xE_Dispatch();
-	void xF_Dispatch();
+	inline void x0_Dispatch();
+	inline void x8_Dispatch();
+	inline void xE_Dispatch();
+	inline void xF_Dispatch();
 	template< typename T, size_t N >
-	void CheckOpcodeAndExec( const T iNibble, const std::array<fct_opcode,N>& aTable );
+	inline void CheckOpcodeAndExec( const T iNibble, const std::array<fct_opcode,N>& aTable );
 
 	//Opcodes
-	void CLS();
-	void RET();
-	void CALL();
+	inline void CLS();
+	inline void RET();
+	inline void CALL();
 
-	void JMP();
-	void JMP_NNN();
+	inline void JMP();
+	inline void JMP_NNN();
 
-	void SNE_VX_NN();
-	void SNE_VX_VY();
+	inline void SNE_VX_NN();
+	inline void SNE_VX_VY();
 
-	void SE_VX_NN();
-	void SE_VX_VY();
+	inline void SE_VX_NN();
+	inline void SE_VX_VY();
 
-	void LD_VX_NN();
-	void LD_VX_VY();
-	void LD_I_NNN();
-	void LD_VX_DT();
-	void LD_DT_VX();
-	void LD_VX_KEY();
-	void LD_ST_VX();
-	void LD_I_FONT();
-	void LD_I_VX();
-	void LD_VX_I();
+	inline void LD_VX_NN();
+	inline void LD_VX_VY();
+	inline void LD_I_NNN();
+	inline void LD_VX_DT();
+	inline void LD_DT_VX();
+	inline void LD_VX_KEY();
+	inline void LD_ST_VX();
+	inline void LD_I_FONT();
+	inline void LD_I_VX();
+	inline void LD_VX_I();
 
-	void ADD_VX_NN();
-	void ADD_VX_VY();
-	void ADD_I_VX();
+	inline void ADD_VX_NN();
+	inline void ADD_VX_VY();
+	inline void ADD_I_VX();
 
-	void SUB_VX_VY();
-	void SUBN_VX_VY();
+	inline void SUB_VX_VY();
+	inline void SUBN_VX_VY();
 
-	void OR();
-	void AND();
-	void XOR();
-	void SHR();
-	void SHL();
-	void RND();
-	void DRAW();
-	void BCD();
+	inline void OR();
+	inline void AND();
+	inline void XOR();
+	inline void SHR();
+	inline void SHL();
+	inline void RND();
+	inline void DRAW();
+	inline void BCD();
 
-	void SKP();
-	void SKNP();
+	inline void SKP();
+	inline void SKNP();
+
+	inline const uint8_t GetX();
+	inline const uint8_t GetY();
+	inline const uint16_t GetNNN();
+	inline const uint8_t GetNN();
+	inline const uint8_t GetN();
 
 #ifdef DEBUG_INFO
 	std::string m_sOpcodeInstruct;

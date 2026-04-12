@@ -359,8 +359,10 @@ void Chip8_Debugger::FormatDebugData( std::string sText,const char* sFormat,cons
 {
 	static_assert( std::is_same_v<T,Data<uint8_t>> || std::is_same_v<T,Data<uint16_t>>,"Function is being call with an unsupported type" );
 
+#ifdef DEBUG_INFO
 	if( m_pCPU && m_iCycleIndex != m_pCPU->GetCycleId() )
 		oData.SetDataAsDirty();
+#endif
 
 	ImGui::PushID( iIndexPosition );
 	if( !sText.empty() )

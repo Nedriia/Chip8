@@ -8,7 +8,8 @@ Input* Input::m_pSingleton = nullptr;
 Input::Input()
 	:
 	m_aInputs{ 0 },
-	m_iLastTimeUpdate( std::chrono::steady_clock::now() )
+	m_iLastTimeUpdate( std::chrono::steady_clock::now() ),
+	m_pDisplayInstance( nullptr )
 {
 }
 
@@ -20,10 +21,13 @@ Input::~Input()
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 void Input::ProcessInput( const std::chrono::steady_clock::time_point& time,bool& quit )
 {
-	if( Display::GetInstance() == nullptr )
+	if( m_pDisplayInstance == nullptr )
+	{
+		m_pDisplayInstance = Display::GetInstance();
 		return;
+	}
 
-	GLFWwindow* pWindow = Display::GetInstance()->GetWindow();
+	GLFWwindow* pWindow = m_pDisplayInstance->GetWindow();
 	if( pWindow == nullptr )
 		return;
 

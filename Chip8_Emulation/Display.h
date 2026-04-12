@@ -5,7 +5,7 @@
 #include "Shader.h"
 #include <chrono>
 
-#define DEBUG_INFO
+//#define DEBUG_INFO
 
 class Chip8;
 class Display
@@ -35,8 +35,8 @@ public:
 	GLFWwindow* GetWindow() const { return m_pWindow; }
 	const std::chrono::steady_clock::time_point& GetLastTimeUpdate() const { return m_iLastTimeUpdate; }
 
-	static const uint8_t GetWidth() { return Display::GetInstance()->m_iDisplayWidth; }
-	static const uint8_t GetHeight() { return Display::GetInstance()->m_iDisplayHeight; }
+	static const uint8_t GetWidth() { return m_iDisplayWidth; }
+	static const uint8_t GetHeight() { return m_iDisplayHeight; }
 
 	static const int GetValueMicroSRefresh() { return m_iValueMicroSRefresh; }
 	static const std::chrono::microseconds& GetRefreshTick() { return m_iCurrentTick; }
@@ -86,6 +86,6 @@ protected:
 	static int m_iValueMicroSRefresh;
 	static std::chrono::microseconds m_iCurrentTick;
 
-	uint8_t	m_iDisplayWidth;
-	uint8_t	m_iDisplayHeight;
+	static uint8_t	m_iDisplayWidth;
+	static uint8_t	m_iDisplayHeight;
 };
