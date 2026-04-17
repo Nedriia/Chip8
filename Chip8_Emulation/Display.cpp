@@ -6,7 +6,8 @@
 const uint16_t WINDOW_WIDTH = 1920;
 const uint16_t WINDOW_HEIGHT = 1080;
 
-uint8_t* Display::m_pPixels = nullptr;
+uint64_t Display::m_pPixels[32] = { 0 };
+
 bool Display::m_bDirtyFrame = false;
 Display* Display::m_pSingleton = nullptr;
 
@@ -43,8 +44,6 @@ Display::Display() :
 
 Display::~Display()
 {
-	delete[] m_pPixels;
-	m_pPixels = nullptr;
 	m_pSingleton = nullptr;
 }
 
@@ -65,7 +64,7 @@ int Display::Init( const KeyDisplayAccess& oKey,const Chip8* pCpu )
 
 	_CreateWindowChip();
 	_InitRenderer();
-	m_pPixels = new uint8_t[ m_iDisplayWidth * m_iDisplayHeight ];
+	
 	_InitPixelsData();
 	_InitFramebuffer();
 
@@ -119,7 +118,7 @@ void Display::_InitTexture()
 	glGenTextures( 1,&m_iTexture );
 	glBindTexture( GL_TEXTURE_2D,m_iTexture );
 
-	glTexImage2D( GL_TEXTURE_2D,0,GL_R8,m_iDisplayWidth,m_iDisplayHeight,0,GL_RED,GL_UNSIGNED_BYTE,NULL );
+	glTexImage2D( GL_TEXTURE_2D,0,GL_R32UI,2,m_iDisplayHeight,0,GL_RED_INTEGER,GL_UNSIGNED_INT,NULL );
 
 	glTexParameteri( GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST );
 	glTexParameteri( GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST );
@@ -178,24 +177,20 @@ void Display::_DestroyRenderer()
 
 void Display::_InitPixelsData()
 {
-	for( int i = 0; i < Display::GetHeight(); ++i )
-	{
-		for( int j = 0; j < Display::GetWidth(); ++j )
-			*( m_pPixels + i * Display::GetWidth() + j ) = 0;
-	}
+	memset( m_pPixels, 0, sizeof( m_pPixels ) );
 	m_bDirtyFrame = true;
 }
 
-void Display::_XORedPixelsData( int xPos,int yPos,uint8_t odata )
+void Display::_XORedPixelsData( int xPos,int yPos )
 {
-	uint8_t iPrevious = *( m_pPixels + yPos * Display::GetWidth() + xPos );
-	uint8_t iCurrent = ( * ( m_pPixels + yPos * Display::GetWidth() + xPos ) ^= odata );
-	m_bDirtyFrame |= ( iCurrent != iPrevious );
+	uint64_t iPreviousValue = m_pPixels[ yPos ];
+	m_pPixels[ yPos ] ^= static_cast<uint64_t>( 1ULL << xPos );
+	m_bDirtyFrame |= ( iPreviousValue != m_pPixels[ yPos ] );
 }
 
 bool Display::_IsPixelErase( int xPos,int yPos )
 {
-	return *( m_pPixels + yPos * Display::GetWidth() + xPos ) == 255;
+	return ( m_pPixels[ yPos ] >> xPos ) & 1ULL;
 }
 
 
@@ -247,7 +242,7 @@ void Display::ClearScreen( const KeyDisplayAccess& oKey )
 	_InitPixelsData();
 }
 
-void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xPos,uint8_t yPos,uint8_t oValue,bool& bErased,bool bClipping )
+void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey, uint8_t xPos, uint8_t yPos, const uint8_t oValue,bool& bErased,bool bClipping )
 {
 	for( uint8_t ByteMask = 0x80; ByteMask > 0; ByteMask >>= 1,++xPos )//uint8_t mask 0x80 --> 10000000 // 01000000 // 00100000 ...
 	{
@@ -264,7 +259,7 @@ void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xPos,uint8_t 
 		if( oValue & ByteMask )
 		{
 			bErased |= _IsPixelErase( xPos,yPos );
-			_XORedPixelsData( xPos,yPos,255 );
+			_XORedPixelsData( xPos,yPos );
 		}
 	}
 }
@@ -293,16 +288,16 @@ void Display::Update( const std::chrono::steady_clock::time_point& time, const b
 			elapsed = std::chrono::duration_cast< std::chrono::microseconds >( time - m_iLastTimeUpdate );
 		}
 
-		glClearColor( 0.f,0.f,0.f,1.f );
-		glClear( GL_COLOR_BUFFER_BIT );
-
 		if( m_bDirtyFrame )
 		{
+			glClearColor( 0.f,0.f,0.f,1.f );
+			glClear( GL_COLOR_BUFFER_BIT );
+
 #ifdef DEBUG_INFO
 			glBindFramebuffer( GL_FRAMEBUFFER,m_iFBO );
 #endif
 			glBindTexture( GL_TEXTURE_2D,m_iTexture );
-			glTexSubImage2D( GL_TEXTURE_2D,0,0,0,Display::GetWidth(),Display::GetHeight(),GL_RED,GL_UNSIGNED_BYTE,m_pPixels );
+			glTexSubImage2D( GL_TEXTURE_2D,0,0,0,2,Display::GetHeight(),GL_RED_INTEGER,GL_UNSIGNED_INT,m_pPixels );
 
 			m_sShaderProgram.Use();
 
@@ -314,6 +309,8 @@ void Display::Update( const std::chrono::steady_clock::time_point& time, const b
 
 #ifdef DEBUG_INFO
 			glBindFramebuffer( GL_FRAMEBUFFER,0 );
+#else
+			glfwSwapBuffers( m_pWindow );
 #endif
 			m_bDirtyFrame = false;
 		}
@@ -321,11 +318,10 @@ void Display::Update( const std::chrono::steady_clock::time_point& time, const b
 #ifdef DEBUG_INFO
 		Chip8_Debugger::GetInstance()->Update( startElapsed );
 		Chip8_Debugger::GetInstance()->Render();
+		glfwSwapBuffers( m_pWindow );
 #else
 		std::string sPerfDebug = std::format( "Chip8 Emulator : {} ms",std::chrono::duration<double,std::milli>( startElapsed ).count() );
 		glfwSetWindowTitle( m_pWindow,sPerfDebug.c_str() );
 #endif
-
-		glfwSwapBuffers( m_pWindow );
 	}
 }

@@ -15,8 +15,8 @@
 #define JMPCHECK_BEFORE_ENDING 4
 #define USE_SWITCH_BRANCH 1
 
-//int Chip8::m_iInstructionsPerFrame = 5000000;
-int Chip8::m_iInstructionsPerFrame = 5000;
+int Chip8::m_iInstructionsPerFrame = 5000000;
+//int Chip8::m_iInstructionsPerFrame = 5;
 
 Chip8* Chip8::m_pSingleton = nullptr;
 
@@ -803,9 +803,9 @@ inline void Chip8::SHR()
 
 	m_aRegisters[ X ] = m_aRegisters[ Y ] >> 1; //before 1990
 #else // QUIRK_SHIFTING
-#ifdef DEBUG_INFO
-	m_sOpcodeInstruct = std::format( "{:04X} : SHR VX",m_iCurrentOpcode );
-#endif
+	#ifdef DEBUG_INFO
+		m_sOpcodeInstruct = std::format( "{:04X} : SHR VX",m_iCurrentOpcode );
+	#endif
 
 	LSB = ( m_aRegisters[ X ] & 0x01 );
 
@@ -917,7 +917,7 @@ inline void Chip8::DRAW()
 	uint8_t iYOffset = 0;
 
 	Display::KeyDisplayAccess oKeyDisplay;
-	uint8_t xPos = m_aRegisters[ GetX()] & ( Display::GetWidth() - 1 );
+	uint8_t xPos = m_aRegisters[ GetX() ] & ( Display::GetWidth() - 1 );
 	uint8_t yPos = m_aRegisters[ GetY() ] & ( Display::GetHeight() - 1 );
 
 	m_aRegisters[ 15 ] = 0;

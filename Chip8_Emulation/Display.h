@@ -31,7 +31,7 @@ public:
 	const unsigned int& GetFBOTexture() const { return m_iFBOTexture; }
 	const unsigned int& GetTexture() const { return m_iTexture; }
 	const unsigned int& GetFBO() const { return m_iFBO; }
-	const uint8_t* GetPixels() const { return m_pPixels; }
+	const uint64_t* GetPixels() const { return m_pPixels; }
 	GLFWwindow* GetWindow() const { return m_pWindow; }
 	const std::chrono::steady_clock::time_point& GetLastTimeUpdate() const { return m_iLastTimeUpdate; }
 
@@ -62,7 +62,7 @@ protected:
 	void _InitRenderer();
 	void _DestroyRenderer();
 	static void _InitPixelsData();
-	static void _XORedPixelsData( int xPos,int yPos,uint8_t oData );
+	static void _XORedPixelsData( int xPos,int yPos );
 	static bool _IsPixelErase( int xPos,int yPos );
 
 	static void framebuffer_size_callback( GLFWwindow* m_pWindow,int width,int height );
@@ -77,7 +77,7 @@ protected:
 	unsigned int m_iEBO;
 	unsigned int m_iFBO;
 
-	static uint8_t* m_pPixels;
+	static uint64_t m_pPixels[];
 
 	std::chrono::steady_clock::time_point m_iLastTimeUpdate;
 
