@@ -62,8 +62,6 @@ protected:
 	void _InitRenderer();
 	void _DestroyRenderer();
 	static void _InitPixelsData();
-	static void _XORedPixelsData( int xPos,int yPos );
-	static bool _IsPixelErase( int xPos,int yPos );
 
 	static void framebuffer_size_callback( GLFWwindow* m_pWindow,int width,int height );
 

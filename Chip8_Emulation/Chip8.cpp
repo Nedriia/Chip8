@@ -19,6 +19,7 @@ int Chip8::m_iInstructionsPerFrame = 5000000;
 //int Chip8::m_iInstructionsPerFrame = 5;
 
 Chip8* Chip8::m_pSingleton = nullptr;
+uint8_t Chip8::iHexToIndex[ 0x66 ] = { 0 };
 
 void Chip8::SetRomToLoad( const KeyAccess& oKey,const std::string& sSrc )
 {
@@ -67,11 +68,7 @@ Chip8::Chip8() :
 	m_aMainTable[ 0xE ] = { &Chip8::xE_Dispatch };
 	m_aMainTable[ 0xF ] = { &Chip8::xF_Dispatch };
 
-	//0x0000
-	m_a0x0_Table[ 0x0 ] = { &Chip8::CLS };
-	m_a0x0_Table[ 0xE ] = { &Chip8::RET };
-
-	//0x8000
+	//0x8000 - 0xE000
 	m_a0x8_Table[ 0x0 ] = { &Chip8::LD_VX_VY };
 	m_a0x8_Table[ 0x1 ] = { &Chip8::OR };
 	m_a0x8_Table[ 0x2 ] = { &Chip8::AND };
@@ -80,22 +77,28 @@ Chip8::Chip8() :
 	m_a0x8_Table[ 0x5 ] = { &Chip8::SUB_VX_VY };
 	m_a0x8_Table[ 0x6 ] = { &Chip8::SHR };
 	m_a0x8_Table[ 0x7 ] = { &Chip8::SUBN_VX_VY };
+	m_a0x8_Table[ 0x9 ] = { &Chip8::SKP };	//xE_Dispatch
+	m_a0x8_Table[ 0xA ] = { &Chip8::SKNP }; //xE_Dispatch
 	m_a0x8_Table[ 0xE ] = { &Chip8::SHL };
 
-	//0xE000
-	m_a0xE_Table[ 0x9 ] = { &Chip8::SKP };
-	m_a0xE_Table[ 0xA ] = { &Chip8::SKNP };
+	//0x0000 - 0xF000 - size 0xFF
+	m_a0xF_Table[ 0 ]  = { &Chip8::CLS };		//0x0 //x0_Dispatch
+	m_a0xF_Table[ 1 ]  = { &Chip8::LD_VX_DT };	//0x7
+	m_a0xF_Table[ 2 ]  = { &Chip8::LD_VX_KEY }; //0xA
+	m_a0xF_Table[ 3 ]  = { &Chip8::RET };		//0xE //x0_Dispatch
+	m_a0xF_Table[ 4 ]  = { &Chip8::LD_DT_VX };	//0x15
+	m_a0xF_Table[ 5 ]  = { &Chip8::LD_ST_VX };	//0x18
+	m_a0xF_Table[ 6 ]  = { &Chip8::ADD_I_VX };	//0x1E
+	m_a0xF_Table[ 7 ]  = { &Chip8::LD_I_FONT };	//0x29
+	m_a0xF_Table[ 8 ]  = { &Chip8::BCD };		//0x33
+	m_a0xF_Table[ 9 ]  = { &Chip8::LD_I_VX };	//0x55
+	m_a0xF_Table[ 10 ] = { &Chip8::LD_VX_I };	//0x65
 
-	//0xF000 - size 0xFF
-	m_a0xF_Table[ 0x7 ] = { &Chip8::LD_VX_DT };
-	m_a0xF_Table[ 0x0A ] = { &Chip8::LD_VX_KEY };
-	m_a0xF_Table[ 0x15 ] = { &Chip8::LD_DT_VX };
-	m_a0xF_Table[ 0x18 ] = { &Chip8::LD_ST_VX };
-	m_a0xF_Table[ 0x1E ] = { &Chip8::ADD_I_VX };
-	m_a0xF_Table[ 0x29 ] = { &Chip8::LD_I_FONT };
-	m_a0xF_Table[ 0x33 ] = { &Chip8::BCD };
-	m_a0xF_Table[ 0x55 ] = { &Chip8::LD_I_VX };
-	m_a0xF_Table[ 0x65 ] = { &Chip8::LD_VX_I };
+	//Hex to Index For F Table
+	iHexToIndex[ 0x00 ] = 0; iHexToIndex[ 0x07 ] = 1; iHexToIndex[ 0x0A ] = 2;
+	iHexToIndex[ 0x0E ] = 3; iHexToIndex[ 0x15 ] = 4; iHexToIndex[ 0x18 ] = 5;
+	iHexToIndex[ 0x1E ] = 6; iHexToIndex[ 0x29 ] = 7; iHexToIndex[ 0x33 ] = 8;
+	iHexToIndex[ 0x55 ] = 9; iHexToIndex[ 0x65 ] = 10;
 }
 
 Chip8::~Chip8()
@@ -463,7 +466,7 @@ bool Chip8::_IsEndReached()
 inline void Chip8::x0_Dispatch()
 {
 	uint8_t iLastNibble = m_iCurrentOpcode & 0x000F;
-	CheckOpcodeAndExec( iLastNibble,m_a0x0_Table );
+	CheckOpcodeAndExec( iHexToIndex[ iLastNibble ],m_a0xF_Table );
 }
 
 inline void Chip8::x8_Dispatch()
@@ -475,13 +478,16 @@ inline void Chip8::x8_Dispatch()
 inline void Chip8::xE_Dispatch()
 {
 	uint8_t iThirdNibble = ( m_iCurrentOpcode & 0x00F0 ) >> 4;
-	CheckOpcodeAndExec( iThirdNibble,m_a0xE_Table );
+	CheckOpcodeAndExec( iThirdNibble,m_a0x8_Table );
 }
 
 inline void Chip8::xF_Dispatch()
 {
 	uint16_t iLastNibbles = m_iCurrentOpcode & 0x00FF;
-	CheckOpcodeAndExec( iLastNibbles,m_a0xF_Table );
+	if( iLastNibbles < 0x66 )
+		CheckOpcodeAndExec( iHexToIndex[ iLastNibbles ],m_a0xF_Table );
+	else
+		std::cerr << "Nibble > to HexToIndex array size" << std::endl;
 }
 
 template< typename T,size_t N >

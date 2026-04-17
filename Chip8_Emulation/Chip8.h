@@ -200,10 +200,9 @@ private:
 	typedef void ( Chip8::*fct_opcode )();
 	//Opcodes array
 	std::array< fct_opcode, 0x10 > m_aMainTable;
-	std::array< fct_opcode, 0x10 > m_a0x0_Table;
 	std::array< fct_opcode, 0x10 > m_a0x8_Table;
-	std::array< fct_opcode, 0x10 > m_a0xE_Table;
-	std::array< fct_opcode, 0xFF > m_a0xF_Table;
+	std::array< fct_opcode, 0x10 > m_a0xF_Table;
+
 	//Functions
 	inline void x0_Dispatch();
 	inline void x8_Dispatch();
@@ -268,4 +267,5 @@ private:
 
 	const Input* m_pInputInstance;
 	SoundManager* m_pSoundManagerInstance;
+	static uint8_t iHexToIndex[];
 };

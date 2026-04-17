@@ -6,7 +6,7 @@
 const uint16_t WINDOW_WIDTH = 1920;
 const uint16_t WINDOW_HEIGHT = 1080;
 
-uint64_t Display::m_pPixels[32] = { 0 };
+uint64_t Display::m_pPixels[ 32 ] = { 0 };
 
 bool Display::m_bDirtyFrame = false;
 Display* Display::m_pSingleton = nullptr;
@@ -64,7 +64,7 @@ int Display::Init( const KeyDisplayAccess& oKey,const Chip8* pCpu )
 
 	_CreateWindowChip();
 	_InitRenderer();
-	
+
 	_InitPixelsData();
 	_InitFramebuffer();
 
@@ -177,22 +177,9 @@ void Display::_DestroyRenderer()
 
 void Display::_InitPixelsData()
 {
-	memset( m_pPixels, 0, sizeof( m_pPixels ) );
+	memset( m_pPixels,0,sizeof( m_pPixels ) );
 	m_bDirtyFrame = true;
 }
-
-void Display::_XORedPixelsData( int xPos,int yPos )
-{
-	uint64_t iPreviousValue = m_pPixels[ yPos ];
-	m_pPixels[ yPos ] ^= static_cast<uint64_t>( 1ULL << xPos );
-	m_bDirtyFrame |= ( iPreviousValue != m_pPixels[ yPos ] );
-}
-
-bool Display::_IsPixelErase( int xPos,int yPos )
-{
-	return ( m_pPixels[ yPos ] >> xPos ) & 1ULL;
-}
-
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
 // ---------------------------------------------------------------------------------------------
@@ -242,29 +229,24 @@ void Display::ClearScreen( const KeyDisplayAccess& oKey )
 	_InitPixelsData();
 }
 
-void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey, uint8_t xPos, uint8_t yPos, const uint8_t oValue,bool& bErased,bool bClipping )
+void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xPos,uint8_t yPos, uint8_t oValue,bool& bErased,bool bClipping )
 {
-	for( uint8_t ByteMask = 0x80; ByteMask > 0; ByteMask >>= 1,++xPos )//uint8_t mask 0x80 --> 10000000 // 01000000 // 00100000 ...
-	{
-		if( bClipping )
-		{
-			if( xPos >= m_iDisplayWidth || yPos >= m_iDisplayHeight )
-				return;
-		}
-		else
-		{
-			xPos &= m_iDisplayWidth - 1;
-		}
+	uint64_t iPreviousValue = m_pPixels[ yPos ];
 
-		if( oValue & ByteMask )
-		{
-			bErased |= _IsPixelErase( xPos,yPos );
-			_XORedPixelsData( xPos,yPos );
-		}
-	}
+	//Invert endianess ( only for 8 bit )
+	oValue = ( ( oValue >> 1 ) & 0x55 ) | ( ( oValue << 1 ) & 0xAA );
+	oValue = ( ( oValue >> 2 ) & 0x33 ) | ( ( oValue << 2 ) & 0xCC );
+	oValue = ( oValue >> 4 ) | ( oValue << 4 );
+
+	uint64_t iLine = static_cast< uint64_t >( oValue ) << xPos;
+
+	bErased |= ( m_pPixels[ yPos ] & iLine );
+
+	m_pPixels[ yPos ] ^= iLine;
+	m_bDirtyFrame |= ( iPreviousValue != m_pPixels[ yPos ] );
 }
 
-void Display::Update( const std::chrono::steady_clock::time_point& time, const bool cpuPaused )
+void Display::Update( const std::chrono::steady_clock::time_point& time,const bool cpuPaused )
 {
 	// render loop
 	// -----------
