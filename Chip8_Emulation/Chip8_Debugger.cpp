@@ -53,7 +53,6 @@ Chip8_Debugger::Chip8_Debugger() :
 
 void Chip8_Debugger::Init( GLFWwindow* mainWindow,const Chip8* pCPU )
 {
-	ImVec4 clear_color = ImVec4( 0.45f,0.55f,0.60f,1.00f );
 	float main_scale = ImGui_ImplGlfw_GetContentScaleForMonitor( glfwGetPrimaryMonitor() ); // Valid on GLFW 3.3+ only
 
 	m_pWindow = mainWindow;
@@ -146,7 +145,6 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 			{
 				OPENFILENAMEA ofn;
 				char szFile[ 260 ];
-				HANDLE hf;
 
 				// Initialize OPENFILENAME
 				ZeroMemory( &ofn,sizeof( ofn ) );
@@ -228,7 +226,6 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 	{
 		if( m_pCPU != nullptr )
 		{
-			static int item_selected_idx = 0;
 			if( ImGui::BeginListBox( "#",ImVec2( -FLT_MIN,26 * ImGui::GetTextLineHeightWithSpacing() ) ) )
 			{
 				const Data<uint16_t>* it = m_pCPU->GetStack();
@@ -273,7 +270,6 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 	{
 		if( m_pCPU != nullptr )
 		{
-			static int item_selected_idx = 0;
 			if( ImGui::BeginListBox( "#",ImVec2( -FLT_MIN,20 * ImGui::GetTextLineHeightWithSpacing() ) ) )
 			{
 				const Data<uint8_t>* it = m_pCPU->GetMemory();
@@ -290,7 +286,6 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 						ImGui::Text( std::format( "{:#06X}:",i ).c_str() );
 						ImGui::SameLine();
 
-						bool is_selected = ( item_selected_idx == i );
 						for( int n = i; n < i + 0x10; ++n )
 						{
 							if( n == i + 8 )

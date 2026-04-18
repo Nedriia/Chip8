@@ -138,8 +138,7 @@ private:
 	void _LoadFont();
 	void _LoadROM( const char* sROMToLoad );
 
-	void _FetchOpcode();
-	void _DecodeExecute_Opcode();
+	void _FetchDecode_Opcode();
 	void _UpdateTimers();
 #ifdef DEBUG_INFO
 	void _AddOpcodeToHistory( const char* pOpcode );

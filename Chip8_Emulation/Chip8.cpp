@@ -13,9 +13,9 @@
 #define MEMORY_SIZE 4096
 #define DEFAULT_PARENT_ROM_FOLDER "..\\Roms\\"
 #define JMPCHECK_BEFORE_ENDING 4
-#define USE_SWITCH_BRANCH 1
+//#define USE_SWITCH_BRANCH
 
-int Chip8::m_iInstructionsPerFrame = 5000000;
+int Chip8::m_iInstructionsPerFrame = 7000000;
 //int Chip8::m_iInstructionsPerFrame = 5;
 
 Chip8* Chip8::m_pSingleton = nullptr;
@@ -33,9 +33,9 @@ void Chip8::SetRomToLoad( const KeyAccess& oKey,const std::string& sSrc )
 }
 
 Chip8::Chip8() :
-	m_iLastOpcode( 0 )
+	m_iCurrentOpcode( 0 )
+	,m_iLastOpcode( 0 )
 	,m_iCountBeforeStop( 0 )
-	,m_iCurrentOpcode( 0 )
 #ifdef DEBUG_INFO
 	,m_oState( RunningState::Pause )
 #else
@@ -235,11 +235,12 @@ void Chip8::EmulateCycle( const KeyAccess& key,const std::chrono::steady_clock::
 
 		for( int i = 0; i < m_iInstructionsPerFrame; ++i )
 		{
-			_FetchOpcode();
-			_DecodeExecute_Opcode();
+			_FetchDecode_Opcode();
 
+#ifdef DEBUG_INFO
 			if( _IsEndReached() || bForceNextStep )
 				break;
+#endif
 		}
 
 		_UpdateTimers();
@@ -260,166 +261,156 @@ void Chip8::DestroyCpu()
 	delete m_pSingleton;
 }
 
-void Chip8::_FetchOpcode()
+void Chip8::_FetchDecode_Opcode()
 {
-	m_iCurrentOpcode = m_aMemory[ m_iPC ];
-	uint8_t byte2 = m_aMemory[ m_iPC + 1 ];
-
-	m_iCurrentOpcode <<= 8;
-	m_iCurrentOpcode |= byte2;
-
+	m_iCurrentOpcode = m_aMemory[ m_iPC ] << 8 | m_aMemory[ m_iPC + 1 ];
 	m_iPC += 2;
-}
 
-void Chip8::_DecodeExecute_Opcode()
-{
-	if( !USE_SWITCH_BRANCH )
-	{
+#ifndef USE_SWITCH_BRANCH
 		uint8_t iIndex = ( m_iCurrentOpcode & 0xF000 ) >> 12;
 		CheckOpcodeAndExec( iIndex,m_aMainTable );
-	}
-	else
+#else
+	//Serve only as comparaison
+	uint16_t opcodeNibble = m_iCurrentOpcode & 0xF000;
+	switch( opcodeNibble )
 	{
-		uint16_t opcodeNibble = m_iCurrentOpcode & 0xF000;
-		switch( opcodeNibble )
+		case 0x0000:
 		{
-			case 0x0000:
-			{
-				uint16_t check = m_iCurrentOpcode & 0x00FF;
-				if( check == 0xE0 )
-					CLS();
-				else if( check == 0xEE )
-					RET();
-				else
-					std::cerr << "ERROR::OPCODE_UNKNOWN_" << std::hex << m_iCurrentOpcode << std::endl;
-			}
-			break;
-			case 0x1000:
-				JMP();
-			break;
-			case 0x2000:
-				CALL();
-			break;
-			case 0x3000:
-				SE_VX_NN();
-			break;
-			case 0x4000:
-				SNE_VX_NN();
-			break;
-			case 0x5000:
-				SE_VX_VY();
-			break;
-			case 0x6000:
-				LD_VX_NN();
-			break;
-			case 0x7000:
-				ADD_VX_NN();
-			break;
-			case 0x8000:
-			{
-				switch( m_iCurrentOpcode & 0x000F )
-				{
-					case 0:
-						LD_VX_VY();
-					break;
-					case 1:
-						OR();
-					break;
-					case 2:
-						AND();
-					break;
-					case 3:
-						XOR();
-					break;
-					case 4:
-						ADD_VX_VY();
-					break;
-					case 5:
-						SUB_VX_VY();
-					break;
-					case 6:
-						SHR();
-					break;
-					case 7:
-						SUBN_VX_VY();
-					break;
-					case 0xE:
-						SHL();
-					break;
-					default:
-						std::cerr << "ERROR::OPCODE_UNKNOWN_" << std::hex << m_iCurrentOpcode << std::endl;
-						break;
-				}
-			}
-			break;
-			case 0x9000:
-				SNE_VX_VY();
-			break;
-			case 0xA000:
-				LD_I_NNN();
-			break;
-			case 0xB000:
-				JMP_NNN();
-			break;
-			case 0xC000:
-				RND();
-			break;
-			case 0xD000:
-				DRAW();
-			break;
-			case 0xE000:
-			{
-				uint16_t check = m_iCurrentOpcode & 0x00FF;
-				if( check == 0x9E )
-					SKP();
-				else if( check == 0xA1 )
-					SKNP();
-				else
-					std::cerr << "ERROR::OPCODE_UNKNOWN_" << std::hex << m_iCurrentOpcode << std::endl;
-			}
-			break;
-			case 0xF000:
-			{
-				switch( m_iCurrentOpcode & 0x00FF )
-				{
-					case 7:
-						LD_VX_DT();
-					break;
-					case 0x0A:
-						LD_VX_KEY();
-					break;
-					case 0x15:
-						LD_DT_VX();
-					break;
-					case 0x18:
-						LD_ST_VX();
-					break;
-					case 0x1E:
-						ADD_I_VX();
-					break;
-					case 0x29:
-						LD_I_FONT();
-					break;
-					case 0x33:
-						BCD();
-					break;
-					case 0x55:
-						LD_I_VX();
-					break;
-					case 0x65:
-						LD_VX_I();
-					break;
-					default:
-						std::cerr << "ERROR::OPCODE_UNKNOWN_" << std::hex << m_iCurrentOpcode << std::endl;
-						break;
-				}
-			}
-			break;
-			default:
+			uint16_t check = m_iCurrentOpcode & 0x00FF;
+			if( check == 0xE0 )
+				CLS();
+			else if( check == 0xEE )
+				RET();
+			else
 				std::cerr << "ERROR::OPCODE_UNKNOWN_" << std::hex << m_iCurrentOpcode << std::endl;
-			break;
 		}
+		break;
+		case 0x1000:
+			JMP();
+		break;
+		case 0x2000:
+			CALL();
+		break;
+		case 0x3000:
+			SE_VX_NN();
+		break;
+		case 0x4000:
+			SNE_VX_NN();
+		break;
+		case 0x5000:
+			SE_VX_VY();
+		break;
+		case 0x6000:
+			LD_VX_NN();
+		break;
+		case 0x7000:
+			ADD_VX_NN();
+		break;
+		case 0x8000:
+		{
+			switch( m_iCurrentOpcode & 0x000F )
+			{
+				case 0:
+					LD_VX_VY();
+				break;
+				case 1:
+					OR();
+				break;
+				case 2:
+					AND();
+				break;
+				case 3:
+					XOR();
+				break;
+				case 4:
+					ADD_VX_VY();
+				break;
+				case 5:
+					SUB_VX_VY();
+				break;
+				case 6:
+					SHR();
+				break;
+				case 7:
+					SUBN_VX_VY();
+				break;
+				case 0xE:
+					SHL();
+				break;
+				default:
+					std::cerr << "ERROR::OPCODE_UNKNOWN_" << std::hex << m_iCurrentOpcode << std::endl;
+					break;
+			}
+		}
+		break;
+		case 0x9000:
+			SNE_VX_VY();
+		break;
+		case 0xA000:
+			LD_I_NNN();
+		break;
+		case 0xB000:
+			JMP_NNN();
+		break;
+		case 0xC000:
+			RND();
+		break;
+		case 0xD000:
+			DRAW();
+		break;
+		case 0xE000:
+		{
+			uint16_t check = m_iCurrentOpcode & 0x00FF;
+			if( check == 0x9E )
+				SKP();
+			else if( check == 0xA1 )
+				SKNP();
+			else
+				std::cerr << "ERROR::OPCODE_UNKNOWN_" << std::hex << m_iCurrentOpcode << std::endl;
+		}
+		break;
+		case 0xF000:
+		{
+			switch( m_iCurrentOpcode & 0x00FF )
+			{
+				case 7:
+					LD_VX_DT();
+				break;
+				case 0x0A:
+					LD_VX_KEY();
+				break;
+				case 0x15:
+					LD_DT_VX();
+				break;
+				case 0x18:
+					LD_ST_VX();
+				break;
+				case 0x1E:
+					ADD_I_VX();
+				break;
+				case 0x29:
+					LD_I_FONT();
+				break;
+				case 0x33:
+					BCD();
+				break;
+				case 0x55:
+					LD_I_VX();
+				break;
+				case 0x65:
+					LD_VX_I();
+				break;
+				default:
+					std::cerr << "ERROR::OPCODE_UNKNOWN_" << std::hex << m_iCurrentOpcode << std::endl;
+					break;
+			}
+		}
+		break;
+		default:
+			std::cerr << "ERROR::OPCODE_UNKNOWN_" << std::hex << m_iCurrentOpcode << std::endl;
+		break;
 	}
+#endif
 }
 
 void Chip8::_UpdateTimers()
@@ -486,16 +477,20 @@ inline void Chip8::xF_Dispatch()
 	uint16_t iLastNibbles = m_iCurrentOpcode & 0x00FF;
 	if( iLastNibbles < 0x66 )
 		CheckOpcodeAndExec( iHexToIndex[ iLastNibbles ],m_a0xF_Table );
+#ifdef DEBUG_TOOLS
 	else
 		std::cerr << "Nibble > to HexToIndex array size" << std::endl;
+#endif
 }
 
 template< typename T,size_t N >
 inline void Chip8::CheckOpcodeAndExec( const T iNibble,const std::array<fct_opcode,N>& aTable )
 {
+#ifdef DEBUG_TOOLS
 	if( aTable[ iNibble ] == nullptr || iNibble < 0 || iNibble >= aTable.size() )
 		std::cerr << "ERROR::OPCODE_UNKNOWN_" << std::hex << m_iCurrentOpcode << std::endl;
 	else
+#endif
 		( this->*aTable[ iNibble ] )();
 }
 
@@ -795,7 +790,6 @@ inline void Chip8::SUB_VX_VY()
 inline void Chip8::SHR()
 {
 	uint8_t X = GetX();
-	uint8_t Y = GetY();
 
 	//If the least - significant bit of Vx is 1, then VF is set to 1, otherwise 0. Then Vx is divided by 2.
 	uint8_t LSB = 0;
@@ -805,6 +799,7 @@ inline void Chip8::SHR()
 		m_sOpcodeInstruct = std::format( "{:04X} : SHR VX, VY",m_iCurrentOpcode );
 	#endif //DEBUF_INFO
 
+	uint8_t Y = GetY();
 	LSB = ( m_aRegisters[ Y ] & 0x01 );
 
 	m_aRegisters[ X ] = m_aRegisters[ Y ] >> 1; //before 1990
