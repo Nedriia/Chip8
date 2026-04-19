@@ -3,8 +3,8 @@
 #include <iostream>
 
 // settings
-const uint16_t WINDOW_WIDTH = 1920;
-const uint16_t WINDOW_HEIGHT = 1080;
+const uint16_t WINDOW_WIDTH = 512;
+const uint16_t WINDOW_HEIGHT = 256;
 
 uint64_t Display::m_pPixels[ 32 ] = { 0 };
 
@@ -254,21 +254,23 @@ void Display::Update( const std::chrono::steady_clock::time_point& time,const bo
 	std::chrono::microseconds startElapsed = elapsed;
 	if( elapsed >= m_iCurrentTick )
 	{
-		int updateThisFrame = 0;
-		const int maxUpdatePerFrame = 5; //could go up to 8 frame( 133 ms )
-		if( elapsed >= ( m_iCurrentTick * maxUpdatePerFrame ) )// too much to catch up
+#ifdef DEBUG_INFO
+		if( elapsed >= ( m_iCurrentTick * 5 ) )// too much to catch up ( 83 ms )
 		{
 			m_iLastTimeUpdate = time;
 			elapsed = std::chrono::microseconds( 0 );
 			return;
 		}
 
-		while( elapsed >= m_iCurrentTick && updateThisFrame < maxUpdatePerFrame )
+		while( elapsed >= m_iCurrentTick )
 		{
+#endif
 			m_iLastTimeUpdate += m_iCurrentTick;
-			++updateThisFrame;
+
+#ifdef DEBUG_INFO
 			elapsed = std::chrono::duration_cast< std::chrono::microseconds >( time - m_iLastTimeUpdate );
 		}
+#endif
 
 		if( m_bDirtyFrame )
 		{
@@ -282,10 +284,6 @@ void Display::Update( const std::chrono::steady_clock::time_point& time,const bo
 			glTexSubImage2D( GL_TEXTURE_2D,0,0,0,2,Display::GetHeight(),GL_RED_INTEGER,GL_UNSIGNED_INT,m_pPixels );
 
 			m_sShaderProgram.Use();
-
-#ifndef DEBUG_INFO
-			glBindVertexArray( m_iVAO );
-#endif // !DEBUG_INFO
 
 			glDrawElements( GL_TRIANGLES,6,GL_UNSIGNED_INT,0 );
 

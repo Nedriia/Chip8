@@ -19,18 +19,6 @@ public:
 			m_pSingleton = new Chip8_Debugger;
 		return m_pSingleton;
 	}
-	static void ConvertHexToString( std::string& sString,const uint16_t& num,const uint16_t& num2 = 0,const uint16_t& num3 = 0 )
-	{
-		std::stringstream ss;
-		ss << "0x" << std::hex << num;
-		sString += ss.str();
-
-		if( num2 != 0 )
-			ss << ", 0x" << std::hex << num2;
-
-		if( num3 != 0 )
-			ss << ", 0x" << std::hex << num3;
-	}
 
 private:
 	template< typename T >

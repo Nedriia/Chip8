@@ -4,7 +4,7 @@
 #include "Display.h"
 
 struct GLFWwindow;
-class Input
+class alignas ( 16 ) Input
 {
 
 public:

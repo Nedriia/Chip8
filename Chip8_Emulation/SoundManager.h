@@ -3,7 +3,7 @@
 
 #include "MiniAudio/miniaudio.h"
 
-class SoundManager
+class alignas ( 16 ) SoundManager
 {
 
 public:

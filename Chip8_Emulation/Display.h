@@ -8,7 +8,7 @@
 //#define DEBUG_INFO
 
 class Chip8;
-class Display
+class alignas( 16 ) Display
 {
 
 public:
