@@ -5,3 +5,6 @@
 [submodule "Chip8_Emulation/chip-8-database"]
 	path = Chip8_Emulation/chip-8-database
 	url = https://github.com/chip-8/chip-8-database.git
+[submodule "Chip8_Emulation/external/json"]
+	path = Chip8_Emulation/external/json
+	url = https://github.com/nlohmann/json.git
