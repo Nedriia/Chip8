@@ -8,3 +8,6 @@
 [submodule "Chip8_Emulation/external/json"]
 	path = Chip8_Emulation/external/json
 	url = https://github.com/nlohmann/json.git
+[submodule "Chip8_Emulation/TinySHA1"]
+	path = Chip8_Emulation/TinySHA1
+	url = https://github.com/mohaps/TinySHA1.git
