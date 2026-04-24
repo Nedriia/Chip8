@@ -272,34 +272,33 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 		{
 			if( ImGui::BeginListBox( "#",ImVec2( -FLT_MIN,20 * ImGui::GetTextLineHeightWithSpacing() ) ) )
 			{
-				const Data<uint8_t>* it = m_pCPU->GetMemory();
-				if( it != nullptr )
+				std::string sAdress;
+				int iIndex = 0;
+				for( int i = 0; i < 0x1000; i += 0x10 )
 				{
-					std::string sAdress;
-					int iIndex = 0;
-					for( int i = 0; i < 0x1000; i += 0x10 )
+					sAdress.clear();
+
+					ImGui::PushID( i );
+
+					ImGui::Text( std::format( "{:#06X}:",i ).c_str() );
+					ImGui::SameLine();
+
+					for( int n = i; n < i + 0x10; ++n )
 					{
-						sAdress.clear();
-
-						ImGui::PushID( i );
-
-						ImGui::Text( std::format( "{:#06X}:",i ).c_str() );
-						ImGui::SameLine();
-
-						for( int n = i; n < i + 0x10; ++n )
+						if( n == i + 8 )
 						{
-							if( n == i + 8 )
-							{
-								ImGui::Text( "-" );
-								ImGui::SameLine();
-							}
-							FormatDebugData( "","%02X",it[ n ],m_iMemorySelected,iIndex );
+							ImGui::Text( "-" );
 							ImGui::SameLine();
 						}
-						ImGui::PopID();
-						ImGui::NewLine();
+						auto pMemoryOffset = m_pCPU->GetMemory()->begin() + n;
+						if( pMemoryOffset != m_pCPU->GetMemory()->end() )
+							FormatDebugData( "","%02X",*( pMemoryOffset ),m_iMemorySelected,iIndex );
+						ImGui::SameLine();
 					}
+					ImGui::PopID();
+					ImGui::NewLine();
 				}
+			
 			}
 			ImGui::EndListBox();
 		}

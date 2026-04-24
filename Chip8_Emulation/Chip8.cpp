@@ -15,7 +15,7 @@
 #define JMPCHECK_BEFORE_ENDING 4
 //#define USE_SWITCH_BRANCH
 
-int Chip8::m_iInstructionsPerFrame = 7000000;
+int Chip8::m_iInstructionsPerFrame = 8000000;
 //int Chip8::m_iInstructionsPerFrame = 5;
 
 Chip8* Chip8::m_pSingleton = nullptr;
@@ -50,6 +50,7 @@ Chip8::Chip8() :
 #endif
 	, m_pInputInstance( nullptr )
 	,m_pSoundManagerInstance( nullptr )
+	,m_pCurrentOpcode( nullptr )
 {
 	m_aMainTable[ 0x0 ] = { &Chip8::x0_Dispatch };
 	m_aMainTable[ 0x1 ] = { &Chip8::JMP };
@@ -104,6 +105,7 @@ Chip8::Chip8() :
 Chip8::~Chip8()
 {
 	m_pSingleton = nullptr;
+	m_aMirorMemory.fill( DecodedOpcode{} );
 }
 
 void Chip8::Init( const KeyAccess& key,const char* sROMToLoad )
@@ -130,12 +132,14 @@ void Chip8::_Reset()
 	m_iLastOpcode = 0;
 	m_iCycle = 0;
 	m_iCurrentOpcode = 0;
-
+	auto test = m_aMemory;
 	Display::KeyDisplayAccess oKeyDisplay;
 	Display::ClearScreen( oKeyDisplay );
 
-	for( Data<uint8_t>* it = &m_aMemory[ 0 ]; it != &m_aMemory[ 0x1000 ]; ++it )
+	for( auto it = m_aMemory.begin(); it != m_aMemory.end(); ++it )
 		it->clear();
+	m_aMirorMemory.fill( DecodedOpcode{} );
+
 	for( Data<uint8_t>* it = &m_aRegisters[ 0 ]; it != &m_aRegisters[ 0x10 ]; ++it )
 		it->clear();
 	for( Data<uint16_t>* it = &m_aStack[ 0 ]; it != &m_aStack[ 0x10 ]; ++it )
@@ -206,6 +210,7 @@ void Chip8::_LoadROM( const char* sROMToLoad )
 
 void Chip8::EmulateCycle( const KeyAccess& key,const std::chrono::steady_clock::time_point& time )
 {
+#ifdef DEBUG_INFO
 	if( m_oState == RunningState::Reset )
 	{
 		_Reset();
@@ -224,9 +229,14 @@ void Chip8::EmulateCycle( const KeyAccess& key,const std::chrono::steady_clock::
 		m_oState = RunningState::Pause;
 		bForceNextStep = true;
 	}
+#endif
 
 	std::chrono::microseconds elapsed = std::chrono::duration_cast< std::chrono::microseconds >( time - m_iLastTimeUpdate );
+#ifdef DEBUG_INFO
 	if( elapsed >= Display::GetRefreshTick() || bForceNextStep )
+#else
+	if( elapsed >= Display::GetRefreshTick() )
+#endif
 	{
 		if( m_pInputInstance == nullptr )
 			m_pInputInstance = Input::GetInstance();
@@ -264,11 +274,26 @@ void Chip8::DestroyCpu()
 void Chip8::_FetchDecode_Opcode()
 {
 	m_iCurrentOpcode = m_aMemory[ m_iPC ] << 8 | m_aMemory[ m_iPC + 1 ];
+	uint16_t iStartPC = m_iPC;
 	m_iPC += 2;
 
 #ifndef USE_SWITCH_BRANCH
+
+	m_pCurrentOpcode = &m_aMirorMemory[ iStartPC ];
+	if( m_pCurrentOpcode->fct != nullptr )
+		( this->*m_pCurrentOpcode->fct )( ); //Opcode known, just trigger the call
+	else
+	{
+		m_pCurrentOpcode->NNN = m_iCurrentOpcode & 0x0FFF;
+
+		m_pCurrentOpcode->X = ( m_iCurrentOpcode & 0x0F00 ) >> 8;
+		m_pCurrentOpcode->Y = ( m_iCurrentOpcode & 0x00F0 ) >> 4;
+		m_pCurrentOpcode->NN = m_iCurrentOpcode & 0x00FF;
+		m_pCurrentOpcode->N = m_iCurrentOpcode & 0x000F;
+
 		uint8_t iIndex = ( m_iCurrentOpcode & 0xF000 ) >> 12;
 		CheckOpcodeAndExec( iIndex,m_aMainTable );
+	}
 #else
 	//Serve only as comparaison
 	uint16_t opcodeNibble = m_iCurrentOpcode & 0xF000;
@@ -491,7 +516,10 @@ inline void Chip8::CheckOpcodeAndExec( const T iNibble,const std::array<fct_opco
 		std::cerr << "ERROR::OPCODE_UNKNOWN_" << std::hex << m_iCurrentOpcode << std::endl;
 	else
 #endif
-		( this->*aTable[ iNibble ] )();
+	{
+		( this->*aTable[ iNibble ] )( );
+		m_pCurrentOpcode->fct = aTable[ iNibble ];
+	}
 }
 
 inline void Chip8::CLS()
@@ -962,27 +990,27 @@ inline void Chip8::SKNP()
 
 inline const uint8_t Chip8::GetX()
 {
-	return ( m_iCurrentOpcode & 0x0F00 ) >> 8;
+	return m_pCurrentOpcode->X;
 }
 
 inline const uint8_t Chip8::GetY()
 {
-	return ( m_iCurrentOpcode & 0x00F0 ) >> 4;
+	return m_pCurrentOpcode->Y;
 }
 
 inline const uint16_t Chip8::GetNNN()
 {
-	return m_iCurrentOpcode & 0x0FFF;
+	return m_pCurrentOpcode->NNN;
 }
 
 inline const uint8_t Chip8::GetNN()
 {
-	return m_iCurrentOpcode & 0x00FF;
+	return m_pCurrentOpcode->NN;
 }
 
 inline const uint8_t Chip8::GetN()
 {
-	return  m_iCurrentOpcode & 0x000F;
+	return m_pCurrentOpcode->N;
 }
 
 inline void Chip8::BCD()

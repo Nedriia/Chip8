@@ -29,7 +29,7 @@ enum class RunningState
 #endif
 
 template< typename T>
-struct Data
+struct alignas ( 4 ) Data
 {
 public:
 	Data() { oData = 0; m_bNewValue = false; m_bDirty = false; }
@@ -83,7 +83,7 @@ private:
 	}
 };
 
-class Chip8
+class alignas( 16 ) Chip8
 {
 public:
 
@@ -107,8 +107,9 @@ public:
 	void							AskForState( const KeyAccess& oKey,RunningState oState ) const;
 	void							DestroyCpu();
 
+	const std::array<Data< uint8_t>,4096>*	GetMemory() const { return &m_aMemory; }
+
 	const Data< uint16_t>*			GetStack() const { return m_aStack; }
-	const Data< uint8_t>*			GetMemory() const { return m_aMemory; }
 	const Data< uint8_t>*			GetRegisters() const { return m_aRegisters; }
 	const std::deque<std::string>&	GetHistoryOpcode() const { return m_aOpcodeHistory; }
 
@@ -145,23 +146,22 @@ private:
 #endif
 	bool _IsEndReached();
 
-	Data<uint8_t> m_aMemory[ 0x1000 ];
-	Data<uint8_t> m_aRegisters[ 0x10 ];
+	std::array< Data<uint8_t>, 4096 > m_aMemory;
+	Data<uint8_t> m_aRegisters[ 16 ];
 	Data<uint16_t> m_iI; //Address register
-	Data<uint16_t> m_aStack[ 0x10 ];
+	Data<uint16_t> m_aStack[ 16 ];
 	Data<uint8_t> m_iSP; //Stack pointer
 	Data<uint16_t> m_iPC; //Program counter
 	uint16_t m_iCurrentOpcode;
 
 	uint16_t m_iLastOpcode;
-	uint8_t m_iCountBeforeStop;
+	int		m_iCycle;
+	mutable RunningState						m_oState;
 
 	Data<uint8_t> m_iDelay_timer;
 	Data<uint8_t> m_iSound_timer;
 
-	std::mt19937 m_iRng;
-
-	uint8_t m_aFontset[ 0x50 ] =
+	uint8_t m_aFontset[ 80 ] =
 	{
 		0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
 		0x20, 0x60, 0x20, 0x20, 0x70, // 1
@@ -180,14 +180,13 @@ private:
 		0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
 		0xF0, 0x80, 0xF0, 0x80, 0x80  // F
 	};
+	uint8_t m_iCountBeforeStop;
+	uint8_t										m_iPreviousKeyPressed;
 
 	std::deque<std::string>						m_aOpcodeHistory;
 
-	mutable RunningState						m_oState;
 	std::chrono::steady_clock::time_point		m_iLastTimeUpdate;
 	const char*									m_sCurrentRomLoaded;//Don't set that without SetRomToLoad function
-	int											m_iCycle;
-	uint8_t										m_iPreviousKeyPressed;
 
 #ifdef QUIRK_DISPWAIT
 	std::chrono::steady_clock::time_point		m_iTimeLastFrame;
@@ -198,9 +197,9 @@ private:
 
 	typedef void ( Chip8::*fct_opcode )();
 	//Opcodes array
-	std::array< fct_opcode, 0x10 > m_aMainTable;
-	std::array< fct_opcode, 0x10 > m_a0x8_Table;
-	std::array< fct_opcode, 0x10 > m_a0xF_Table;
+	std::array< fct_opcode, 16 > m_aMainTable;
+	std::array< fct_opcode, 16 > m_a0x8_Table;
+	std::array< fct_opcode, 16 > m_a0xF_Table;
 
 	//Functions
 	inline void x0_Dispatch();
@@ -267,4 +266,18 @@ private:
 	const Input* m_pInputInstance;
 	SoundManager* m_pSoundManagerInstance;
 	static uint8_t iHexToIndex[];
+
+	struct alignas ( 16 ) DecodedOpcode
+	{
+		fct_opcode fct = nullptr;
+		uint16_t NNN = 0;
+		uint8_t X = 0;
+		uint8_t Y = 0;
+		uint8_t NN = 0;
+		uint8_t N = 0;
+	};
+	std::array<DecodedOpcode, 4096 > m_aMirorMemory;
+	DecodedOpcode*			   m_pCurrentOpcode; 
+
+	std::mt19937 m_iRng;
 };
