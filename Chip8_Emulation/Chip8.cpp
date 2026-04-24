@@ -15,8 +15,7 @@
 #define JMPCHECK_BEFORE_ENDING 4
 //#define USE_SWITCH_BRANCH
 
-int Chip8::m_iInstructionsPerFrame = 8000000;
-//int Chip8::m_iInstructionsPerFrame = 5;
+int Chip8::m_iInstructionsPerFrame = 100;
 
 Chip8* Chip8::m_pSingleton = nullptr;
 uint8_t Chip8::iHexToIndex[ 0x66 ] = { 0 };
@@ -805,9 +804,7 @@ inline void Chip8::SUB_VX_VY()
 	//VY is subtracted from VX.
 	uint16_t diff = m_aRegisters[ X ] - m_aRegisters[ GetY() ];
 	m_aRegisters[ X ] = diff & 0xFF;
-	m_aRegisters[ 15 ] = 1;
-	if( diff > 0xFF )
-		m_aRegisters[ 15 ] = 0;
+	m_aRegisters[ 15 ] = diff > 0xFF ? 0 : 1;
 	// VF is set to 0 when there's an underflow, and 1 when there is not. (i.e. VF set to 1 if VX >= VY and 0 if not)
 
 #ifdef DEBUG_INFO
@@ -855,9 +852,7 @@ inline void Chip8::SUBN_VX_VY()
 	//Sets VX equals to VY minus VX.
 	uint16_t diff = m_aRegisters[ GetY() ] - m_aRegisters[X];
 	m_aRegisters[ X ] = diff & 0xFF;
-	m_aRegisters[ 15 ] = 1;
-	if( diff > 0xFF )
-		m_aRegisters[ 15 ] = 0;
+	m_aRegisters[ 15 ] = diff > 0xFF ? 0 : 1;
 	// VF is set to 0 when there's an underflow, and 1 when there is not. (i.e. VF set to 1 if VY >= VX).
 
 #ifdef DEBUG_INFO

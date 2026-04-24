@@ -5,7 +5,7 @@
 #include "Shader.h"
 #include <chrono>
 
-//#define DEBUG_INFO
+#define DEBUG_INFO
 
 class Chip8;
 class alignas( 16 ) Display

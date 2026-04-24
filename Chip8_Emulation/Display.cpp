@@ -3,8 +3,8 @@
 #include <iostream>
 
 // settings
-const uint16_t WINDOW_WIDTH = 512;
-const uint16_t WINDOW_HEIGHT = 256;
+const uint16_t WINDOW_WIDTH = 1920;
+const uint16_t WINDOW_HEIGHT = 1080;
 
 uint64_t Display::m_pPixels[ 32 ] = { 0 };
 
@@ -231,6 +231,11 @@ void Display::ClearScreen( const KeyDisplayAccess& oKey )
 
 void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xPos,uint8_t yPos, uint8_t oValue,bool& bErased,bool bClipping )
 {
+	if( bClipping && yPos >= m_iDisplayHeight )
+		return;
+	else if( !bClipping )
+		yPos &= ( m_iDisplayHeight - 1 );
+
 	uint64_t iPreviousValue = m_pPixels[ yPos ];
 
 	//Invert endianess ( only for 8 bit )
@@ -238,7 +243,11 @@ void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xPos,uint8_t 
 	oValue = ( ( oValue >> 2 ) & 0x33 ) | ( ( oValue << 2 ) & 0xCC );
 	oValue = ( oValue >> 4 ) | ( oValue << 4 );
 
-	uint64_t iLine = static_cast< uint64_t >( oValue ) << xPos;
+	uint64_t iLine = 0;
+	if( bClipping )
+		iLine = static_cast< uint64_t >( oValue ) << xPos;
+	else
+		iLine = static_cast< uint64_t >( oValue ) << xPos | static_cast< uint64_t >( oValue ) >> ( 64 - xPos );
 
 	bErased |= ( m_pPixels[ yPos ] & iLine );
 
