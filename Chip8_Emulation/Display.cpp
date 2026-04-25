@@ -192,6 +192,14 @@ void Display::AssignDatabaseColors( const std::vector<std::string >& sColors )
 
 	glUseProgram( m_sShaderProgram.ID );
 
+	if( sColors.empty() )
+	{
+		glUniform3f( vertexBgColorLocation, 0.67f, 0.27f, 0.0f );
+		glUniform3f( vertexFontColorLocation, 1.0f, 0.67f, 0.0f );
+
+		return;
+	}
+
 	for( std::string sColor : sColors )
 	{
 		if( sColor[0] == '#' )
@@ -344,10 +352,7 @@ void Display::Update( const std::chrono::steady_clock::time_point& time,const bo
 		Chip8_Debugger::GetInstance()->Render();
 		glfwSwapBuffers( m_pWindow );
 #endif
-		std::string sPerfDebug = std::format( "Chip8 Emulator : {} ms ",std::chrono::duration<double,std::milli>( startElapsed ).count() );
-		if( !m_sGameTitle.empty() )
-			sPerfDebug += m_sGameTitle;
-
+		std::string sPerfDebug = std::format("{} : {} ms ",m_sGameTitle,std::chrono::duration<double,std::milli>( startElapsed ).count() );
 		glfwSetWindowTitle( m_pWindow,sPerfDebug.c_str() );
 	}
 }
