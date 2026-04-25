@@ -7,6 +7,7 @@
 #include "Input.h"
 #include "SoundManager.h"
 #include <string.h>
+#include "Init_RomSettings.h"
 
 #define START_FONT_MEMORY_ADDRESS 0x050
 #define START_ROM_MEMORY_ADDRESS 0x200
@@ -195,6 +196,9 @@ void Chip8::_LoadROM( const char* sROMToLoad )
 		{
 			m_aMemory[ START_ROM_MEMORY_ADDRESS + i ] = static_cast< uint8_t >( memblock[ i ] );
 		}
+
+		Init_RomSettings oRomSettings;
+		oRomSettings.LookForDatabaseInfos( memblock, size );
 
 		delete[] memblock;
 

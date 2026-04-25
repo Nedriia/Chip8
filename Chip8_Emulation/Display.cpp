@@ -19,6 +19,8 @@ std::chrono::microseconds Display::m_iCurrentTick = std::chrono::microseconds( D
 uint8_t Display::m_iDisplayWidth = 64;//Keep as power of two or instruction in draw opcode might give you exotic result
 uint8_t Display::m_iDisplayHeight = 32;
 
+std::string Display::m_sGameTitle = "";
+
 float vertices[] = {
 	// positions		//Texture coords
 	1.f, 1.0f, 0.0f,	1.0f, 0.0f,		// top right
@@ -181,6 +183,39 @@ void Display::_InitPixelsData()
 	m_bDirtyFrame = true;
 }
 
+void Display::AssignDatabaseColors( const std::vector<std::string >& sColors )
+{
+	int iIndex = 0;
+
+	int vertexBgColorLocation = glGetUniformLocation( m_sShaderProgram.ID,"bgColor" );
+	int vertexFontColorLocation = glGetUniformLocation( m_sShaderProgram.ID,"fontColor" );
+
+	glUseProgram( m_sShaderProgram.ID );
+
+	for( std::string sColor : sColors )
+	{
+		if( sColor[0] == '#' )
+			sColor.erase( 0, 1 );
+				
+		unsigned long iColor = std::stoul( sColor, nullptr, 16 );
+		float vColor[3] = { ( ( iColor >> 16 ) & 0xFF ) / 255.0f, ( ( iColor >> 8 ) & 0xFF ) / 255.0f, ( iColor & 0xFF ) / 255.0f };
+
+		switch( iIndex )
+		{
+			case 0:
+				glUniform3f( vertexBgColorLocation, vColor[0], vColor[1], vColor[2] );
+				break;
+			case 1:
+				glUniform3f( vertexFontColorLocation, vColor[ 0 ], vColor[ 1 ], vColor[ 2 ] );
+				break;
+			default:
+				std::cerr << "Case Color not handle";
+				break;
+		}
+		++iIndex;
+	}
+}
+
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
 // ---------------------------------------------------------------------------------------------
 void Display::framebuffer_size_callback( GLFWwindow* m_pWindow,int width,int height )
@@ -229,7 +264,7 @@ void Display::ClearScreen( const KeyDisplayAccess& oKey )
 	_InitPixelsData();
 }
 
-void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xPos,uint8_t yPos, uint8_t oValue,bool& bErased,bool bClipping )
+void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xPos,uint8_t yPos,uint8_t oValue,bool& bErased,bool bClipping )
 {
 	if( bClipping && yPos >= m_iDisplayHeight )
 		return;
@@ -308,9 +343,11 @@ void Display::Update( const std::chrono::steady_clock::time_point& time,const bo
 		Chip8_Debugger::GetInstance()->Update( startElapsed );
 		Chip8_Debugger::GetInstance()->Render();
 		glfwSwapBuffers( m_pWindow );
-#else
-		std::string sPerfDebug = std::format( "Chip8 Emulator : {} ms",std::chrono::duration<double,std::milli>( startElapsed ).count() );
-		glfwSetWindowTitle( m_pWindow,sPerfDebug.c_str() );
 #endif
+		std::string sPerfDebug = std::format( "Chip8 Emulator : {} ms ",std::chrono::duration<double,std::milli>( startElapsed ).count() );
+		if( !m_sGameTitle.empty() )
+			sPerfDebug += m_sGameTitle;
+
+		glfwSetWindowTitle( m_pWindow,sPerfDebug.c_str() );
 	}
 }

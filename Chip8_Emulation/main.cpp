@@ -30,10 +30,9 @@ int main( int argc,char* argv[] )
 	Display* m_pDisplayInstance = Display::GetInstance();
 	Input* m_pInputInstance = Input::GetInstance();
 
-	m_pCpuInstance->Init( oKey,sROMToLoad );
 	if( m_pDisplayInstance->Init( oKeyDisplay,m_pCpuInstance ) == -1 )
 		return Quit();
-
+	m_pCpuInstance->Init( oKey,sROMToLoad );
 	SoundManager::GetInstance()->Init();
 
 	//Loop

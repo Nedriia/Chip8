@@ -44,6 +44,9 @@ public:
 	static void SetValueMicroSRefresh( const int iNewValue ) { m_iValueMicroSRefresh = iNewValue; }
 	static void SetRefreshTick( const std::chrono::microseconds& iNewValue ) { m_iCurrentTick = iNewValue; }
 
+	static void SetGameTitle( const std::string& sTitle ){ m_sGameTitle = sTitle; }
+	void AssignDatabaseColors( const std::vector<std::string >& sColors );
+
 	static Display* GetInstance()
 	{
 		if( m_pSingleton == nullptr )
@@ -86,4 +89,6 @@ protected:
 
 	static uint8_t	m_iDisplayWidth;
 	static uint8_t	m_iDisplayHeight;
+
+	static std::string		m_sGameTitle;
 };
