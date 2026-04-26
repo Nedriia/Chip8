@@ -1073,7 +1073,7 @@ inline void Chip8::XOR()
 {
 	//Sets VX to VX xor VY
 	m_aRegisters[ GetX() ] ^= m_aRegisters[ GetY() ];
-	if( Chip8::m_oCurrentQuirk.bWrapFlag )
+	if( Chip8::m_oCurrentQuirk.bVFResetFlag )
 		m_aRegisters[ 15 ] = 0;
 
 #ifdef DEBUG_INFO

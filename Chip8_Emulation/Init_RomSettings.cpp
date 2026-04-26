@@ -137,6 +137,7 @@ void Init_RomSettings::_LoadPlatformsSpecs( const std::string& sPlatform,const i
 	if( sPlatformsAbsolutePath.empty() )
 		sPlatformsAbsolutePath = std::filesystem::absolute( PLATFORMS_DEFAULT_FOLDER ).string();
 
+#ifndef OVERRIDE_DATABASE_QUIRKS
 	std::ifstream file( sPlatformsAbsolutePath,std::ios::in );
 	if( file.is_open() )
 	{
@@ -164,6 +165,7 @@ void Init_RomSettings::_LoadPlatformsSpecs( const std::string& sPlatform,const i
 		std::cerr << "ERROR::DATABASE::CANT_FIND_PLATFORMS_FILE : " << PLATFORMS_DEFAULT_FOLDER << std::endl;
 		_ReturnAdditionnalInfoOnErrors( file );
 	}
+#endif
 }
 
 void Init_RomSettings::_ReturnAdditionnalInfoOnErrors( const std::ifstream& sfile )
