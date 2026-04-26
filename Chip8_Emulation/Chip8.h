@@ -16,17 +16,16 @@ enum class RunningState
 	Reset
 };
 
-#ifndef QUIRKS
-#define QUIRKS
-	#ifdef QUIRKS
-		#define QUIRK_VFRESET
-		#define QUIRK_MEMORY
-		//#define QUIRK_DISPWAIT
-		#define QUIRK_CLIPPING
-		#define QUIRK_SHIFTING
-		#define QUIRK_JUMPING
-	#endif
-#endif
+struct Quirk
+{
+	Quirk() {};
+	bool bVFResetFlag = false;
+	bool bMemoryFlag = false;
+	bool bDispWaitFlag = false;
+	bool bWrapFlag = false;
+	bool bShiftingFlag = false;
+	bool bQuirkJumpingFlag = false;
+};
 
 template< typename T>
 struct alignas ( 4 ) Data
@@ -107,18 +106,18 @@ public:
 	void							AskForState( const KeyAccess& oKey,RunningState oState ) const;
 	void							DestroyCpu();
 
-	const std::array<Data< uint8_t>,4096>*	GetMemory() const { return &m_aMemory; }
+	const std::array<Data< uint8_t>,4096>* GetMemory() const { return &m_aMemory; }
 
-	const Data< uint16_t>*			GetStack() const { return m_aStack; }
-	const Data< uint8_t>*			GetRegisters() const { return m_aRegisters; }
-	const std::deque<std::string>&	GetHistoryOpcode() const { return m_aOpcodeHistory; }
+	const Data< uint16_t>* GetStack() const { return m_aStack; }
+	const Data< uint8_t>* GetRegisters() const { return m_aRegisters; }
+	const std::deque<std::string>& GetHistoryOpcode() const { return m_aOpcodeHistory; }
 
-	const Data< uint16_t>&			GetI() const { return m_iI; }
-	const Data< uint16_t>&			GetPC() const { return m_iPC; }
+	const Data< uint16_t>& GetI() const { return m_iI; }
+	const Data< uint16_t>& GetPC() const { return m_iPC; }
 
-	const Data< uint8_t>&			GetSP() const { return m_iSP; }
-	const Data< uint8_t>&			GetDelayTimer() const { return m_iDelay_timer; }
-	const Data< uint8_t>&			GetSoundTimer() const { return m_iSound_timer; }
+	const Data< uint8_t>& GetSP() const { return m_iSP; }
+	const Data< uint8_t>& GetDelayTimer() const { return m_iDelay_timer; }
+	const Data< uint8_t>& GetSoundTimer() const { return m_iSound_timer; }
 	int								GetCycleId() const { return m_iCycle; }
 
 	bool							IsPause() const { return m_oState == RunningState::Pause; }
@@ -127,8 +126,11 @@ public:
 	static const int				GetInstructPerFrame() { return m_iInstructionsPerFrame; }
 	static void						SetInstructionPerFrame( const int iNewValue ) { m_iInstructionsPerFrame = iNewValue; }
 
-	const char*						GetCurrentRomLoaded() const { return m_sCurrentRomLoaded; }
-	void							SetRomToLoad( const KeyAccess& oKey, const std::string& sSrc );
+	const char* GetCurrentRomLoaded() const { return m_sCurrentRomLoaded; }
+	void							SetRomToLoad( const KeyAccess& oKey,const std::string& sSrc );
+
+	static const std::array<std::string,5>* GetPlatformsSupported() { return &m_sSupportedPlatform; }
+	static Quirk					m_oCurrentQuirk;
 
 private:
 
@@ -146,7 +148,7 @@ private:
 #endif
 	bool _IsEndReached();
 
-	std::array< Data<uint8_t>, 4096 > m_aMemory;
+	std::array< Data<uint8_t>,4096 > m_aMemory;
 	Data<uint8_t> m_aRegisters[ 16 ];
 	Data<uint16_t> m_iI; //Address register
 	Data<uint16_t> m_aStack[ 16 ];
@@ -186,28 +188,27 @@ private:
 	std::deque<std::string>						m_aOpcodeHistory;
 
 	std::chrono::steady_clock::time_point		m_iLastTimeUpdate;
-	const char*									m_sCurrentRomLoaded;//Don't set that without SetRomToLoad function
+	const char* m_sCurrentRomLoaded;//Don't set that without SetRomToLoad function
 
-#ifdef QUIRK_DISPWAIT
 	std::chrono::steady_clock::time_point		m_iTimeLastFrame;
-#endif
 
-	static Chip8*								m_pSingleton;
+
+	static Chip8* m_pSingleton;
 	static  int									m_iInstructionsPerFrame;
 
-	typedef void ( Chip8::*fct_opcode )();
+	typedef void ( Chip8::* fct_opcode )( );
 	//Opcodes array
-	std::array< fct_opcode, 16 > m_aMainTable;
-	std::array< fct_opcode, 16 > m_a0x8_Table;
-	std::array< fct_opcode, 16 > m_a0xF_Table;
+	std::array< fct_opcode,16 > m_aMainTable;
+	std::array< fct_opcode,16 > m_a0x8_Table;
+	std::array< fct_opcode,16 > m_a0xF_Table;
 
 	//Functions
 	inline void x0_Dispatch();
 	inline void x8_Dispatch();
 	inline void xE_Dispatch();
 	inline void xF_Dispatch();
-	template< typename T, size_t N >
-	inline void CheckOpcodeAndExec( const T iNibble, const std::array<fct_opcode,N>& aTable );
+	template< typename T,size_t N >
+	inline void CheckOpcodeAndExec( const T iNibble,const std::array<fct_opcode,N>& aTable );
 
 	//Opcodes
 	inline void CLS();
@@ -276,8 +277,9 @@ private:
 		uint8_t NN = 0;
 		uint8_t N = 0;
 	};
-	std::array<DecodedOpcode, 4096 > m_aMirorMemory;
-	DecodedOpcode*			   m_pCurrentOpcode; 
+	std::array<DecodedOpcode,4096 > m_aMirorMemory;
+	DecodedOpcode* m_pCurrentOpcode;
 
 	std::mt19937 m_iRng;
+	static std::array<std::string,5> m_sSupportedPlatform;
 };

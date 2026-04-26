@@ -21,6 +21,9 @@ int Chip8::m_iInstructionsPerFrame = 100;
 Chip8* Chip8::m_pSingleton = nullptr;
 uint8_t Chip8::iHexToIndex[ 0x66 ] = { 0 };
 
+std::array<std::string,5> Chip8::m_sSupportedPlatform = { "originalChip8","hybridVIP","modernChip8","chip8x","chip48" };
+Quirk  Chip8::m_oCurrentQuirk = Quirk();
+
 void Chip8::SetRomToLoad( const KeyAccess& oKey,const std::string& sSrc )
 {
 	delete[] m_sCurrentRomLoaded;
@@ -45,9 +48,7 @@ Chip8::Chip8() :
 	,m_sCurrentRomLoaded( nullptr )
 	,m_iCycle( 0 )
 	,m_iPreviousKeyPressed( 0xFF )
-#ifdef QUIRK_DISPWAIT
 	,m_iTimeLastFrame{}
-#endif
 	, m_pInputInstance( nullptr )
 	,m_pSoundManagerInstance( nullptr )
 	,m_pCurrentOpcode( nullptr )
@@ -560,19 +561,21 @@ inline void Chip8::JMP()
 
 inline void Chip8::JMP_NNN()
 {
-#ifdef QUIRK_JUMPING
-	//Jumps to the address NNN plus V0
-	#ifdef DEBUF_INFO
+	if ( !Chip8::m_oCurrentQuirk.bQuirkJumpingFlag )
+	{
+		//Jumps to the address NNN plus V0
+#ifdef DEBUF_INFO
 		m_sOpcodeInstruct = std::format( "{:04X} : JMP V0, NNN",m_iCurrentOpcode );
-	#endif //DEBUG_INFO
-	m_iPC = GetNNN() + m_aRegisters[ 0 ];
-#else // QUIRK_JUMPING
-
-	#ifdef DEBUG_INFO
+#endif //DEBUG_INFO
+		m_iPC = GetNNN() + m_aRegisters[ 0 ];
+	}
+	else
+	{
+#ifdef DEBUG_INFO
 		m_sOpcodeInstruct = std::format( "{:04X} : JMP VX",m_iCurrentOpcode );
-	#endif //DEBUG_INFO
-	m_iPC = GetNNN() + m_aRegisters[ GetX() ];
-#endif //QUIRK_JUMPING
+#endif //DEBUG_INFO
+		m_iPC = GetNNN() + m_aRegisters[ GetX() ];
+	}
 
 #ifdef DEBUG_INFO
 	_AddOpcodeToHistory( m_sOpcodeInstruct.c_str() );
@@ -736,12 +739,15 @@ inline void Chip8::LD_I_VX()
 	//Stores from V0 to VX (including VX) in memory, starting at address I. The offset from I is increased by 1 for each value written, but I itself is left unmodified
 	for( int i = 0; i <= GetX(); ++i )
 	{
-#ifdef QUIRK_MEMORY
-		m_aMemory[ m_iI ] = m_aRegisters[ i ];
-		++m_iI;
-#else
-		m_aMemory[ m_iI + i ] = m_aRegisters[ i ];
-#endif
+		if( !Chip8::m_oCurrentQuirk.bMemoryFlag )
+		{
+			m_aMemory[ m_iI ] = m_aRegisters[ i ];
+			++m_iI;
+		}
+		else
+		{
+			m_aMemory[ m_iI + i ] = m_aRegisters[ i ];
+		}
 	}
 
 #ifdef DEBUG_INFO
@@ -754,12 +760,15 @@ inline void Chip8::LD_VX_I()
 	//Fills from V0 to VX (including VX) with values from memory, starting at address I. The offset from I is increased by 1 for each value read, but I itself is left unmodified
 	for( int i = 0; i <= GetX(); ++i )
 	{
-#ifdef QUIRK_MEMORY
-		m_aRegisters[ i ] = m_aMemory[ m_iI ];
-		++m_iI;
-#else
-		m_aRegisters[ i ] = m_aMemory[ m_iI + i ];
-#endif
+		if( !Chip8::m_oCurrentQuirk.bMemoryFlag )
+		{
+			m_aRegisters[ i ] = m_aMemory[ m_iI ];
+			++m_iI;
+		}
+		else
+		{
+			m_aRegisters[ i ] = m_aMemory[ m_iI + i ];
+		}
 	}
 
 #ifdef DEBUG_INFO
@@ -823,24 +832,27 @@ inline void Chip8::SHR()
 	//If the least - significant bit of Vx is 1, then VF is set to 1, otherwise 0. Then Vx is divided by 2.
 	uint8_t LSB = 0;
 
-#ifdef QUIRK_SHIFTING
-	#ifdef DEBUF_INFO
-		m_sOpcodeInstruct = std::format( "{:04X} : SHR VX, VY",m_iCurrentOpcode );
-	#endif //DEBUF_INFO
+	if( !Chip8::m_oCurrentQuirk.bShiftingFlag )
+	{
+		#ifdef DEBUF_INFO
+			m_sOpcodeInstruct = std::format( "{:04X} : SHR VX, VY",m_iCurrentOpcode );
+		#endif //DEBUF_INFO
 
-	uint8_t Y = GetY();
-	LSB = ( m_aRegisters[ Y ] & 0x01 );
+		uint8_t Y = GetY();
+		LSB = ( m_aRegisters[ Y ] & 0x01 );
 
-	m_aRegisters[ X ] = m_aRegisters[ Y ] >> 1; //before 1990
-#else // QUIRK_SHIFTING
-	#ifdef DEBUG_INFO
+		m_aRegisters[ X ] = m_aRegisters[ Y ] >> 1; //before 1990
+	}
+	else
+	{
+#ifdef DEBUG_INFO
 		m_sOpcodeInstruct = std::format( "{:04X} : SHR VX",m_iCurrentOpcode );
-	#endif
-
-	LSB = ( m_aRegisters[ X ] & 0x01 );
-
-	m_aRegisters[ X ] >>= 1;
 #endif
+
+		LSB = ( m_aRegisters[ X ] & 0x01 );
+
+		m_aRegisters[ X ] >>= 1;
+	}
 
 	m_aRegisters[ 15 ] = LSB;
 
@@ -867,27 +879,31 @@ inline void Chip8::SUBN_VX_VY()
 inline void Chip8::SHL()
 {
 	uint8_t MSB = 0;
-#ifdef QUIRK_SHIFTING
-	#ifdef DEBUG_INFO//DEBUG_INFO
-		m_sOpcodeInstruct = std::format( "{:04X} : SHL VX, VY",m_iCurrentOpcode );
-	#endif //DEBUG_INFO
+	if( !Chip8::m_oCurrentQuirk.bShiftingFlag )
+	{
+		#ifdef DEBUG_INFO//DEBUG_INFO
+			m_sOpcodeInstruct = std::format( "{:04X} : SHL VX, VY",m_iCurrentOpcode );
+		#endif //DEBUG_INFO
 
-	uint8_t Y = GetY();
-	// If the most-significant bit of Vy is 1.
-	MSB = ( m_aRegisters[ Y ] & 0x80 ) == 0x80 ? 1 : 0;
+		uint8_t Y = GetY();
+		// If the most-significant bit of Vy is 1.
+		MSB = ( m_aRegisters[ Y ] & 0x80 ) == 0x80 ? 1 : 0;
 
-	m_aRegisters[ GetX() ] = m_aRegisters[Y] << 1; //before 1990
-#else // QUIRK_SHIFTING
-	uint8_t X = GetX();
-	#ifdef DEBUG_INFO//DEBUG_INFO
+		m_aRegisters[ GetX() ] = m_aRegisters[Y] << 1; //before 1990
+	}
+	else
+	{
+		uint8_t X = GetX();
+#ifdef DEBUG_INFO//DEBUG_INFO
 		m_sOpcodeInstruct = std::format( "{:04X} : SHL VX",m_iCurrentOpcode );
-	#endif //DEBUG_INFO
+#endif //DEBUG_INFO
 
-	// If the most-significant bit of Vx is 1, then VF is set to 1, otherwise to 0. Then Vx is multiplied by 2.
-	MSB = ( m_aRegisters[ X ] & 0x80 ) == 0x80 ? 1 : 0;
+		// If the most-significant bit of Vx is 1, then VF is set to 1, otherwise to 0. Then Vx is multiplied by 2.
+		MSB = ( m_aRegisters[ X ] & 0x80 ) == 0x80 ? 1 : 0;
 
-	m_aRegisters[ X ] <<= 1;
-#endif
+		m_aRegisters[ X ] <<= 1;
+	}
+
 	m_aRegisters[ 15 ] = MSB;
 
 #ifdef DEBUG_INFO
@@ -908,32 +924,35 @@ inline void Chip8::RND()
 
 inline void Chip8::DRAW()
 {
-#ifdef QUIRK_DISPWAIT
-	#ifdef DEBUG_INFO
-		m_sOpcodeInstruct = std::format( "{:04X} : DRW VX, VY VBlank",m_iCurrentOpcode );
-	#endif //DEBUG_INFO
+	if( Chip8::m_oCurrentQuirk.bDispWaitFlag )
+	{
+		#ifdef DEBUG_INFO
+			m_sOpcodeInstruct = std::format( "{:04X} : DRW VX, VY VBlank",m_iCurrentOpcode );
+		#endif //DEBUG_INFO
 
-	//VBlank, waiting for next frame
-	if( m_iTimeLastFrame.time_since_epoch().count() == 0 )
-	{
-		m_iTimeLastFrame = m_iLastTimeUpdate;
-		m_iPC -= 2;
-		return;
-	}
-	if( m_iLastTimeUpdate >= ( m_iTimeLastFrame + Display::GetRefreshTick() ) )
-	{
-		m_iTimeLastFrame = {};
+		//VBlank, waiting for next frame
+		if( m_iTimeLastFrame.time_since_epoch().count() == 0 )
+		{
+			m_iTimeLastFrame = m_iLastTimeUpdate;
+			m_iPC -= 2;
+			return;
+		}
+		if( m_iLastTimeUpdate >= ( m_iTimeLastFrame + Display::GetRefreshTick() ) )
+		{
+			m_iTimeLastFrame = {};
+		}
+		else
+		{
+			m_iPC -= 2;
+			return;
+		}
 	}
 	else
 	{
-		m_iPC -= 2;
-		return;
-	}
-#else
-	#ifdef DEBUG_INFO
+#ifdef DEBUG_INFO
 		m_sOpcodeInstruct = std::format( "{:04X} : DRW VX, VY",m_iCurrentOpcode );
-	#endif //DEBUG_INFO
-#endif //QUIRK_DISPWAIT
+#endif //DEBUG_INFO
+	}
 
 	/*Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision.
 	The interpreter reads N bytes from memory, starting at the address stored in I.
@@ -951,11 +970,11 @@ inline void Chip8::DRAW()
 	m_aRegisters[ 15 ] = 0;
 	for( ; iYOffset < GetN(); ++iYOffset )
 	{
-#ifdef QUIRK_CLIPPING
-		Display::DrawPixelAtPos( oKeyDisplay,xPos,yPos + iYOffset,m_aMemory[ m_iI + iYOffset ],bErased,true );
-#else
-		Display::DrawPixelAtPos( oKeyDisplay,xPos,yPos + iYOffset,m_aMemory[ m_iI + iYOffset ],bErased,false );
-#endif
+		if( !Chip8::m_oCurrentQuirk.bWrapFlag )
+			Display::DrawPixelAtPos( oKeyDisplay,xPos,yPos + iYOffset,m_aMemory[ m_iI + iYOffset ],bErased,true );
+		else
+			Display::DrawPixelAtPos( oKeyDisplay,xPos,yPos + iYOffset,m_aMemory[ m_iI + iYOffset ],bErased,false );
+
 		if( bErased )
 			m_aRegisters[ 15 ] = 1;
 	}
@@ -1030,9 +1049,8 @@ inline void Chip8::OR()
 {
 	//Sets VX to VX or VY. (bitwise OR operation)
 	m_aRegisters[ GetX()] |= m_aRegisters[ GetY() ];
-#ifdef QUIRK_VFRESET
-	m_aRegisters[ 15 ] = 0;
-#endif
+	if( Chip8::m_oCurrentQuirk.bVFResetFlag )
+		m_aRegisters[ 15 ] = 0;
 
 #ifdef DEBUG_INFO
 	_AddOpcodeToHistory( std::format( "{:04X} : OR VX, VY",m_iCurrentOpcode ).c_str() );
@@ -1043,9 +1061,8 @@ inline void Chip8::AND()
 {
 	//Sets VX to VX and VY. (bitwise AND operation)
 	m_aRegisters[ GetX() ] &= m_aRegisters[ GetY() ];
-#ifdef QUIRK_VFRESET
-	m_aRegisters[ 15 ] = 0;
-#endif
+	if( Chip8::m_oCurrentQuirk.bVFResetFlag )
+		m_aRegisters[ 15 ] = 0;
 
 #ifdef DEBUG_INFO
 	_AddOpcodeToHistory( std::format( "{:04X} : AND VX, VY",m_iCurrentOpcode ).c_str() );
@@ -1056,9 +1073,8 @@ inline void Chip8::XOR()
 {
 	//Sets VX to VX xor VY
 	m_aRegisters[ GetX() ] ^= m_aRegisters[ GetY() ];
-#ifdef QUIRK_VFRESET
-	m_aRegisters[ 15 ] = 0;
-#endif
+	if( Chip8::m_oCurrentQuirk.bWrapFlag )
+		m_aRegisters[ 15 ] = 0;
 
 #ifdef DEBUG_INFO
 	_AddOpcodeToHistory( std::format( "{:04X} : XOR VX, VY",m_iCurrentOpcode ).c_str() );

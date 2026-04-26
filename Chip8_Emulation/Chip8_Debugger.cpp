@@ -197,28 +197,20 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 	ImGui::End();
 	if( ImGui::Begin( "Quirks",nullptr ) )
 	{
-#ifdef QUIRKS
-#ifdef QUIRK_VFRESET
-		ImGui::Text( "VFReset On" );
-#endif
-#ifdef QUIRK_MEMORY
-		ImGui::Text( "Memory On ( Adress Register++ )" );
-#endif
-#ifdef QUIRK_DISPWAIT
-		ImGui::Text( "VBlank On" );
-#endif
-#ifdef QUIRK_CLIPPING
-		ImGui::Text( "Clipping On" );
-#endif
-#ifdef QUIRK_SHIFTING
-		ImGui::Text( "Shifting On ( Registers[X] = Registers[Y] >> 1 )" );
-#endif
-#ifdef QUIRK_JUMPING
-		ImGui::Text( "Jumping On ( NNN + Registers[0] )" );
-#endif
-#else
-		ImGui::Text( "Wrapping On" );
-#endif
+		if( Chip8::m_oCurrentQuirk.bVFResetFlag )
+			ImGui::Text( "VFReset On" );
+		if( Chip8::m_oCurrentQuirk.bMemoryFlag )
+			ImGui::Text( "Memory On ( Adress Register++ )" );
+		if( Chip8::m_oCurrentQuirk.bDispWaitFlag )
+			ImGui::Text( "VBlank On" );
+		if( Chip8::m_oCurrentQuirk.bWrapFlag )
+			ImGui::Text( "Clipping On" );
+		else
+			ImGui::Text( "Wrapping On" );
+		if( Chip8::m_oCurrentQuirk.bShiftingFlag )
+			ImGui::Text( "Shifting On ( Registers[X] = Registers[Y] >> 1 )" );
+		if( Chip8::m_oCurrentQuirk.bQuirkJumpingFlag )
+			ImGui::Text( "Jumping On ( NNN + Registers[0] )" );
 	}
 	ImGui::End();
 
