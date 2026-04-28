@@ -7,6 +7,13 @@
 
 #define DEBUG_INFO
 
+enum ResolutionMode
+{
+	None,
+	LORE,
+	HIRE
+};
+
 class Chip8;
 class alignas( 16 ) Display
 {
@@ -24,6 +31,8 @@ public:
 	int Init( const KeyDisplayAccess& oKey,const Chip8* pCpu );
 	static void ClearScreen( const KeyDisplayAccess& oKey );
 	static void DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xPos,uint8_t yPos,uint8_t oValue,bool& bErased,bool bClipping );
+	static void ScrollDown( const KeyDisplayAccess& oKey, uint8_t N );
+	static void Scroll( const KeyDisplayAccess& oKey, bool bLeft );
 	void DestroyWindow( const KeyDisplayAccess& oKey );
 
 	void Update( const std::chrono::steady_clock::time_point& time,const bool cpuPaused );
@@ -56,10 +65,11 @@ public:
 		return m_pSingleton;
 	}
 
+	void SetResolutionMode( ResolutionMode oResolutionMode ){ m_oResolutionMode = oResolutionMode; }
+
 protected:
 	Display();
 	~Display();
-	static Display* m_pSingleton;
 
 	int _CreateWindowChip();
 	void _InitTexture();
@@ -70,27 +80,32 @@ protected:
 
 	static void framebuffer_size_callback( GLFWwindow* m_pWindow,int width,int height );
 
-	GLFWwindow* m_pWindow;
-	Shader m_sShaderProgram;
+	static Display*						m_pSingleton;
 
-	static unsigned int m_iFBOTexture;
-	unsigned int m_iTexture;
-	unsigned int m_iVAO;
-	unsigned int m_iVBO;
-	unsigned int m_iEBO;
-	unsigned int m_iFBO;
+	GLFWwindow*							m_pWindow;
+	Shader 								m_sShaderProgram;
 
-	static uint64_t m_pPixels[];
+	static unsigned int					m_iFBOTexture;
+	unsigned int 						m_iTexture;
+	unsigned int 						m_iVAO;
+	unsigned int 						m_iVBO;
+	unsigned int 						m_iEBO;
+	unsigned int						m_iFBO;
+
+	static uint64_t						m_pPixels[];
 
 	std::chrono::steady_clock::time_point m_iLastTimeUpdate;
 
-	static bool		m_bDirtyFrame;
+	static bool							m_bDirtyFrame;
 
-	static int m_iValueMicroSRefresh;
-	static std::chrono::microseconds m_iCurrentTick;
+	static int							m_iValueMicroSRefresh;
+	static std::chrono::microseconds	m_iCurrentTick;
 
-	static uint8_t	m_iDisplayWidth;
-	static uint8_t	m_iDisplayHeight;
+	static uint8_t						m_iDisplayWidth;
+	static uint8_t						m_iDisplayHeight;
 
-	static std::string		m_sGameTitle;
+	static std::string					m_sGameTitle;
+
+	
+	ResolutionMode						m_oResolutionMode;
 };

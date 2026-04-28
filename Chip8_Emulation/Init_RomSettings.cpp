@@ -128,6 +128,7 @@ void Init_RomSettings::_LoadPlatformsSettings( const std::vector<std::string >& 
 			if( sPlatforms[ k ] == ( *it ) )
 			{
 				_LoadPlatformsSpecs( *it,iRomCustomTickrate );
+				std::cout << "LOAD_ROM_ON_" << ( *it ) << std::endl;
 				return;
 			}
 		}

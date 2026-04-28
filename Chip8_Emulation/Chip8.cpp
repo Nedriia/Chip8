@@ -10,18 +10,19 @@
 #include "Init_RomSettings.h"
 
 #define START_FONT_MEMORY_ADDRESS 0x050
+#define START_sFONT_MEMORY_ADDRESS 0x0A0
 #define START_ROM_MEMORY_ADDRESS 0x200
 #define MEMORY_SIZE 4096
 #define DEFAULT_PARENT_ROM_FOLDER "..\\Roms\\"
 #define JMPCHECK_BEFORE_ENDING 4
-//#define USE_SWITCH_BRANCH
+#define USE_SWITCH_BRANCH
 
 int Chip8::m_iInstructionsPerFrame = 100;
 
 Chip8* Chip8::m_pSingleton = nullptr;
 uint8_t Chip8::iHexToIndex[ 0x66 ] = { 0 };
 
-std::array<std::string,5> Chip8::m_sSupportedPlatform = { "originalChip8","hybridVIP","modernChip8","chip8x","chip48" };
+std::array< std::string, 6 > Chip8::m_sSupportedPlatform = { "originalChip8","hybridVIP","modernChip8","chip8x","chip48", "superchip" };
 Quirk  Chip8::m_oCurrentQuirk = Quirk();
 
 void Chip8::SetRomToLoad( const KeyAccess& oKey,const std::string& sSrc )
@@ -155,6 +156,11 @@ void Chip8::_LoadFont()
 	for( uint8_t i = 0; i < 80; ++i )
 	{
 		m_aMemory[ START_FONT_MEMORY_ADDRESS + i ] = m_aFontset[ i ];
+	}
+
+	for( uint8_t i = 0; i < 160; ++i )
+	{
+		m_aMemory[ START_sFONT_MEMORY_ADDRESS + i ] = m_aSuperFontset[ i ];
 	}
 }
 
@@ -310,6 +316,16 @@ void Chip8::_FetchDecode_Opcode()
 				CLS();
 			else if( check == 0xEE )
 				RET();
+			else if( GetY() == 0xC )
+				SCROLL_DOWN();
+			else if( check == 0xFB )
+				SCROLL_RIGHT();
+			else if( check == 0xFC )
+				SCROLL_LEFT();
+			else if( check == 0xFE )
+				LORE();
+			else if( check == 0xFF )
+				HIRE();
 			else
 				std::cerr << "ERROR::OPCODE_UNKNOWN_" << std::hex << m_iCurrentOpcode << std::endl;
 		}
@@ -506,7 +522,7 @@ inline void Chip8::xF_Dispatch()
 	uint16_t iLastNibbles = m_iCurrentOpcode & 0x00FF;
 	if( iLastNibbles < 0x66 )
 		CheckOpcodeAndExec( iHexToIndex[ iLastNibbles ],m_a0xF_Table );
-#ifdef DEBUG_TOOLS
+#ifdef DEBUG_INFO
 	else
 		std::cerr << "Nibble > to HexToIndex array size" << std::endl;
 #endif
@@ -515,7 +531,7 @@ inline void Chip8::xF_Dispatch()
 template< typename T,size_t N >
 inline void Chip8::CheckOpcodeAndExec( const T iNibble,const std::array<fct_opcode,N>& aTable )
 {
-#ifdef DEBUG_TOOLS
+#ifdef DEBUG_INFO
 	if( aTable[ iNibble ] == nullptr || iNibble < 0 || iNibble >= aTable.size() )
 		std::cerr << "ERROR::OPCODE_UNKNOWN_" << std::hex << m_iCurrentOpcode << std::endl;
 	else
@@ -734,6 +750,16 @@ inline void Chip8::LD_I_FONT()
 #endif
 }
 
+inline void Chip8::LD_I_SUPER_FONT()
+{
+	//Sets I to the location of the sprite for the character in VX(only consider the lowest nibble). Characters 0-F (in hexadecimal) are represented by a 8x10 font.
+	m_iI = START_FONT_MEMORY_ADDRESS + ( m_aRegisters[ GetX() ] * 10 );
+
+#ifdef DEBUG_INFO
+	_AddOpcodeToHistory( std::format( "{:04X} : LD I, sFONT( VX )",m_iCurrentOpcode ).c_str() );
+#endif
+}
+
 inline void Chip8::LD_I_VX()
 {
 	//Stores from V0 to VX (including VX) in memory, starting at address I. The offset from I is increased by 1 for each value written, but I itself is left unmodified
@@ -773,6 +799,54 @@ inline void Chip8::LD_VX_I()
 
 #ifdef DEBUG_INFO
 	_AddOpcodeToHistory( std::format( "{:04X} : LD VX, [I]",m_iCurrentOpcode ).c_str() );
+#endif
+}
+
+inline void Chip8::HIRE()
+{
+	Display::GetInstance()->SetResolutionMode( ResolutionMode::HIRE );
+
+#ifdef DEBUG_INFO
+	_AddOpcodeToHistory( std::format( "{:04X}  : HIRE",m_iCurrentOpcode ).c_str() );
+#endif
+}
+
+inline void Chip8::LORE()
+{
+	Display::GetInstance()->SetResolutionMode( ResolutionMode::LORE );
+
+#ifdef DEBUG_INFO
+	_AddOpcodeToHistory( std::format( "{:04X}  : LORE",m_iCurrentOpcode ).c_str() );
+#endif
+}
+
+inline void Chip8::SCROLL_DOWN()
+{
+	Display::KeyDisplayAccess oKeyDisplay;
+	Display::ScrollDown( oKeyDisplay, GetN() );
+
+#ifdef DEBUG_INFO
+	_AddOpcodeToHistory( std::format( "{:04X}  : SCROLL_L",m_iCurrentOpcode ).c_str() );
+#endif
+}
+
+inline void Chip8::SCROLL_LEFT()
+{
+	Display::KeyDisplayAccess oKeyDisplay;
+	Display::Scroll( oKeyDisplay, true );
+
+#ifdef DEBUG_INFO
+	_AddOpcodeToHistory( std::format( "{:04X}  : SCROLL_L",m_iCurrentOpcode ).c_str() );
+#endif
+}
+
+inline void Chip8::SCROLL_RIGHT()
+{
+	Display::KeyDisplayAccess oKeyDisplay;
+	Display::Scroll( oKeyDisplay, false );
+
+#ifdef DEBUG_INFO
+	_AddOpcodeToHistory( std::format( "{:04X}  : SCROLL_R",m_iCurrentOpcode ).c_str() );
 #endif
 }
 
@@ -1008,27 +1082,47 @@ inline void Chip8::SKNP()
 
 inline const uint8_t Chip8::GetX()
 {
+#ifndef USE_SWITCH_BRANCH
 	return m_pCurrentOpcode->X;
+#else
+	return ( m_iCurrentOpcode & 0x0F00 ) >> 8;
+#endif
 }
 
 inline const uint8_t Chip8::GetY()
 {
+#ifndef USE_SWITCH_BRANCH
 	return m_pCurrentOpcode->Y;
+#else
+	return ( m_iCurrentOpcode & 0x00F0 ) >> 4;
+#endif
 }
 
 inline const uint16_t Chip8::GetNNN()
 {
+#ifndef USE_SWITCH_BRANCH
 	return m_pCurrentOpcode->NNN;
+#else
+	return m_iCurrentOpcode & 0x0FFF;
+#endif
 }
 
 inline const uint8_t Chip8::GetNN()
 {
+#ifndef USE_SWITCH_BRANCH
 	return m_pCurrentOpcode->NN;
+#else
+	return  m_iCurrentOpcode & 0x00FF;
+#endif
 }
 
 inline const uint8_t Chip8::GetN()
 {
+#ifndef USE_SWITCH_BRANCH
 	return m_pCurrentOpcode->N;
+#else
+	return m_iCurrentOpcode & 0x000F;
+#endif
 }
 
 inline void Chip8::BCD()

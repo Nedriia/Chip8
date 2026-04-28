@@ -298,6 +298,24 @@ void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xPos,uint8_t 
 	m_bDirtyFrame |= ( iPreviousValue != m_pPixels[ yPos ] );
 }
 
+void Display::ScrollDown( const KeyDisplayAccess& oKey, uint8_t N )
+{
+	for( int k = m_iDisplayHeight - 1; k >= 0; --k )
+	{
+		int iIndex = k - N;
+		if( iIndex < 0 )
+			m_pPixels[ k ] = 0;
+		else
+			m_pPixels[ k ] = m_pPixels[ iIndex ];
+	}
+}
+
+void Display::Scroll( const KeyDisplayAccess& oKey,bool bLeft )
+{
+	for( int k = 0; k < m_iDisplayHeight; ++k )
+		!bLeft ? m_pPixels[k] <<= 4 : m_pPixels[k] >>= 4; //Pixels are invert ( so left scroll equal right shift )
+}
+
 void Display::Update( const std::chrono::steady_clock::time_point& time,const bool cpuPaused )
 {
 	// render loop
@@ -359,9 +377,6 @@ void Display::Update( const std::chrono::steady_clock::time_point& time,const bo
 
 void Display::SetResolutionFromDatabaseInfos( const int iWidth,const int iHeight )
 {
-	if( iWidth == m_iDisplayWidth || iHeight == m_iDisplayHeight )
-		return;
-
 	m_iDisplayWidth = iWidth;
 	m_iDisplayHeight = iHeight;
 	int iWithLocation = glGetUniformLocation( m_sShaderProgram.ID,"Width" );
@@ -371,4 +386,8 @@ void Display::SetResolutionFromDatabaseInfos( const int iWidth,const int iHeight
 
 	glUniform1i( iWithLocation, m_iDisplayWidth );
 	glUniform1i( iHeightLocation, m_iDisplayHeight );
+
+#ifdef DEBUG_INFO
+	std::cout << std::format( "DISPLAY::CURRENT_RESOLUTION_{}x{}",m_iDisplayWidth,m_iDisplayHeight ) << std::endl;
+#endif
 }
