@@ -35,6 +35,8 @@ public:
 	GLFWwindow* GetWindow() const { return m_pWindow; }
 	const std::chrono::steady_clock::time_point& GetLastTimeUpdate() const { return m_iLastTimeUpdate; }
 
+	void SetResolutionFromDatabaseInfos( const int iWidth, const int iHeight );
+
 	static const uint8_t GetWidth() { return m_iDisplayWidth; }
 	static const uint8_t GetHeight() { return m_iDisplayHeight; }
 

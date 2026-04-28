@@ -80,20 +80,24 @@ void Init_RomSettings::_LoadProgramsSettings( const int iIndex )
 		{
 			for( json::iterator it = data[ iIndex ].begin(); it != data[ iIndex ].end(); ++it )
 				std::cout << *it << '\n';
+			std::cout << std::endl;
 
 			Display::SetGameTitle( data[ iIndex ][ "title" ] );
 			if( data[ iIndex ][ "roms" ].contains( sHash.str() ) )
 			{
+				//Tickrate
 				int iRomCustomTickrate = 0;
 				auto oRom = data[ iIndex ][ "roms" ][ sHash.str() ];
 				if( oRom.contains( "tickrate" ) )
 					iRomCustomTickrate = oRom[ "tickrate" ];
 
+				//Palette
 				std::vector<std::string > sColors;
 				if( oRom[ "colors" ].contains( "pixels" ) )
 					sColors = oRom[ "colors" ][ "pixels" ].get<std::vector<std::string>>();
 				Display::GetInstance()->AssignDatabaseColors( sColors );
 
+				//Platforms Specs
 				if( oRom.contains( "platforms" ) )
 					_LoadPlatformsSettings( oRom[ "platforms" ].get<std::vector<std::string>>(),iRomCustomTickrate );//Load specs if platform found
 			}
@@ -137,7 +141,6 @@ void Init_RomSettings::_LoadPlatformsSpecs( const std::string& sPlatform,const i
 	if( sPlatformsAbsolutePath.empty() )
 		sPlatformsAbsolutePath = std::filesystem::absolute( PLATFORMS_DEFAULT_FOLDER ).string();
 
-#ifndef OVERRIDE_DATABASE_QUIRKS
 	std::ifstream file( sPlatformsAbsolutePath,std::ios::in );
 	if( file.is_open() )
 	{
@@ -146,6 +149,22 @@ void Init_RomSettings::_LoadPlatformsSpecs( const std::string& sPlatform,const i
 		{
 			if( oData.contains( "id" ) && oData[ "id" ] == sPlatform )
 			{
+				//Resolution
+				std::string sRes;
+				if( oData.contains( "displayResolutions" ) )
+				{
+					sRes = oData[ "displayResolutions" ][ 0 ];
+					size_t xPos = sRes.find( 'x' );
+
+					if( xPos != std::string::npos )
+					{
+						int iWidth = std::stoi( sRes.substr( 0,xPos ) );
+						int iHeight = std::stoi( sRes.substr( xPos + 1 ) );
+
+						Display::GetInstance()->SetResolutionFromDatabaseInfos( iWidth,iHeight );
+					}
+				}
+#ifndef OVERRIDE_DATABASE_QUIRKS
 				Chip8::SetInstructionPerFrame( iRomCustomTickrate == 0 ? static_cast< int >( oData[ "defaultTickrate" ] ) : iRomCustomTickrate );
 				if( oData.contains( "quirks" ) )
 				{
@@ -157,6 +176,8 @@ void Init_RomSettings::_LoadPlatformsSpecs( const std::string& sPlatform,const i
 					Chip8::m_oCurrentQuirk.bWrapFlag = oData[ "quirks" ].value( "wrap",false );
 					Chip8::m_oCurrentQuirk.bQuirkJumpingFlag = oData[ "quirks" ].value( "jump",false );
 				}
+#endif
+				return;
 			}
 		}
 	}
@@ -165,7 +186,6 @@ void Init_RomSettings::_LoadPlatformsSpecs( const std::string& sPlatform,const i
 		std::cerr << "ERROR::DATABASE::CANT_FIND_PLATFORMS_FILE : " << PLATFORMS_DEFAULT_FOLDER << std::endl;
 		_ReturnAdditionnalInfoOnErrors( file );
 	}
-#endif
 }
 
 void Init_RomSettings::_ReturnAdditionnalInfoOnErrors( const std::ifstream& sfile )

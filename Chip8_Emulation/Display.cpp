@@ -356,3 +356,19 @@ void Display::Update( const std::chrono::steady_clock::time_point& time,const bo
 		glfwSetWindowTitle( m_pWindow,sPerfDebug.c_str() );
 	}
 }
+
+void Display::SetResolutionFromDatabaseInfos( const int iWidth,const int iHeight )
+{
+	if( iWidth == m_iDisplayWidth || iHeight == m_iDisplayHeight )
+		return;
+
+	m_iDisplayWidth = iWidth;
+	m_iDisplayHeight = iHeight;
+	int iWithLocation = glGetUniformLocation( m_sShaderProgram.ID,"Width" );
+	int iHeightLocation = glGetUniformLocation( m_sShaderProgram.ID,"Height" );
+
+	glUseProgram( m_sShaderProgram.ID );
+
+	glUniform1i( iWithLocation, m_iDisplayWidth );
+	glUniform1i( iHeightLocation, m_iDisplayHeight );
+}
