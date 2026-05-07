@@ -26,6 +26,7 @@ struct Quirk
 	bool bWrapFlag = false;
 	bool bShiftingFlag = false;
 	bool bQuirkJumpingFlag = false;
+	bool bLegacySrolling = false; //Not a real quirk but serve if we want to simulate legacy superchip behavior - Need a manuel set
 };
 
 template< typename T>

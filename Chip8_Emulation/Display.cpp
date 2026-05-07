@@ -396,6 +396,7 @@ void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xPos,uint8_t 
 
 void Display::ScrollDown( const KeyDisplayAccess& oKey,uint8_t N )
 {
+	N = Chip8::m_oCurrentQuirk.bLegacySrolling ? N / 2 : N;
 	for( int k = m_iDisplayHeight - 1; k >= 0; --k )
 	{
 		int iIndex = k - N;
@@ -416,26 +417,27 @@ void Display::ScrollDown( const KeyDisplayAccess& oKey,uint8_t N )
 
 void Display::Scroll( const KeyDisplayAccess& oKey,bool bLeft )
 {
+	uint8_t iScrollValue = Chip8::m_oCurrentQuirk.bLegacySrolling ? 2 : 4;
 	for( int k = 0; k < m_iDisplayHeight; ++k )
 	{
 		if( GetResolutionMode() == ResolutionMode::LORES )
-			!bLeft ? m_pPixels[ k ][ 0 ] <<= 4 : m_pPixels[ k ][ 0 ] >>= 4;// MSB == rightmost pixel
-		if( GetResolutionMode() == ResolutionMode::HIRES )
+			!bLeft ? m_pPixels[ k ][ 0 ] <<= iScrollValue : m_pPixels[ k ][ 0 ] >>= iScrollValue;// MSB == rightmost pixel
+		else
 		{
 			//Check if we push outside the block
 			if( !bLeft )
 			{
 				uint8_t iBlockErase = ( m_pPixels[ k ][ 0 ] >> 60 ) & 0xF;
 
-				m_pPixels[ k ][ 0 ] <<= 4;
-				m_pPixels[ k ][ 1 ] = ( m_pPixels[ k ][ 1 ] << 4 ) | iBlockErase;
+				m_pPixels[ k ][ 0 ] <<= iScrollValue;
+				m_pPixels[ k ][ 1 ] = ( m_pPixels[ k ][ 1 ] << iScrollValue ) | iBlockErase;
 			}
 			else
 			{
 				uint64_t iBlockErase = m_pPixels[ k ][ 1 ] & 0xF;
 
-				m_pPixels[ k ][ 1 ] >>= 4;
-				m_pPixels[ k ][ 0 ] = ( m_pPixels[ k ][ 0 ] >> 4 ) | ( iBlockErase << 60 );
+				m_pPixels[ k ][ 1 ] >>= iScrollValue;
+				m_pPixels[ k ][ 0 ] = ( m_pPixels[ k ][ 0 ] >> iScrollValue ) | ( iBlockErase << 60 );
 			}
 		}
 	}
