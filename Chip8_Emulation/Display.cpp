@@ -1,12 +1,13 @@
 #include "Display.h"
 #include "Chip8_Debugger.h"
 #include <iostream>
+#include "Chip8.h"
 
 // settings
 const uint16_t WINDOW_WIDTH = 1920;
 const uint16_t WINDOW_HEIGHT = 1080;
 
-uint64_t Display::m_pPixels[ 32 ] = { 0 };
+uint64_t Display::m_pPixels[ 64 ][ 2 ] = { 0 };
 
 bool Display::m_bDirtyFrame = false;
 Display* Display::m_pSingleton = nullptr;
@@ -16,8 +17,8 @@ unsigned int Display::m_iFBOTexture = 0;
 int Display::m_iValueMicroSRefresh = 16666;
 std::chrono::microseconds Display::m_iCurrentTick = std::chrono::microseconds( Display::m_iValueMicroSRefresh );
 
-uint8_t Display::m_iDisplayWidth = 64;//Keep as power of two or instruction in draw opcode might give you exotic result
-uint8_t Display::m_iDisplayHeight = 32;
+uint8_t Display::m_iDisplayWidth = 0;//TODO : init to 0, so we could check and stop if no resolution is found
+uint8_t Display::m_iDisplayHeight = 0;
 
 std::string Display::m_sGameTitle = "";
 
@@ -41,8 +42,10 @@ Display::Display() :
 	m_iVBO( 0 ),
 	m_iEBO( 0 ),
 	m_iFBO( 0 ),
-	m_iLastTimeUpdate( std::chrono::steady_clock::now() )
-{}
+	m_iLastTimeUpdate( std::chrono::steady_clock::now() ),
+	m_oResolutionMode( ResolutionMode::LORES )
+{
+}
 
 Display::~Display()
 {
@@ -194,31 +197,31 @@ void Display::AssignDatabaseColors( const std::vector<std::string >& sColors )
 
 	if( sColors.empty() )
 	{
-		glUniform3f( vertexBgColorLocation, 0.67f, 0.27f, 0.0f );
-		glUniform3f( vertexFontColorLocation, 1.0f, 0.67f, 0.0f );
+		glUniform3f( vertexBgColorLocation,0.67f,0.27f,0.0f );
+		glUniform3f( vertexFontColorLocation,1.0f,0.67f,0.0f );
 
 		return;
 	}
 
 	for( std::string sColor : sColors )
 	{
-		if( sColor[0] == '#' )
-			sColor.erase( 0, 1 );
-				
-		unsigned long iColor = std::stoul( sColor, nullptr, 16 );
-		float vColor[3] = { ( ( iColor >> 16 ) & 0xFF ) / 255.0f, ( ( iColor >> 8 ) & 0xFF ) / 255.0f, ( iColor & 0xFF ) / 255.0f };
+		if( sColor[ 0 ] == '#' )
+			sColor.erase( 0,1 );
+
+		unsigned long iColor = std::stoul( sColor,nullptr,16 );
+		float vColor[ 3 ] = { ( ( iColor >> 16 ) & 0xFF ) / 255.0f, ( ( iColor >> 8 ) & 0xFF ) / 255.0f, ( iColor & 0xFF ) / 255.0f };
 
 		switch( iIndex )
 		{
-			case 0:
-				glUniform3f( vertexBgColorLocation, vColor[0], vColor[1], vColor[2] );
-				break;
-			case 1:
-				glUniform3f( vertexFontColorLocation, vColor[ 0 ], vColor[ 1 ], vColor[ 2 ] );
-				break;
-			default:
-				std::cerr << "Case Color not handle";
-				break;
+		case 0:
+			glUniform3f( vertexBgColorLocation,vColor[ 0 ],vColor[ 1 ],vColor[ 2 ] );
+			break;
+		case 1:
+			glUniform3f( vertexFontColorLocation,vColor[ 0 ],vColor[ 1 ],vColor[ 2 ] );
+			break;
+		default:
+			std::cerr << "Case Color not handle";
+			break;
 		}
 		++iIndex;
 	}
@@ -272,48 +275,170 @@ void Display::ClearScreen( const KeyDisplayAccess& oKey )
 	_InitPixelsData();
 }
 
-void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xPos,uint8_t yPos,uint8_t oValue,bool& bErased,bool bClipping )
+void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xPos,uint8_t yPos,uint8_t N,uint8_t& iVFFlag,bool bClipping )
 {
-	if( bClipping && yPos >= m_iDisplayHeight )
-		return;
-	else if( !bClipping )
-		yPos &= ( m_iDisplayHeight - 1 );
+	Chip8* pInstance = Chip8::GetInstance();
+	//if( N == 0 )
+	//{
+	//	for( uint8_t iYOffset = 0; iYOffset < 16; ++iYOffset,++yPos )
+	//	{
+	//		uint16_t iMemoryValue = 0;
 
-	uint64_t iPreviousValue = m_pPixels[ yPos ];
+	//		iMemoryValue = *( pInstance->GetMemory()->begin() + pInstance->GetI() + ( iYOffset * 2 ) ) << 8 | *( pInstance->GetMemory()->begin() + pInstance->GetI() + ( iYOffset * 2 ) + 1 );
+	//		iMemoryValue = ( iMemoryValue << 8 ) | ( iMemoryValue >> 8 );
+	//		iMemoryValue = ( ( iMemoryValue & 0xF0F0 ) >> 4 ) | ( ( iMemoryValue & 0x0F0F ) << 4 );
+	//		iMemoryValue = ( ( iMemoryValue & 0xCCCC ) >> 2 ) | ( ( iMemoryValue & 0x3333 ) << 2 );
+	//		iMemoryValue = ( ( iMemoryValue & 0xAAAA ) >> 1 ) | ( ( iMemoryValue & 0x5555 ) << 1 );
 
-	//Invert endianess ( only for 8 bit )
-	oValue = ( ( oValue >> 1 ) & 0x55 ) | ( ( oValue << 1 ) & 0xAA );
-	oValue = ( ( oValue >> 2 ) & 0x33 ) | ( ( oValue << 2 ) & 0xCC );
-	oValue = ( oValue >> 4 ) | ( oValue << 4 );
+	//		uint64_t iLine1 = m_pPixels[ yPos ][ 0 ];
+	//		uint64_t iLine2 = m_pPixels[ yPos ][ 1 ];
+	//		uint64_t iPreviousValue1 = m_pPixels[ yPos ][ 0 ];
+	//		uint64_t iPreviousValue2 = m_pPixels[ yPos ][ 1 ];
 
-	uint64_t iLine = 0;
-	if( bClipping )
-		iLine = static_cast< uint64_t >( oValue ) << xPos;
-	else
-		iLine = static_cast< uint64_t >( oValue ) << xPos | static_cast< uint64_t >( oValue ) >> ( 64 - xPos );
+	//		//Check in wich block we are, or if both
+	//		if( xPos < 64 && xPos + 16 >= 64 )
+	//		{
+	//			int xShift = xPos + 16;
+	//			int iAns = xShift - 64;
 
-	bErased |= ( m_pPixels[ yPos ] & iLine );
+	//			uint64_t iLine1 = static_cast< uint64_t >( iMemoryValue ) << xPos;
+	//			uint64_t iLine2 = static_cast< uint64_t >( iMemoryValue ) >> ( 16 - iAns );
 
-	m_pPixels[ yPos ] ^= iLine;
-	m_bDirtyFrame |= ( iPreviousValue != m_pPixels[ yPos ] );
+	//			iVFFlag |= ( m_pPixels[ yPos ][ 0 ] & iLine1 ) || ( m_pPixels[ yPos ][ 1 ] & iLine2 );
+
+	//			m_pPixels[ yPos ][ 0 ] ^= iLine1;
+	//			m_pPixels[ yPos ][ 1 ] ^= iLine2;
+	//		}
+	//		else if( xPos < 64 )
+	//		{
+	//			//if( bClipping )//TODO : wrap
+	//			iLine1 = static_cast< uint64_t >( iMemoryValue ) << xPos;
+	//			iVFFlag |= ( m_pPixels[ yPos ][ 0 ] & iLine1 );
+	//			m_pPixels[ yPos ][ 0 ] ^= iLine1;
+	//		}
+	//		else if( xPos >= 64 )
+	//		{
+	//			iLine2 = static_cast< uint64_t >( iMemoryValue ) << ( xPos - 64 );
+	//			iVFFlag |= ( m_pPixels[ yPos ][ 1 ] & iLine2 );
+	//			m_pPixels[ yPos ][ 1 ] ^= iLine2;
+	//		}
+	//		m_bDirtyFrame |= ( iPreviousValue1 != m_pPixels[ yPos ][ 0 ] || iPreviousValue2 != m_pPixels[ yPos ][ 1 ] );
+	//	}
+	//	return;
+	//}
+
+	for( uint8_t iYOffset = 0; iYOffset < N; ++iYOffset, ++yPos )
+	{
+		if( bClipping && yPos >= m_iDisplayHeight )
+			return;
+		else if( !bClipping )
+			yPos &= ( m_iDisplayHeight - 1 );
+
+		uint16_t iMemoryValue = 0;
+		uint64_t iLine = 0;
+
+		if( GetResolutionMode() != ResolutionMode::HIRES )
+		{
+			uint64_t iPreviousValue = m_pPixels[ yPos ][ 0 ];
+
+			iMemoryValue = BitReversal( ( uint8_t& )*( pInstance->GetMemory()->begin() + ( pInstance->GetI() + iYOffset ) ) );
+
+			if( bClipping )
+				iLine = static_cast< uint64_t >( iMemoryValue ) << xPos;
+			else
+				iLine = static_cast< uint64_t >( iMemoryValue ) << xPos | static_cast< uint64_t >( iMemoryValue ) >> ( m_iDisplayWidth - xPos );
+
+			iVFFlag |= ( m_pPixels[ yPos ][ 0 ] & iLine );
+			m_pPixels[ yPos ][ 0 ] ^= iLine;
+			m_bDirtyFrame |= ( iPreviousValue != m_pPixels[ yPos ][ 0 ] );
+		}
+		else
+		{
+			iMemoryValue = BitReversal( ( uint8_t& )*( pInstance->GetMemory()->begin() + ( pInstance->GetI() + iYOffset ) ) );
+
+			//Check in wich block we are, or if both
+			if( xPos < 64 && xPos + 8 >= 64 )
+			{
+				int xShift = xPos + 8;
+				int iAns = xShift - 64;
+
+				uint64_t iLine1 = static_cast< uint64_t >( iMemoryValue ) << xPos;
+				uint64_t iLine2 = static_cast< uint64_t >( iMemoryValue ) >> ( 8 - iAns );
+
+				iVFFlag |= ( m_pPixels[ yPos ][ 0 ] & iLine1 ) || ( m_pPixels[ yPos ][ 1 ] & iLine2 );
+
+				m_pPixels[ yPos ][ 0 ] ^= iLine1;
+				m_pPixels[ yPos ][ 1 ] ^= iLine2;//TODO : Wrapping
+			}
+			else if( xPos < 64 )
+			{
+				uint64_t iPreviousValue = m_pPixels[ yPos ][ 0 ];
+
+				iLine = static_cast< uint64_t >( iMemoryValue ) << xPos;
+
+				iVFFlag |= ( m_pPixels[ yPos ][ 0 ] & iLine );
+				m_pPixels[ yPos ][ 0 ] ^= iLine;
+				m_bDirtyFrame |= ( iPreviousValue != m_pPixels[ yPos ][ 0 ] );
+			}
+			else if( xPos >= 64 )
+			{
+				uint64_t iPreviousValue = m_pPixels[ yPos ][ 1 ];
+
+				iLine = static_cast< uint64_t >( iMemoryValue ) << xPos;
+
+				iVFFlag |= ( m_pPixels[ yPos ][ 1 ] & iLine );
+				m_pPixels[ yPos ][ 1 ] ^= iLine;
+				m_bDirtyFrame |= ( iPreviousValue != m_pPixels[ yPos ][ 1 ] );
+			}
+		}
+	}
 }
 
-void Display::ScrollDown( const KeyDisplayAccess& oKey, uint8_t N )
+void Display::ScrollDown( const KeyDisplayAccess& oKey,uint8_t N )
 {
 	for( int k = m_iDisplayHeight - 1; k >= 0; --k )
 	{
 		int iIndex = k - N;
 		if( iIndex < 0 )
-			m_pPixels[ k ] = 0;
+		{
+			m_pPixels[ k ][ 0 ] = 0; //Clip
+			if( GetResolutionMode() == ResolutionMode::HIRES )
+				m_pPixels[ k ][ 1 ] = 0;
+		}
 		else
-			m_pPixels[ k ] = m_pPixels[ iIndex ];
+		{
+			m_pPixels[ k ][ 0 ] = m_pPixels[ iIndex ][ 0 ];
+			if( GetResolutionMode() == ResolutionMode::HIRES )
+				m_pPixels[ k ][ 1 ] = m_pPixels[ iIndex ][ 1 ];
+		}
 	}
 }
 
 void Display::Scroll( const KeyDisplayAccess& oKey,bool bLeft )
 {
 	for( int k = 0; k < m_iDisplayHeight; ++k )
-		!bLeft ? m_pPixels[k] <<= 4 : m_pPixels[k] >>= 4; //Pixels are invert ( so left scroll equal right shift )
+	{
+		if( GetResolutionMode() == ResolutionMode::LORES )
+			!bLeft ? m_pPixels[ k ][ 0 ] <<= 4 : m_pPixels[ k ][ 0 ] >>= 4;// MSB == rightmost pixel
+		if( GetResolutionMode() == ResolutionMode::HIRES )
+		{
+			//Check if we push outside the block
+			if( !bLeft )
+			{
+				uint8_t iBlockErase = ( m_pPixels[ k ][ 0 ] >> 60 ) & 0xF;
+
+				m_pPixels[ k ][ 0 ] <<= 4;
+				m_pPixels[ k ][ 1 ] = ( m_pPixels[ k ][ 1 ] << 4 ) | iBlockErase;
+			}
+			else
+			{
+				uint64_t iBlockErase = m_pPixels[ k ][ 1 ] & 0xF;
+
+				m_pPixels[ k ][ 1 ] >>= 4;
+				m_pPixels[ k ][ 0 ] = ( m_pPixels[ k ][ 0 ] >> 4 ) | ( iBlockErase << 60 );
+			}
+		}
+	}
 }
 
 void Display::Update( const std::chrono::steady_clock::time_point& time,const bool cpuPaused )
@@ -350,8 +475,7 @@ void Display::Update( const std::chrono::steady_clock::time_point& time,const bo
 #ifdef DEBUG_INFO
 			glBindFramebuffer( GL_FRAMEBUFFER,m_iFBO );
 #endif
-			glBindTexture( GL_TEXTURE_2D,m_iTexture );
-			glTexSubImage2D( GL_TEXTURE_2D,0,0,0,2,Display::GetHeight(),GL_RED_INTEGER,GL_UNSIGNED_INT,m_pPixels );
+			glTexSubImage2D( GL_TEXTURE_2D,0,0,0,4,Display::GetHeight(),GL_RED_INTEGER,GL_UNSIGNED_INT,m_pPixels );
 
 			m_sShaderProgram.Use();
 
@@ -370,13 +494,16 @@ void Display::Update( const std::chrono::steady_clock::time_point& time,const bo
 		Chip8_Debugger::GetInstance()->Render();
 		glfwSwapBuffers( m_pWindow );
 #endif
-		std::string sPerfDebug = std::format("{} : {} ms ",m_sGameTitle,std::chrono::duration<double,std::milli>( startElapsed ).count() );
+		std::string sPerfDebug = std::format( "{} : {} ms ",m_sGameTitle,std::chrono::duration<double,std::milli>( startElapsed ).count() );
 		glfwSetWindowTitle( m_pWindow,sPerfDebug.c_str() );
 	}
 }
 
-void Display::SetResolutionFromDatabaseInfos( const int iWidth,const int iHeight )
+void Display::SetResolution( const int iWidth,const int iHeight )
 {
+	//if( m_iDisplayWidth == iWidth && m_iDisplayHeight == iHeight )
+		//return;
+
 	m_iDisplayWidth = iWidth;
 	m_iDisplayHeight = iHeight;
 	int iWithLocation = glGetUniformLocation( m_sShaderProgram.ID,"Width" );
@@ -384,10 +511,46 @@ void Display::SetResolutionFromDatabaseInfos( const int iWidth,const int iHeight
 
 	glUseProgram( m_sShaderProgram.ID );
 
-	glUniform1i( iWithLocation, m_iDisplayWidth );
-	glUniform1i( iHeightLocation, m_iDisplayHeight );
+	glUniform1i( iWithLocation,m_iDisplayWidth );
+	glUniform1i( iHeightLocation,m_iDisplayHeight );
+	glUniform1i( iHeightLocation,m_iDisplayHeight );
+
+	//Update texture with new res
+	glBindTexture( GL_TEXTURE_2D,m_iTexture );
+	glTexImage2D( GL_TEXTURE_2D,0,GL_R32UI,4,iHeight,0,GL_RED_INTEGER,GL_UNSIGNED_INT,NULL );//Beware to Display::Update glTexSubImage2D call
+	m_bDirtyFrame = true;
 
 #ifdef DEBUG_INFO
-	std::cout << std::format( "DISPLAY::CURRENT_RESOLUTION_{}x{}",m_iDisplayWidth,m_iDisplayHeight ) << std::endl;
+	std::cout << std::format( "DISPLAY::CHANGE_CURRENT_RESOLUTION_{}x{}",m_iDisplayWidth,m_iDisplayHeight ) << std::endl;
 #endif
+}
+
+void Display::SetResolutionMode( const ResolutionMode oResolutionMode )
+{
+	//Keep res as power of two or instruction in draw opcode might give you exotic result
+	if( m_oResolutionMode != oResolutionMode )
+		m_oResolutionMode = oResolutionMode;
+
+	switch( m_oResolutionMode )
+	{
+	case ResolutionMode::HIRES:
+		SetResolution( 128,64 );
+		break;
+	case ResolutionMode::LORES:
+		SetResolution( 64,32 );
+		break;
+	default:
+		std::cerr << "Should not pass here with that value" << std::endl;
+		break;
+	}
+}
+
+uint8_t Display::BitReversal( uint8_t iValue )
+{
+	//Invert endianess ( only for 8 bit )
+	iValue = ( ( iValue >> 1 ) & 0x55 ) | ( ( iValue << 1 ) & 0xAA );
+	iValue = ( ( iValue >> 2 ) & 0x33 ) | ( ( iValue << 2 ) & 0xCC );
+	iValue = ( iValue >> 4 ) | ( iValue << 4 );
+
+	return iValue;
 }

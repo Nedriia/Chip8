@@ -257,8 +257,8 @@ private:
 	inline void LD_I_SUPER_FONT();
 	inline void LD_I_VX();
 	inline void LD_VX_I();
-	inline void HIRE();
-	inline void LORE();
+	inline void HIRES();
+	inline void LORES();
 	inline void SCROLL_DOWN();
 	inline void SCROLL_LEFT();
 	inline void SCROLL_RIGHT();

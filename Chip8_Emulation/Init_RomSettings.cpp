@@ -78,6 +78,7 @@ void Init_RomSettings::_LoadProgramsSettings( const int iIndex )
 		json data = json::parse( file );
 		if( iIndex < data.size() )
 		{
+			std::cout << std::endl;
 			for( json::iterator it = data[ iIndex ].begin(); it != data[ iIndex ].end(); ++it )
 				std::cout << *it << '\n';
 			std::cout << std::endl;
@@ -162,7 +163,7 @@ void Init_RomSettings::_LoadPlatformsSpecs( const std::string& sPlatform,const i
 						int iWidth = std::stoi( sRes.substr( 0,xPos ) );
 						int iHeight = std::stoi( sRes.substr( xPos + 1 ) );
 
-						Display::GetInstance()->SetResolutionFromDatabaseInfos( iWidth,iHeight );
+						Display::GetInstance()->SetResolution( iWidth,iHeight );
 					}
 				}
 #ifndef OVERRIDE_DATABASE_QUIRKS

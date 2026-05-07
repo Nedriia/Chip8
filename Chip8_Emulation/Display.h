@@ -9,9 +9,8 @@
 
 enum ResolutionMode
 {
-	None,
-	LORE,
-	HIRE
+	LORES,
+	HIRES
 };
 
 class Chip8;
@@ -30,7 +29,7 @@ public:
 
 	int Init( const KeyDisplayAccess& oKey,const Chip8* pCpu );
 	static void ClearScreen( const KeyDisplayAccess& oKey );
-	static void DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xPos,uint8_t yPos,uint8_t oValue,bool& bErased,bool bClipping );
+	static void DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xPos,uint8_t yPos,const uint8_t N,uint8_t& iVFFlag,bool bClipping );
 	static void ScrollDown( const KeyDisplayAccess& oKey, uint8_t N );
 	static void Scroll( const KeyDisplayAccess& oKey, bool bLeft );
 	void DestroyWindow( const KeyDisplayAccess& oKey );
@@ -40,11 +39,10 @@ public:
 	const unsigned int& GetFBOTexture() const { return m_iFBOTexture; }
 	const unsigned int& GetTexture() const { return m_iTexture; }
 	const unsigned int& GetFBO() const { return m_iFBO; }
-	const uint64_t* GetPixels() const { return m_pPixels; }
 	GLFWwindow* GetWindow() const { return m_pWindow; }
 	const std::chrono::steady_clock::time_point& GetLastTimeUpdate() const { return m_iLastTimeUpdate; }
 
-	void SetResolutionFromDatabaseInfos( const int iWidth, const int iHeight );
+	void SetResolution( const int iWidth, const int iHeight );
 
 	static const uint8_t GetWidth() { return m_iDisplayWidth; }
 	static const uint8_t GetHeight() { return m_iDisplayHeight; }
@@ -65,7 +63,10 @@ public:
 		return m_pSingleton;
 	}
 
-	void SetResolutionMode( ResolutionMode oResolutionMode ){ m_oResolutionMode = oResolutionMode; }
+	void SetResolutionMode( const ResolutionMode oResolutionMode );
+	static ResolutionMode GetResolutionMode() { return GetInstance()->m_oResolutionMode;}
+	static void InitResolutionMode( const KeyDisplayAccess& oKey ){ GetInstance()->m_oResolutionMode = ResolutionMode::LORES; }
+	static uint8_t BitReversal( uint8_t iValue );
 
 protected:
 	Display();
@@ -92,7 +93,7 @@ protected:
 	unsigned int 						m_iEBO;
 	unsigned int						m_iFBO;
 
-	static uint64_t						m_pPixels[];
+	static uint64_t						m_pPixels[ 64 ][ 2 ];
 
 	std::chrono::steady_clock::time_point m_iLastTimeUpdate;
 

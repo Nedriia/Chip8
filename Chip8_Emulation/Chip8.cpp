@@ -22,7 +22,7 @@ int Chip8::m_iInstructionsPerFrame = 100;
 Chip8* Chip8::m_pSingleton = nullptr;
 uint8_t Chip8::iHexToIndex[ 0x66 ] = { 0 };
 
-std::array< std::string, 6 > Chip8::m_sSupportedPlatform = { "originalChip8","hybridVIP","modernChip8","chip8x","chip48", "superchip" };
+std::array< std::string,6 > Chip8::m_sSupportedPlatform = { "originalChip8","hybridVIP","modernChip8","chip8x","chip48", "superchip" };
 Quirk  Chip8::m_oCurrentQuirk = Quirk();
 
 void Chip8::SetRomToLoad( const KeyAccess& oKey,const std::string& sSrc )
@@ -50,7 +50,7 @@ Chip8::Chip8() :
 	,m_iCycle( 0 )
 	,m_iPreviousKeyPressed( 0xFF )
 	,m_iTimeLastFrame{}
-	, m_pInputInstance( nullptr )
+	,m_pInputInstance( nullptr )
 	,m_pSoundManagerInstance( nullptr )
 	,m_pCurrentOpcode( nullptr )
 {
@@ -85,16 +85,16 @@ Chip8::Chip8() :
 	m_a0x8_Table[ 0xE ] = { &Chip8::SHL };
 
 	//0x0000 - 0xF000 - size 0xFF
-	m_a0xF_Table[ 0 ]  = { &Chip8::CLS };		//0x0 //x0_Dispatch
-	m_a0xF_Table[ 1 ]  = { &Chip8::LD_VX_DT };	//0x7
-	m_a0xF_Table[ 2 ]  = { &Chip8::LD_VX_KEY }; //0xA
-	m_a0xF_Table[ 3 ]  = { &Chip8::RET };		//0xE //x0_Dispatch
-	m_a0xF_Table[ 4 ]  = { &Chip8::LD_DT_VX };	//0x15
-	m_a0xF_Table[ 5 ]  = { &Chip8::LD_ST_VX };	//0x18
-	m_a0xF_Table[ 6 ]  = { &Chip8::ADD_I_VX };	//0x1E
-	m_a0xF_Table[ 7 ]  = { &Chip8::LD_I_FONT };	//0x29
-	m_a0xF_Table[ 8 ]  = { &Chip8::BCD };		//0x33
-	m_a0xF_Table[ 9 ]  = { &Chip8::LD_I_VX };	//0x55
+	m_a0xF_Table[ 0 ] = { &Chip8::CLS };		//0x0 //x0_Dispatch
+	m_a0xF_Table[ 1 ] = { &Chip8::LD_VX_DT };	//0x7
+	m_a0xF_Table[ 2 ] = { &Chip8::LD_VX_KEY }; //0xA
+	m_a0xF_Table[ 3 ] = { &Chip8::RET };		//0xE //x0_Dispatch
+	m_a0xF_Table[ 4 ] = { &Chip8::LD_DT_VX };	//0x15
+	m_a0xF_Table[ 5 ] = { &Chip8::LD_ST_VX };	//0x18
+	m_a0xF_Table[ 6 ] = { &Chip8::ADD_I_VX };	//0x1E
+	m_a0xF_Table[ 7 ] = { &Chip8::LD_I_FONT };	//0x29
+	m_a0xF_Table[ 8 ] = { &Chip8::BCD };		//0x33
+	m_a0xF_Table[ 9 ] = { &Chip8::LD_I_VX };	//0x55
 	m_a0xF_Table[ 10 ] = { &Chip8::LD_VX_I };	//0x65
 
 	//Hex to Index For F Table
@@ -137,6 +137,7 @@ void Chip8::_Reset()
 	auto test = m_aMemory;
 	Display::KeyDisplayAccess oKeyDisplay;
 	Display::ClearScreen( oKeyDisplay );
+	Display::InitResolutionMode( oKeyDisplay );
 
 	for( auto it = m_aMemory.begin(); it != m_aMemory.end(); ++it )
 		it->clear();
@@ -205,7 +206,7 @@ void Chip8::_LoadROM( const char* sROMToLoad )
 		}
 
 		Init_RomSettings oRomSettings;
-		oRomSettings.LookForDatabaseInfos( memblock, size );
+		oRomSettings.LookForDatabaseInfos( memblock,size );
 
 		delete[] memblock;
 
@@ -309,150 +310,150 @@ void Chip8::_FetchDecode_Opcode()
 	uint16_t opcodeNibble = m_iCurrentOpcode & 0xF000;
 	switch( opcodeNibble )
 	{
-		case 0x0000:
+	case 0x0000:
+	{
+		uint16_t check = m_iCurrentOpcode & 0x00FF;
+		if( check == 0xE0 )
+			CLS();
+		else if( check == 0xEE )
+			RET();
+		else if( GetY() == 0xC )
+			SCROLL_DOWN();
+		else if( check == 0xFB )
+			SCROLL_RIGHT();
+		else if( check == 0xFC )
+			SCROLL_LEFT();
+		else if( check == 0xFE )
+			LORES();
+		else if( check == 0xFF )
+			HIRES();
+		else
+			std::cerr << "ERROR::OPCODE_UNKNOWN_" << std::hex << m_iCurrentOpcode << std::endl;
+	}
+	break;
+	case 0x1000:
+		JMP();
+		break;
+	case 0x2000:
+		CALL();
+		break;
+	case 0x3000:
+		SE_VX_NN();
+		break;
+	case 0x4000:
+		SNE_VX_NN();
+		break;
+	case 0x5000:
+		SE_VX_VY();
+		break;
+	case 0x6000:
+		LD_VX_NN();
+		break;
+	case 0x7000:
+		ADD_VX_NN();
+		break;
+	case 0x8000:
+	{
+		switch( m_iCurrentOpcode & 0x000F )
 		{
-			uint16_t check = m_iCurrentOpcode & 0x00FF;
-			if( check == 0xE0 )
-				CLS();
-			else if( check == 0xEE )
-				RET();
-			else if( GetY() == 0xC )
-				SCROLL_DOWN();
-			else if( check == 0xFB )
-				SCROLL_RIGHT();
-			else if( check == 0xFC )
-				SCROLL_LEFT();
-			else if( check == 0xFE )
-				LORE();
-			else if( check == 0xFF )
-				HIRE();
-			else
-				std::cerr << "ERROR::OPCODE_UNKNOWN_" << std::hex << m_iCurrentOpcode << std::endl;
-		}
-		break;
-		case 0x1000:
-			JMP();
-		break;
-		case 0x2000:
-			CALL();
-		break;
-		case 0x3000:
-			SE_VX_NN();
-		break;
-		case 0x4000:
-			SNE_VX_NN();
-		break;
-		case 0x5000:
-			SE_VX_VY();
-		break;
-		case 0x6000:
-			LD_VX_NN();
-		break;
-		case 0x7000:
-			ADD_VX_NN();
-		break;
-		case 0x8000:
-		{
-			switch( m_iCurrentOpcode & 0x000F )
-			{
-				case 0:
-					LD_VX_VY();
-				break;
-				case 1:
-					OR();
-				break;
-				case 2:
-					AND();
-				break;
-				case 3:
-					XOR();
-				break;
-				case 4:
-					ADD_VX_VY();
-				break;
-				case 5:
-					SUB_VX_VY();
-				break;
-				case 6:
-					SHR();
-				break;
-				case 7:
-					SUBN_VX_VY();
-				break;
-				case 0xE:
-					SHL();
-				break;
-				default:
-					std::cerr << "ERROR::OPCODE_UNKNOWN_" << std::hex << m_iCurrentOpcode << std::endl;
-					break;
-			}
-		}
-		break;
-		case 0x9000:
-			SNE_VX_VY();
-		break;
-		case 0xA000:
-			LD_I_NNN();
-		break;
-		case 0xB000:
-			JMP_NNN();
-		break;
-		case 0xC000:
-			RND();
-		break;
-		case 0xD000:
-			DRAW();
-		break;
-		case 0xE000:
-		{
-			uint16_t check = m_iCurrentOpcode & 0x00FF;
-			if( check == 0x9E )
-				SKP();
-			else if( check == 0xA1 )
-				SKNP();
-			else
-				std::cerr << "ERROR::OPCODE_UNKNOWN_" << std::hex << m_iCurrentOpcode << std::endl;
-		}
-		break;
-		case 0xF000:
-		{
-			switch( m_iCurrentOpcode & 0x00FF )
-			{
-				case 7:
-					LD_VX_DT();
-				break;
-				case 0x0A:
-					LD_VX_KEY();
-				break;
-				case 0x15:
-					LD_DT_VX();
-				break;
-				case 0x18:
-					LD_ST_VX();
-				break;
-				case 0x1E:
-					ADD_I_VX();
-				break;
-				case 0x29:
-					LD_I_FONT();
-				break;
-				case 0x33:
-					BCD();
-				break;
-				case 0x55:
-					LD_I_VX();
-				break;
-				case 0x65:
-					LD_VX_I();
-				break;
-				default:
-					std::cerr << "ERROR::OPCODE_UNKNOWN_" << std::hex << m_iCurrentOpcode << std::endl;
-					break;
-			}
-		}
-		break;
+		case 0:
+			LD_VX_VY();
+			break;
+		case 1:
+			OR();
+			break;
+		case 2:
+			AND();
+			break;
+		case 3:
+			XOR();
+			break;
+		case 4:
+			ADD_VX_VY();
+			break;
+		case 5:
+			SUB_VX_VY();
+			break;
+		case 6:
+			SHR();
+			break;
+		case 7:
+			SUBN_VX_VY();
+			break;
+		case 0xE:
+			SHL();
+			break;
 		default:
 			std::cerr << "ERROR::OPCODE_UNKNOWN_" << std::hex << m_iCurrentOpcode << std::endl;
+			break;
+		}
+	}
+	break;
+	case 0x9000:
+		SNE_VX_VY();
+		break;
+	case 0xA000:
+		LD_I_NNN();
+		break;
+	case 0xB000:
+		JMP_NNN();
+		break;
+	case 0xC000:
+		RND();
+		break;
+	case 0xD000:
+		DRAW();
+		break;
+	case 0xE000:
+	{
+		uint16_t check = m_iCurrentOpcode & 0x00FF;
+		if( check == 0x9E )
+			SKP();
+		else if( check == 0xA1 )
+			SKNP();
+		else
+			std::cerr << "ERROR::OPCODE_UNKNOWN_" << std::hex << m_iCurrentOpcode << std::endl;
+	}
+	break;
+	case 0xF000:
+	{
+		switch( m_iCurrentOpcode & 0x00FF )
+		{
+		case 7:
+			LD_VX_DT();
+			break;
+		case 0x0A:
+			LD_VX_KEY();
+			break;
+		case 0x15:
+			LD_DT_VX();
+			break;
+		case 0x18:
+			LD_ST_VX();
+			break;
+		case 0x1E:
+			ADD_I_VX();
+			break;
+		case 0x29:
+			LD_I_FONT();
+			break;
+		case 0x33:
+			BCD();
+			break;
+		case 0x55:
+			LD_I_VX();
+			break;
+		case 0x65:
+			LD_VX_I();
+			break;
+		default:
+			std::cerr << "ERROR::OPCODE_UNKNOWN_" << std::hex << m_iCurrentOpcode << std::endl;
+			break;
+		}
+	}
+	break;
+	default:
+		std::cerr << "ERROR::OPCODE_UNKNOWN_" << std::hex << m_iCurrentOpcode << std::endl;
 		break;
 	}
 #endif
@@ -577,7 +578,7 @@ inline void Chip8::JMP()
 
 inline void Chip8::JMP_NNN()
 {
-	if ( !Chip8::m_oCurrentQuirk.bQuirkJumpingFlag )
+	if( !Chip8::m_oCurrentQuirk.bQuirkJumpingFlag )
 	{
 		//Jumps to the address NNN plus V0
 #ifdef DEBUF_INFO
@@ -802,28 +803,28 @@ inline void Chip8::LD_VX_I()
 #endif
 }
 
-inline void Chip8::HIRE()
+inline void Chip8::HIRES()
 {
-	Display::GetInstance()->SetResolutionMode( ResolutionMode::HIRE );
+	Display::GetInstance()->SetResolutionMode( ResolutionMode::HIRES );
 
 #ifdef DEBUG_INFO
-	_AddOpcodeToHistory( std::format( "{:04X}  : HIRE",m_iCurrentOpcode ).c_str() );
+	_AddOpcodeToHistory( std::format( "{:04X}  : HIRES",m_iCurrentOpcode ).c_str() );
 #endif
 }
 
-inline void Chip8::LORE()
+inline void Chip8::LORES()
 {
-	Display::GetInstance()->SetResolutionMode( ResolutionMode::LORE );
+	Display::GetInstance()->SetResolutionMode( ResolutionMode::LORES );
 
 #ifdef DEBUG_INFO
-	_AddOpcodeToHistory( std::format( "{:04X}  : LORE",m_iCurrentOpcode ).c_str() );
+	_AddOpcodeToHistory( std::format( "{:04X}  : LORES",m_iCurrentOpcode ).c_str() );
 #endif
 }
 
 inline void Chip8::SCROLL_DOWN()
 {
 	Display::KeyDisplayAccess oKeyDisplay;
-	Display::ScrollDown( oKeyDisplay, GetN() );
+	Display::ScrollDown( oKeyDisplay,GetN() );
 
 #ifdef DEBUG_INFO
 	_AddOpcodeToHistory( std::format( "{:04X}  : SCROLL_L",m_iCurrentOpcode ).c_str() );
@@ -833,7 +834,7 @@ inline void Chip8::SCROLL_DOWN()
 inline void Chip8::SCROLL_LEFT()
 {
 	Display::KeyDisplayAccess oKeyDisplay;
-	Display::Scroll( oKeyDisplay, true );
+	Display::Scroll( oKeyDisplay,true );
 
 #ifdef DEBUG_INFO
 	_AddOpcodeToHistory( std::format( "{:04X}  : SCROLL_L",m_iCurrentOpcode ).c_str() );
@@ -843,7 +844,7 @@ inline void Chip8::SCROLL_LEFT()
 inline void Chip8::SCROLL_RIGHT()
 {
 	Display::KeyDisplayAccess oKeyDisplay;
-	Display::Scroll( oKeyDisplay, false );
+	Display::Scroll( oKeyDisplay,false );
 
 #ifdef DEBUG_INFO
 	_AddOpcodeToHistory( std::format( "{:04X}  : SCROLL_R",m_iCurrentOpcode ).c_str() );
@@ -908,9 +909,9 @@ inline void Chip8::SHR()
 
 	if( !Chip8::m_oCurrentQuirk.bShiftingFlag )
 	{
-		#ifdef DEBUF_INFO
-			m_sOpcodeInstruct = std::format( "{:04X} : SHR VX, VY",m_iCurrentOpcode );
-		#endif //DEBUF_INFO
+#ifdef DEBUF_INFO
+		m_sOpcodeInstruct = std::format( "{:04X} : SHR VX, VY",m_iCurrentOpcode );
+#endif //DEBUF_INFO
 
 		uint8_t Y = GetY();
 		LSB = ( m_aRegisters[ Y ] & 0x01 );
@@ -940,7 +941,7 @@ inline void Chip8::SUBN_VX_VY()
 	uint8_t X = GetX();
 
 	//Sets VX equals to VY minus VX.
-	uint16_t diff = m_aRegisters[ GetY() ] - m_aRegisters[X];
+	uint16_t diff = m_aRegisters[ GetY() ] - m_aRegisters[ X ];
 	m_aRegisters[ X ] = diff & 0xFF;
 	m_aRegisters[ 15 ] = diff > 0xFF ? 0 : 1;
 	// VF is set to 0 when there's an underflow, and 1 when there is not. (i.e. VF set to 1 if VY >= VX).
@@ -955,15 +956,15 @@ inline void Chip8::SHL()
 	uint8_t MSB = 0;
 	if( !Chip8::m_oCurrentQuirk.bShiftingFlag )
 	{
-		#ifdef DEBUG_INFO//DEBUG_INFO
-			m_sOpcodeInstruct = std::format( "{:04X} : SHL VX, VY",m_iCurrentOpcode );
-		#endif //DEBUG_INFO
+#ifdef DEBUG_INFO//DEBUG_INFO
+		m_sOpcodeInstruct = std::format( "{:04X} : SHL VX, VY",m_iCurrentOpcode );
+#endif //DEBUG_INFO
 
 		uint8_t Y = GetY();
 		// If the most-significant bit of Vy is 1.
 		MSB = ( m_aRegisters[ Y ] & 0x80 ) == 0x80 ? 1 : 0;
 
-		m_aRegisters[ GetX() ] = m_aRegisters[Y] << 1; //before 1990
+		m_aRegisters[ GetX() ] = m_aRegisters[ Y ] << 1; //before 1990
 	}
 	else
 	{
@@ -989,7 +990,7 @@ inline void Chip8::RND()
 {
 	//Sets VX to the result of a bitwise and operation on a random number (Typically: 0 to 255) and NN
 	std::uniform_int_distribution<std::mt19937::result_type> dist( 0,255 );
-	m_aRegisters[ GetX() ] = dist(m_iRng) & GetNN();
+	m_aRegisters[ GetX() ] = dist( m_iRng ) & GetNN();
 
 #ifdef DEBUG_INFO
 	_AddOpcodeToHistory( std::format( "{:04X} : RND VX, NN",m_iCurrentOpcode ).c_str() );
@@ -1000,9 +1001,9 @@ inline void Chip8::DRAW()
 {
 	if( Chip8::m_oCurrentQuirk.bDispWaitFlag )
 	{
-		#ifdef DEBUG_INFO
-			m_sOpcodeInstruct = std::format( "{:04X} : DRW VX, VY VBlank",m_iCurrentOpcode );
-		#endif //DEBUG_INFO
+#ifdef DEBUG_INFO
+		m_sOpcodeInstruct = std::format( "{:04X} : DRW VX, VY VBlank",m_iCurrentOpcode );
+#endif //DEBUG_INFO
 
 		//VBlank, waiting for next frame
 		if( m_iTimeLastFrame.time_since_epoch().count() == 0 )
@@ -1034,24 +1035,14 @@ inline void Chip8::DRAW()
 	If this causes any pixels to be erased, VF is set to 1, otherwise it is set to 0.
 	If the sprite is positioned so part of it is outside the coordinates of the display, it wraps around to the opposite side of the screen
 	I value does not change after the execution of this instruction*/
-	bool bErased = false;
-	uint8_t iYOffset = 0;
 
 	Display::KeyDisplayAccess oKeyDisplay;
 	uint8_t xPos = m_aRegisters[ GetX() ] & ( Display::GetWidth() - 1 );
 	uint8_t yPos = m_aRegisters[ GetY() ] & ( Display::GetHeight() - 1 );
 
-	m_aRegisters[ 15 ] = 0;
-	for( ; iYOffset < GetN(); ++iYOffset )
-	{
-		if( !Chip8::m_oCurrentQuirk.bWrapFlag )
-			Display::DrawPixelAtPos( oKeyDisplay,xPos,yPos + iYOffset,m_aMemory[ m_iI + iYOffset ],bErased,true );
-		else
-			Display::DrawPixelAtPos( oKeyDisplay,xPos,yPos + iYOffset,m_aMemory[ m_iI + iYOffset ],bErased,false );
-
-		if( bErased )
-			m_aRegisters[ 15 ] = 1;
-	}
+	uint8_t& iVFFlag = ( uint8_t& )m_aRegisters[ 15 ];
+	iVFFlag = 0;
+	Display::DrawPixelAtPos( oKeyDisplay,xPos,yPos,GetN(),iVFFlag,Chip8::m_oCurrentQuirk.bWrapFlag );
 
 #ifdef DEBUG_INFO
 	_AddOpcodeToHistory( m_sOpcodeInstruct.c_str() );
@@ -1061,7 +1052,7 @@ inline void Chip8::DRAW()
 inline void Chip8::SKP()
 {
 	//Skips the next instruction if the key stored in VX(only consider the lowest nibble) is pressed (usually the next instruction is a jump to skip a code block).
-	if( m_pInputInstance->GetKeyState( m_aRegisters[ GetX() ]) )
+	if( m_pInputInstance->GetKeyState( m_aRegisters[ GetX() ] ) )
 		m_iPC += 2;
 
 #ifdef DEBUG_INFO
@@ -1072,7 +1063,7 @@ inline void Chip8::SKP()
 inline void Chip8::SKNP()
 {
 	//Skips the next instruction if the key stored in VX(only consider the lowest nibble) is not pressed (usually the next instruction is a jump to skip a code block).
-	if( !m_pInputInstance->GetKeyState( m_aRegisters[ GetX() ]) )
+	if( !m_pInputInstance->GetKeyState( m_aRegisters[ GetX() ] ) )
 		m_iPC += 2;
 
 #ifdef DEBUG_INFO
@@ -1142,7 +1133,7 @@ inline void Chip8::BCD()
 inline void Chip8::OR()
 {
 	//Sets VX to VX or VY. (bitwise OR operation)
-	m_aRegisters[ GetX()] |= m_aRegisters[ GetY() ];
+	m_aRegisters[ GetX() ] |= m_aRegisters[ GetY() ];
 	if( Chip8::m_oCurrentQuirk.bVFResetFlag )
 		m_aRegisters[ 15 ] = 0;
 
