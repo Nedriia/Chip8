@@ -348,7 +348,7 @@ void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xPos,uint8_t 
 			else
 				iLine = static_cast< uint64_t >( iMemoryValue ) << xPos | static_cast< uint64_t >( iMemoryValue ) >> ( m_iDisplayWidth - xPos );
 
-			iVFFlag |= ( m_pPixels[ yPos ][ 0 ] & iLine );
+			iVFFlag |= ( m_pPixels[ yPos ][ 0 ] & iLine ) ? 1 : 0;
 			m_pPixels[ yPos ][ 0 ] ^= iLine;
 			m_bDirtyFrame |= ( iPreviousValue != m_pPixels[ yPos ][ 0 ] );
 		}
