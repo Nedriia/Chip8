@@ -437,6 +437,9 @@ void Chip8::_FetchDecode_Opcode()
 		case 0x29:
 			LD_I_FONT();
 			break;
+		case 0x30:
+			LD_I_SUPER_FONT();
+			break;
 		case 0x33:
 			BCD();
 			break;
@@ -744,7 +747,7 @@ inline void Chip8::LD_ST_VX()
 inline void Chip8::LD_I_FONT()
 {
 	//Sets I to the location of the sprite for the character in VX(only consider the lowest nibble). Characters 0-F (in hexadecimal) are represented by a 4x5 font.
-	m_iI = START_FONT_MEMORY_ADDRESS + ( m_aRegisters[ GetX() ] * 5 );
+	m_iI = START_FONT_MEMORY_ADDRESS + ( ( m_aRegisters[ GetX() ] & 0xF ) * 5 );
 
 #ifdef DEBUG_INFO
 	_AddOpcodeToHistory( std::format( "{:04X} : LD I, FONT( VX )",m_iCurrentOpcode ).c_str() );
@@ -754,7 +757,7 @@ inline void Chip8::LD_I_FONT()
 inline void Chip8::LD_I_SUPER_FONT()
 {
 	//Sets I to the location of the sprite for the character in VX(only consider the lowest nibble). Characters 0-F (in hexadecimal) are represented by a 8x10 font.
-	m_iI = START_FONT_MEMORY_ADDRESS + ( m_aRegisters[ GetX() ] * 10 );
+	m_iI = START_sFONT_MEMORY_ADDRESS + ( ( m_aRegisters[ GetX() ] & 0xF ) * 10 );
 
 #ifdef DEBUG_INFO
 	_AddOpcodeToHistory( std::format( "{:04X} : LD I, sFONT( VX )",m_iCurrentOpcode ).c_str() );
