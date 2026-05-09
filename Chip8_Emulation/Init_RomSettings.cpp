@@ -171,8 +171,8 @@ void Init_RomSettings::_LoadPlatformsSpecs( const std::string& sPlatform,const i
 				if( oData.contains( "quirks" ) )
 				{
 					Chip8::m_oCurrentQuirk.bShiftingFlag = oData[ "quirks" ].value( "shift",false );
-					Chip8::m_oCurrentQuirk.bMemoryFlag = oData[ "quirks" ].value( "memoryLeaveIUnchanged",false );
-					//Chip8::m_oCurrentQuirk.bMemoryFlag = oData[ "quirks" ].value( "memoryIncrementByX",false ); //superchip
+					Chip8::m_oCurrentQuirk.bMemoryUnchanged = oData[ "quirks" ].value( "memoryLeaveIUnchanged",false );
+					Chip8::m_oCurrentQuirk.bMemoryIncrementByX = oData[ "quirks" ].value( "memoryIncrementByX",false );
 					Chip8::m_oCurrentQuirk.bVFResetFlag = oData["quirks"].value( "logic",false );
 					Chip8::m_oCurrentQuirk.bDispWaitFlag = oData[ "quirks" ].value( "vblank", false );
 					Chip8::m_oCurrentQuirk.bWrapFlag = oData[ "quirks" ].value( "wrap",false );

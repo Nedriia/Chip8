@@ -199,8 +199,10 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 	{
 		if( Chip8::m_oCurrentQuirk.bVFResetFlag )
 			ImGui::Text( "VFReset On" );
-		if( Chip8::m_oCurrentQuirk.bMemoryFlag )
-			ImGui::Text( "Memory On ( Adress Register++ )" );
+		if( Chip8::m_oCurrentQuirk.bMemoryUnchanged )
+			ImGui::Text( "Memory Unchanged On" );
+		if( Chip8::m_oCurrentQuirk.bMemoryIncrementByX )
+			ImGui::Text( "Memory Increment On ( Adress Register++ )" );
 		if( Chip8::m_oCurrentQuirk.bDispWaitFlag )
 			ImGui::Text( "VBlank On" );
 		if( Chip8::m_oCurrentQuirk.bWrapFlag )

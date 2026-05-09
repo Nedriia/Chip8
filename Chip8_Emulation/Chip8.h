@@ -16,13 +16,14 @@ enum class RunningState
 	Reset
 };
 
-//#define OVERRIDE_DATABASE_QUIRKS //if def set values wanted below, otherwise there are erased by platforms specs quirks
+#define OVERRIDE_DATABASE_QUIRKS //if def set values wanted below, otherwise there are erased by platforms specs quirks
 struct Quirk
 {
 	Quirk() {};
 	bool bVFResetFlag = true;
-	bool bMemoryFlag = false;
-	bool bDispWaitFlag = true;
+	bool bMemoryUnchanged = false;
+	bool bMemoryIncrementByX = false;
+	bool bDispWaitFlag = false;
 	bool bWrapFlag = false;
 	bool bShiftingFlag = false;
 	bool bQuirkJumpingFlag = false;

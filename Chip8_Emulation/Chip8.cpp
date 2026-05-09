@@ -763,10 +763,11 @@ inline void Chip8::LD_I_SUPER_FONT()
 
 inline void Chip8::LD_I_VX()
 {
+	uint16_t iOriginal_I = m_iI;
 	//Stores from V0 to VX (including VX) in memory, starting at address I. The offset from I is increased by 1 for each value written, but I itself is left unmodified
 	for( int i = 0; i <= GetX(); ++i )
 	{
-		if( !Chip8::m_oCurrentQuirk.bMemoryFlag )
+		if( !Chip8::m_oCurrentQuirk.bMemoryIncrementByX )
 		{
 			m_aMemory[ m_iI ] = m_aRegisters[ i ];
 			++m_iI;
@@ -777,6 +778,9 @@ inline void Chip8::LD_I_VX()
 		}
 	}
 
+	if( Chip8::m_oCurrentQuirk.bMemoryUnchanged )
+		m_iI = iOriginal_I;
+
 #ifdef DEBUG_INFO
 	_AddOpcodeToHistory( std::format( "{:04X} : LD [I], VX",m_iCurrentOpcode ).c_str() );
 #endif
@@ -784,10 +788,11 @@ inline void Chip8::LD_I_VX()
 
 inline void Chip8::LD_VX_I()
 {
+	uint16_t iOriginal_I = m_iI;
 	//Fills from V0 to VX (including VX) with values from memory, starting at address I. The offset from I is increased by 1 for each value read, but I itself is left unmodified
 	for( int i = 0; i <= GetX(); ++i )
 	{
-		if( !Chip8::m_oCurrentQuirk.bMemoryFlag )
+		if( !Chip8::m_oCurrentQuirk.bMemoryIncrementByX )
 		{
 			m_aRegisters[ i ] = m_aMemory[ m_iI ];
 			++m_iI;
@@ -797,6 +802,9 @@ inline void Chip8::LD_VX_I()
 			m_aRegisters[ i ] = m_aMemory[ m_iI + i ];
 		}
 	}
+
+	if( Chip8::m_oCurrentQuirk.bMemoryUnchanged )
+		m_iI = iOriginal_I;
 
 #ifdef DEBUG_INFO
 	_AddOpcodeToHistory( std::format( "{:04X} : LD VX, [I]",m_iCurrentOpcode ).c_str() );
