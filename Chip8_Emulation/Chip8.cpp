@@ -143,10 +143,9 @@ void Chip8::_Reset()
 		it->clear();
 	m_aMirorMemory.fill( DecodedOpcode{} );
 
-	for( Data<uint8_t>* it = &m_aRegisters[ 0 ]; it != &m_aRegisters[ 0x10 ]; ++it )
-		it->clear();
-	for( Data<uint16_t>* it = &m_aStack[ 0 ]; it != &m_aStack[ 0x10 ]; ++it )
-		it->clear();
+	memset( m_aRegisters,0,sizeof( m_aRegisters ) );
+	memset( m_aStack,0,sizeof( m_aStack ) );
+	memset( m_aFlags,0,sizeof( m_aFlags ) );
 
 	Chip8::KeyAccess oKey;
 	Init( oKey,m_sCurrentRomLoaded );
@@ -323,6 +322,8 @@ void Chip8::_FetchDecode_Opcode()
 			SCROLL_RIGHT();
 		else if( check == 0xFC )
 			SCROLL_LEFT();
+		else if( check == 0xFD )
+			QUIT();
 		else if( check == 0xFE )
 			LORES();
 		else if( check == 0xFF )
@@ -448,6 +449,12 @@ void Chip8::_FetchDecode_Opcode()
 			break;
 		case 0x65:
 			LD_VX_I();
+			break;
+		case 0x75:
+			SAVEFLAGS_VX();
+			break;
+		case 0x85:
+			LOADFLAGS_VX();
 			break;
 		default:
 			std::cerr << "ERROR::OPCODE_UNKNOWN_" << std::hex << m_iCurrentOpcode << std::endl;
@@ -814,6 +821,32 @@ inline void Chip8::LD_VX_I()
 #endif
 }
 
+inline void Chip8::SAVEFLAGS_VX()
+{
+	//store the content of the registers v0 to vX into flags storage (outside of the addressable ram)
+	for( int i = 0; i <= GetX(); ++i )
+	{
+		m_aFlags[i] = m_aRegisters[i];
+	}
+
+#ifdef DEBUG_INFO
+	_AddOpcodeToHistory( std::format( "{:04X} : SAVEFLAGS VX",m_iCurrentOpcode ).c_str() );
+#endif
+}
+
+inline void Chip8::LOADFLAGS_VX()
+{
+	//Load the registers v0 to vX from flags storage( outside the addressable ram )
+	for( int i = 0; i <= GetX(); ++i )
+	{
+		m_aRegisters[ i ] = m_aFlags[ i ];
+	}
+
+#ifdef DEBUG_INFO
+	_AddOpcodeToHistory( std::format( "{:04X} : LOADFLAGS VX",m_iCurrentOpcode ).c_str() );
+#endif
+}
+
 inline void Chip8::HIRES()
 {
 	Display::GetInstance()->SetResolutionMode( ResolutionMode::HIRES );
@@ -859,6 +892,15 @@ inline void Chip8::SCROLL_RIGHT()
 
 #ifdef DEBUG_INFO
 	_AddOpcodeToHistory( std::format( "{:04X}  : SCROLL_R",m_iCurrentOpcode ).c_str() );
+#endif
+}
+
+inline void Chip8::QUIT()
+{
+	m_oState = RunningState::Pause;//keep it as pause for now, so we keep debug view
+
+#ifdef DEBUG_INFO
+	_AddOpcodeToHistory( std::format( "{:04X}  : STOP",m_iCurrentOpcode ).c_str() );
 #endif
 }
 

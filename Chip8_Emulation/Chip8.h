@@ -153,6 +153,7 @@ private:
 
 	std::array< Data<uint8_t>,4096 > m_aMemory;
 	Data<uint8_t> m_aRegisters[ 16 ];
+	Data<uint8_t> m_aFlags[ 16 ]; //for FX75 // FX85
 	Data<uint16_t> m_iI; //Address register
 	Data<uint16_t> m_aStack[ 16 ];
 	Data<uint8_t> m_iSP; //Stack pointer
@@ -259,11 +260,14 @@ private:
 	inline void LD_I_SUPER_FONT();
 	inline void LD_I_VX();
 	inline void LD_VX_I();
+	inline void SAVEFLAGS_VX();
+	inline void LOADFLAGS_VX();
 	inline void HIRES();
 	inline void LORES();
 	inline void SCROLL_DOWN();
 	inline void SCROLL_LEFT();
 	inline void SCROLL_RIGHT();
+	inline void QUIT();
 
 	inline void ADD_VX_NN();
 	inline void ADD_VX_VY();
