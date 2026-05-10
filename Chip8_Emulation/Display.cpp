@@ -365,7 +365,7 @@ void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xPos,uint8_t 
 				uint64_t iLine1 = static_cast< uint64_t >( iMemoryValue ) << xPos;
 				uint64_t iLine2 = static_cast< uint64_t >( iMemoryValue ) >> ( 8 - iAns );
 
-				iVFFlag |= ( m_pPixels[ yPos ][ 0 ] & iLine1 ) || ( m_pPixels[ yPos ][ 1 ] & iLine2 );
+				iVFFlag |= ( m_pPixels[ yPos ][ 0 ] & iLine1 ) || ( m_pPixels[ yPos ][ 1 ] & iLine2 ) ? 1 : 0;
 
 				m_pPixels[ yPos ][ 0 ] ^= iLine1;
 				m_pPixels[ yPos ][ 1 ] ^= iLine2;//TODO : Wrapping
@@ -376,7 +376,7 @@ void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xPos,uint8_t 
 
 				iLine = static_cast< uint64_t >( iMemoryValue ) << xPos;
 
-				iVFFlag |= ( m_pPixels[ yPos ][ 0 ] & iLine );
+				iVFFlag |= ( m_pPixels[ yPos ][ 0 ] & iLine ) ? 1 : 0;
 				m_pPixels[ yPos ][ 0 ] ^= iLine;
 				m_bDirtyFrame |= ( iPreviousValue != m_pPixels[ yPos ][ 0 ] );
 			}
@@ -386,7 +386,7 @@ void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xPos,uint8_t 
 
 				iLine = static_cast< uint64_t >( iMemoryValue ) << xPos;
 
-				iVFFlag |= ( m_pPixels[ yPos ][ 1 ] & iLine );
+				iVFFlag |= ( m_pPixels[ yPos ][ 1 ] & iLine ) ? 1 : 0;
 				m_pPixels[ yPos ][ 1 ] ^= iLine;
 				m_bDirtyFrame |= ( iPreviousValue != m_pPixels[ yPos ][ 1 ] );
 			}
