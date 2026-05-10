@@ -9,8 +9,11 @@ Input::Input()
 	:
 	m_aInputs{ 0 },
 	m_iLastTimeUpdate( std::chrono::steady_clock::now() ),
-	m_pDisplayInstance( nullptr )
+	m_pDisplayInstance( nullptr ),
+	m_bEnglishLayout( true ),
+	m_bOverride( true )
 {
+	InitInputDefault();
 }
 
 Input::~Input()
@@ -39,11 +42,12 @@ void Input::ProcessInput( const std::chrono::steady_clock::time_point& time,bool
 			if( glfwGetKey( pWindow,GLFW_KEY_ESCAPE ) == GLFW_PRESS )
 				glfwSetWindowShouldClose( pWindow,true );
 
-			for( uint8_t i = 0; i < 0x10; ++i )
+			for( uint8_t i = 0; i < 16; ++i )
 				CheckInputState( i,pWindow );
 
 			m_iLastTimeUpdate = time;
 		}
+
 		glfwPollEvents();
 	}
 	else
@@ -53,6 +57,80 @@ void Input::ProcessInput( const std::chrono::steady_clock::time_point& time,bool
 void Input::DestroyInputManager()
 {
 	delete m_pSingleton;
+}
+
+void Input::InitInputFromDatabase( std::map<std::string,int>& aKeys )
+{
+	if( m_bOverride )
+		InitInputDefault();
+
+	if( aKeys.empty() )
+		return;
+	else
+		m_bOverride = true;
+	
+	const char* sName = glfwGetKeyName( GLFW_KEY_W,glfwGetKeyScancode( GLFW_KEY_W ) );
+	if( sName != nullptr )
+	{
+		if( tolower( *sName ) == ( int )'z' )
+			m_bEnglishLayout = false;
+	}
+
+	const char* name = glfwGetKeyName( GLFW_KEY_Z,0 );
+	int iValue = aKeys[ "up" ];
+	if( iValue )
+		m_aKeyMap[ iValue ] = m_bEnglishLayout ? GLFW_KEY_Z : GLFW_KEY_W;
+
+	iValue = aKeys[ "down" ];
+	if( iValue )
+		m_aKeyMap[ iValue ] = GLFW_KEY_S;
+
+	iValue = aKeys[ "left" ];
+	if( iValue )
+		m_aKeyMap[ iValue ] = m_bEnglishLayout ? GLFW_KEY_Q : GLFW_KEY_A;
+
+	iValue = aKeys[ "right" ];
+	if( iValue )
+		m_aKeyMap[ iValue ] = GLFW_KEY_D;
+
+	iValue = aKeys[ "a" ];
+	if( iValue )
+		m_aKeyMap[ iValue ] = GLFW_KEY_1;
+
+	iValue = aKeys[ "b" ];
+	if( iValue )
+		m_aKeyMap[ iValue ] = GLFW_KEY_2;
+
+	iValue = aKeys[ "player2Up" ];
+	if( iValue )
+		m_aKeyMap[ iValue ] = GLFW_KEY_I;
+
+
+	iValue = aKeys[ "player2Down" ];
+	if( iValue )
+		m_aKeyMap[ iValue ] = GLFW_KEY_K;
+}
+
+void Input::InitInputDefault()
+{
+	m_aKeyMap[ 0x0 ] = GLFW_KEY_0;
+	m_aKeyMap[ 0x1 ] = GLFW_KEY_1;
+	m_aKeyMap[ 0x2 ] = GLFW_KEY_2;
+	m_aKeyMap[ 0x3 ] = GLFW_KEY_3;
+	m_aKeyMap[ 0x4 ] = GLFW_KEY_4;
+	m_aKeyMap[ 0x5 ] = GLFW_KEY_5;
+	m_aKeyMap[ 0x6 ] = GLFW_KEY_6;
+	m_aKeyMap[ 0x7 ] = GLFW_KEY_7;
+	m_aKeyMap[ 0x8 ] = GLFW_KEY_8;
+	m_aKeyMap[ 0x9 ] = GLFW_KEY_9;
+	m_aKeyMap[ 0xA ] = GLFW_KEY_A;
+	m_aKeyMap[ 0xB ] = GLFW_KEY_B;
+	m_aKeyMap[ 0xC ] = GLFW_KEY_C;
+	m_aKeyMap[ 0xD ] = GLFW_KEY_D;
+	m_aKeyMap[ 0xE ] = GLFW_KEY_E;
+	m_aKeyMap[ 0xF ] = GLFW_KEY_F;
+
+	m_bOverride = false;
 }
 
 uint8_t Input::GetKeyState( uint8_t iIndex ) const
@@ -68,7 +146,7 @@ uint8_t Input::GetKeyState( uint8_t iIndex ) const
 
 uint8_t Input::IsAnyKeyPress() const
 {
-	for( int i = 0; i < 0x10; ++i )
+	for( int i = 0; i < 16; ++i )
 	{
 		if( m_aInputs[ i ] )
 			return i;
@@ -79,61 +157,7 @@ uint8_t Input::IsAnyKeyPress() const
 
 void Input::CheckInputState( const uint8_t iKey, GLFWwindow* pWindow )
 {
-	uint8_t iInputId = 0;
-	switch( iKey )
-	{
-		case 0x0:
-			iInputId = GLFW_KEY_0;
-			break;
-		case 0x1:
-			iInputId = GLFW_KEY_1;
-			break;
-		case 0x2:
-			iInputId = GLFW_KEY_2;
-			break;
-		case 0x3:
-			iInputId = GLFW_KEY_3;
-			break;
-		case 0x4:
-			iInputId = GLFW_KEY_4;
-			break;
-		case 0x5:
-			iInputId = GLFW_KEY_5;
-			break;
-		case 0x6:
-			iInputId = GLFW_KEY_6;
-			break;
-		case 0x7:
-			iInputId = GLFW_KEY_7;
-			break;
-		case 0x8:
-			iInputId = GLFW_KEY_8;
-			break;
-		case 0x9:
-			iInputId = GLFW_KEY_9;
-			break;
-		case 0xA:
-			iInputId = GLFW_KEY_A;
-			break;
-		case 0xB:
-			iInputId = GLFW_KEY_B;
-			break;
-		case 0xC:
-			iInputId = GLFW_KEY_C;
-			break;
-		case 0xD:
-			iInputId = GLFW_KEY_D;
-			break;
-		case 0xE:
-			iInputId = GLFW_KEY_E;
-			break;
-		case 0xF:
-			iInputId = GLFW_KEY_F;
-			break;
-		default:
-			std::cerr << "INPUT::KEY_NOT_IMPLEMENTED" << std::endl;
-			break;
-	}
-
-	m_aInputs[ iKey ] = glfwGetKey( pWindow,iInputId ) == GLFW_PRESS;
+	int iKeyId = m_aKeyMap[ iKey ];
+	if( iKeyId )
+		m_aInputs[ iKey ] = glfwGetKey( pWindow,iKeyId ) == GLFW_PRESS;
 }

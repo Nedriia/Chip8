@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <chrono>
 #include "Display.h"
+#include <map>
 
 struct GLFWwindow;
 class alignas ( 16 ) Input
@@ -18,6 +19,8 @@ public:
 
 	void ProcessInput( const std::chrono::steady_clock::time_point& time,bool& quit );
 	void DestroyInputManager();
+	void InitInputFromDatabase( std::map<std::string,int>& aKeys );
+	void InitInputDefault();
 
 	uint8_t GetKeyState( uint8_t iIndex ) const;
 	uint8_t	IsAnyKeyPress() const;
@@ -29,8 +32,11 @@ private:
 
 	void	CheckInputState( const uint8_t iKey,GLFWwindow* pWindow );
 	static Input* m_pSingleton;
+	std::map< uint8_t, int > m_aKeyMap;
 
 	uint8_t m_aInputs[ 0x10 ];
 	std::chrono::steady_clock::time_point m_iLastTimeUpdate;
 	const Display* m_pDisplayInstance;
+	bool m_bEnglishLayout;
+	bool m_bOverride;
 };

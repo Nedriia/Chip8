@@ -92,6 +92,11 @@ void Init_RomSettings::_LoadProgramsSettings( const int iIndex )
 				if( oRom.contains( "tickrate" ) )
 					iRomCustomTickrate = oRom[ "tickrate" ];
 
+				std::map<std::string,int> aKeys;
+				if( oRom.contains( "keys" ) )
+					aKeys = oRom[ "keys" ].get<std::map<std::string,int>>();
+				Input::GetInstance()->InitInputFromDatabase( aKeys );
+
 				//Palette
 				std::vector<std::string > sColors;
 				if( oRom[ "colors" ].contains( "pixels" ) )
