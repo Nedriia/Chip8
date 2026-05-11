@@ -127,7 +127,8 @@ void Init_RomSettings::_LoadProgramsSettings( const int iIndex )
 void Init_RomSettings::_LoadPlatformsSettings( const std::vector<std::string >& sPlatforms,const int iRomCustomTickrate )
 {
 	auto sSupportPlatforms = Chip8::GetPlatformsSupported();
-	for( auto it = sSupportPlatforms->end() - 1; it != sSupportPlatforms->begin(); --it )
+	int iSize = sSupportPlatforms->end() - sSupportPlatforms->begin();
+	for( auto it = sSupportPlatforms->end() - 1; iSize > 0; --iSize )
 	{
 		for( int k = sPlatforms.size() - 1; k >= 0; --k ) //Check for newer chip8 in prior
 		{
@@ -138,6 +139,9 @@ void Init_RomSettings::_LoadPlatformsSettings( const std::vector<std::string >& 
 				return;
 			}
 		}
+
+		if( iSize > 1 )
+			--it;
 	}
 	std::cerr << "ERROR::PLATFORM::NO_SUPPORT_PLATFORM_FOR_THIS_ROM" << std::endl; //We should add a fail process to stop launching the current rom
 }
