@@ -13,7 +13,8 @@ enum class RunningState
 	Running,
 	Pause,
 	StepNextFrame,
-	Reset
+	Reset,
+	Stop
 };
 
 //#define OVERRIDE_DATABASE_QUIRKS //if def set values wanted below, otherwise there are erased by platforms specs quirks
@@ -124,6 +125,7 @@ public:
 	int								GetCycleId() const { return m_iCycle; }
 
 	bool							IsPause() const { return m_oState == RunningState::Pause; }
+	bool							IsStop() const { return m_oState == RunningState::Stop; }
 	bool							IsRunning() const { return m_oState == RunningState::Running; }
 
 	static const int				GetInstructPerFrame() { return m_iInstructionsPerFrame; }

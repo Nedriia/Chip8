@@ -169,18 +169,34 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 			ImGui::Separator();
 
 			if( m_pCPU->IsPause() )
-				ImGui::PushStyleColor( ImGuiCol_Button,ImVec4( 0.5f,0,0,0.62f ) );
+				ImGui::PushStyleColor( ImGuiCol_Button,ImVec4( 0.5f,0.f,0.f,0.62f ) );
+			else if( m_pCPU->IsStop() )
+				ImGui::PushStyleColor( ImGuiCol_Button,ImVec4( 0.37f,0.0f,0.0f,0.62f ) );
 			else
 				ImGui::PushStyleColor( ImGuiCol_Button,ImVec4( 0.35f,0.40f,0.61f,0.62f ) );
 
-			if( ImGui::Button( "Pause" ) && m_pCPU->GetCurrentRomLoaded() != nullptr )
+			if( ImGui::Button( "Pause" ) && m_pCPU->GetCurrentRomLoaded() != nullptr && !m_pCPU->IsStop() )
 				m_pCPU->AskForState( oKey,m_pCPU->IsPause() ? RunningState::Running : RunningState::Pause );
-			ImGui::PopStyleColor();
+
+			bool bPause = m_pCPU->IsPause();
+			if( bPause )
+				ImGui::PopStyleColor();
+
+			if( ImGui::Button( "Step Next Frame" ) && m_pCPU->GetCurrentRomLoaded() != nullptr && !m_pCPU->IsStop() )
+				m_pCPU->AskForState( oKey,RunningState::StepNextFrame );
+			
+			if( !bPause )
+				ImGui::PopStyleColor();
+			
+			if( m_pCPU->IsStop() )
+				ImGui::PushStyleColor( ImGuiCol_Button,ImVec4( 0.23f,0.76f,0.18f,0.62f ) );
+			else
+				ImGui::PushStyleColor( ImGuiCol_Button,ImVec4( 0.35f,0.40f,0.61f,0.62f ) );
 
 			if( ImGui::Button( "Reset" ) )
 				m_pCPU->AskForState( oKey,RunningState::Reset );
-			if( ImGui::Button( "Step Next Frame" ) && m_pCPU->GetCurrentRomLoaded() != nullptr )
-				m_pCPU->AskForState( oKey,RunningState::StepNextFrame );
+
+			ImGui::PopStyleColor();
 			ImGui::Separator();
 
 			float fFps = 1 / ( Display::GetValueMicroSRefresh() / 1000000.0f );

@@ -105,7 +105,6 @@ void Input::InitInputFromDatabase( std::map<std::string,int>& aKeys )
 	if( iValue )
 		m_aKeyMap[ iValue ] = GLFW_KEY_I;
 
-
 	iValue = aKeys[ "player2Down" ];
 	if( iValue )
 		m_aKeyMap[ iValue ] = GLFW_KEY_K;

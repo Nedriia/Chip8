@@ -227,7 +227,7 @@ void Chip8::EmulateCycle( const KeyAccess& key,const std::chrono::steady_clock::
 		m_oState = RunningState::Pause;
 	}
 
-	if( m_oState == RunningState::Pause )
+	if( m_oState == RunningState::Pause || m_oState == RunningState::Stop )
 	{
 		m_iLastTimeUpdate = time;
 		return;
@@ -258,7 +258,7 @@ void Chip8::EmulateCycle( const KeyAccess& key,const std::chrono::steady_clock::
 			_FetchDecode_Opcode();
 
 #ifdef DEBUG_INFO
-			if( _IsEndReached() || bForceNextStep )
+			if( m_oState == RunningState::Stop || _IsEndReached() || bForceNextStep )
 				break;
 #endif
 		}
@@ -566,10 +566,22 @@ inline void Chip8::CLS()
 inline void Chip8::RET()
 {
 	//Returns from a subroutine
-	m_iPC = m_aStack[ m_iSP ];
-	m_aStack[ m_iSP ] = 0;
-	if( m_iSP != 0 )
-		--m_iSP;
+	const uint16_t iValue = m_aStack[ m_iSP ];
+	if( iValue == 0 || iValue >= MEMORY_SIZE )
+	{
+		m_iPC -= 2;
+#ifdef DEBUG_INFO
+		std::cerr << "PC not valid" << std::endl;
+#endif // DEBUG_INFO
+		QUIT();
+	}
+	else
+	{
+		m_iPC = iValue;
+		m_aStack[ m_iSP ] = 0;
+		if( m_iSP != 0 )
+			--m_iSP;
+	}
 
 #ifdef DEBUG_INFO
 	_AddOpcodeToHistory( std::format( "{:04X} : RET",m_iCurrentOpcode ).c_str() );
@@ -897,7 +909,7 @@ inline void Chip8::SCROLL_RIGHT()
 
 inline void Chip8::QUIT()
 {
-	m_oState = RunningState::Pause;//keep it as pause for now, so we keep debug view
+	m_oState = RunningState::Stop;
 
 #ifdef DEBUG_INFO
 	_AddOpcodeToHistory( std::format( "{:04X}  : STOP",m_iCurrentOpcode ).c_str() );
