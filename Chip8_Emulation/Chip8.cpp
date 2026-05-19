@@ -1093,25 +1093,28 @@ inline void Chip8::DRAW()
 {
 	if( Chip8::m_oCurrentQuirk.bDispWaitFlag )
 	{
+		if( !Chip8::m_oCurrentQuirk.bLegacySrolling || ( Chip8::m_oCurrentQuirk.bLegacySrolling && Display::GetInstance()->GetResolutionMode() == ResolutionMode::LORES ) )
+		{
 #ifdef DEBUG_INFO
-		m_sOpcodeInstruct = std::format( "{:04X} : DRW VX, VY VBlank",m_iCurrentOpcode );
+			m_sOpcodeInstruct = std::format( "{:04X} : DRW VX, VY VBlank",m_iCurrentOpcode );
 #endif //DEBUG_INFO
 
-		//VBlank, waiting for next frame
-		if( m_iTimeLastFrame.time_since_epoch().count() == 0 )
-		{
-			m_iTimeLastFrame = m_iLastTimeUpdate;
-			m_iPC -= 2;
-			return;
-		}
-		if( m_iLastTimeUpdate >= ( m_iTimeLastFrame + Display::GetRefreshTick() ) )
-		{
-			m_iTimeLastFrame = {};
-		}
-		else
-		{
-			m_iPC -= 2;
-			return;
+			//VBlank, waiting for next frame
+			if( m_iTimeLastFrame.time_since_epoch().count() == 0 )
+			{
+				m_iTimeLastFrame = m_iLastTimeUpdate;
+				m_iPC -= 2;
+				return;
+			}
+			if( m_iLastTimeUpdate >= ( m_iTimeLastFrame + Display::GetRefreshTick() ) )
+			{
+				m_iTimeLastFrame = {};
+			}
+			else
+			{
+				m_iPC -= 2;
+				return;
+			}
 		}
 	}
 	else
