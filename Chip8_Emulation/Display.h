@@ -29,7 +29,7 @@ public:
 
 	int Init( const KeyDisplayAccess& oKey,const Chip8* pCpu );
 	static void ClearScreen( const KeyDisplayAccess& oKey );
-	static void DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xPos,uint8_t yPos,const uint8_t N,uint8_t& iVFFlag,bool bClipping );
+	static void DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xPos,uint8_t yPos,const uint8_t N,uint8_t& iVFFlag,bool bWrapping );
 	static void ScrollDown( const KeyDisplayAccess& oKey, uint8_t N );
 	static void Scroll( const KeyDisplayAccess& oKey, bool bLeft );
 	void DestroyWindow( const KeyDisplayAccess& oKey );

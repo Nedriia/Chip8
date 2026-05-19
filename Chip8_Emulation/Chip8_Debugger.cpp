@@ -221,7 +221,7 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 			ImGui::Text( "Memory Increment On ( Adress Register++ )" );
 		if( Chip8::m_oCurrentQuirk.bDispWaitFlag )
 			ImGui::Text( "VBlank On" );
-		if( Chip8::m_oCurrentQuirk.bWrapFlag )
+		if( !Chip8::m_oCurrentQuirk.bWrapFlag )
 			ImGui::Text( "Clipping On" );
 		else
 			ImGui::Text( "Wrapping On" );
