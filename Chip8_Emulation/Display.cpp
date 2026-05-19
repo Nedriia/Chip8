@@ -278,54 +278,76 @@ void Display::ClearScreen( const KeyDisplayAccess& oKey )
 void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xPos,uint8_t yPos,uint8_t N,uint8_t& iVFFlag,bool bClipping )
 {
 	Chip8* pInstance = Chip8::GetInstance();
-	//if( N == 0 )
-	//{
-	//	for( uint8_t iYOffset = 0; iYOffset < 16; ++iYOffset,++yPos )
-	//	{
-	//		uint16_t iMemoryValue = 0;
+	if( N == 0 )
+	{
+		for( uint8_t iYOffset = 0; iYOffset < 16; ++iYOffset,++yPos )
+		{
+			if( bClipping && yPos >= m_iDisplayHeight )
+				return;
+			else if( !bClipping )
+				yPos &= ( m_iDisplayHeight - 1 );
 
-	//		iMemoryValue = *( pInstance->GetMemory()->begin() + pInstance->GetI() + ( iYOffset * 2 ) ) << 8 | *( pInstance->GetMemory()->begin() + pInstance->GetI() + ( iYOffset * 2 ) + 1 );
-	//		iMemoryValue = ( iMemoryValue << 8 ) | ( iMemoryValue >> 8 );
-	//		iMemoryValue = ( ( iMemoryValue & 0xF0F0 ) >> 4 ) | ( ( iMemoryValue & 0x0F0F ) << 4 );
-	//		iMemoryValue = ( ( iMemoryValue & 0xCCCC ) >> 2 ) | ( ( iMemoryValue & 0x3333 ) << 2 );
-	//		iMemoryValue = ( ( iMemoryValue & 0xAAAA ) >> 1 ) | ( ( iMemoryValue & 0x5555 ) << 1 );
+			uint16_t iMemoryValue =	*( pInstance->GetMemory()->begin() + pInstance->GetI() + ( iYOffset * 2 ) ) << 8 | 
+									*( pInstance->GetMemory()->begin() + pInstance->GetI() + ( iYOffset * 2 ) + 1 );
 
-	//		uint64_t iLine1 = m_pPixels[ yPos ][ 0 ];
-	//		uint64_t iLine2 = m_pPixels[ yPos ][ 1 ];
-	//		uint64_t iPreviousValue1 = m_pPixels[ yPos ][ 0 ];
-	//		uint64_t iPreviousValue2 = m_pPixels[ yPos ][ 1 ];
+			iMemoryValue = ( ( iMemoryValue & 0xFF00 ) >> 8 ) | ( ( iMemoryValue & 0x00FF ) << 8 ); // swap bytes
+			iMemoryValue = ( ( iMemoryValue & 0xF0F0 ) >> 4 ) | ( ( iMemoryValue & 0x0F0F ) << 4 ); // swap nibbles
+			iMemoryValue = ( ( iMemoryValue & 0xCCCC ) >> 2 ) | ( ( iMemoryValue & 0x3333 ) << 2 ); // swap pairs
+			iMemoryValue = ( ( iMemoryValue & 0xAAAA ) >> 1 ) | ( ( iMemoryValue & 0x5555 ) << 1 ); // swap bits
 
-	//		//Check in wich block we are, or if both
-	//		if( xPos < 64 && xPos + 16 >= 64 )
-	//		{
-	//			int xShift = xPos + 16;
-	//			int iAns = xShift - 64;
+			//Check in wich block we are, or if both
+			if( xPos < 64 && xPos + 16 >= 64 )
+			{
+				int xShift = xPos + 16;
+				int iAns = xShift - 64;
 
-	//			uint64_t iLine1 = static_cast< uint64_t >( iMemoryValue ) << xPos;
-	//			uint64_t iLine2 = static_cast< uint64_t >( iMemoryValue ) >> ( 16 - iAns );
+				uint64_t iPreviousValue1 = m_pPixels[ yPos ][ 0 ];
+				uint64_t iPreviousValue2 = m_pPixels[ yPos ][ 1 ];
 
-	//			iVFFlag |= ( m_pPixels[ yPos ][ 0 ] & iLine1 ) || ( m_pPixels[ yPos ][ 1 ] & iLine2 );
+				uint64_t iLine1 = static_cast< uint64_t >( iMemoryValue ) << xPos;
+				uint64_t iLine2 = static_cast< uint64_t >( iMemoryValue ) >> ( 16 - iAns );
 
-	//			m_pPixels[ yPos ][ 0 ] ^= iLine1;
-	//			m_pPixels[ yPos ][ 1 ] ^= iLine2;
-	//		}
-	//		else if( xPos < 64 )
-	//		{
-	//			//if( bClipping )//TODO : wrap
-	//			iLine1 = static_cast< uint64_t >( iMemoryValue ) << xPos;
-	//			iVFFlag |= ( m_pPixels[ yPos ][ 0 ] & iLine1 );
-	//			m_pPixels[ yPos ][ 0 ] ^= iLine1;
-	//		}
-	//		else if( xPos >= 64 )
-	//		{
-	//			iLine2 = static_cast< uint64_t >( iMemoryValue ) << ( xPos - 64 );
-	//			iVFFlag |= ( m_pPixels[ yPos ][ 1 ] & iLine2 );
-	//			m_pPixels[ yPos ][ 1 ] ^= iLine2;
-	//		}
-	//		m_bDirtyFrame |= ( iPreviousValue1 != m_pPixels[ yPos ][ 0 ] || iPreviousValue2 != m_pPixels[ yPos ][ 1 ] );
-	//	}
-	//	return;
-	//}
+				iVFFlag |= ( m_pPixels[ yPos ][ 0 ] & iLine1 ) || ( m_pPixels[ yPos ][ 1 ] & iLine2 ) ? 1 : 0;
+
+				m_pPixels[ yPos ][ 0 ] ^= iLine1;
+				m_pPixels[ yPos ][ 1 ] ^= iLine2;
+
+				m_bDirtyFrame |= ( iPreviousValue1 != m_pPixels[ yPos ][ 0 ] ) || ( iPreviousValue2 != m_pPixels[ yPos ][ 1 ] );
+			}
+			else if( xPos < 64 )
+			{
+				uint64_t iPreviousValue = m_pPixels[ yPos ][ 0 ];
+
+				uint64_t iLine = static_cast< uint64_t >( iMemoryValue ) << xPos;
+
+				iVFFlag |= ( m_pPixels[ yPos ][ 0 ] & iLine ) ? 1 : 0;
+				m_pPixels[ yPos ][ 0 ] ^= iLine;
+				m_bDirtyFrame |= ( iPreviousValue != m_pPixels[ yPos ][ 0 ] );
+			}
+			else if( xPos >= 64 )
+			{
+				uint64_t iPreviousValue1 = m_pPixels[ yPos ][ 0 ];
+				uint64_t iPreviousValue2 = m_pPixels[ yPos ][ 1 ];
+				uint64_t iLine = static_cast< uint64_t >( iMemoryValue ) << ( xPos - 64 );
+
+				iVFFlag |= ( m_pPixels[ yPos ][ 1 ] & iLine ) ? 1 : 0;
+				m_pPixels[ yPos ][ 1 ] ^= iLine;
+
+				if( !bClipping )
+				{
+					uint64_t iOverflow = ( xPos + 16 ) >= 128 ? static_cast< uint64_t >( iMemoryValue ) >> ( 128 - xPos ) : 0;
+					if( iOverflow )
+					{
+						iVFFlag |= ( m_pPixels[ yPos ][ 0 ] & iOverflow ) ? 1 : 0;
+						m_pPixels[ yPos ][ 0 ] ^= iOverflow;
+					}
+				}
+
+				m_bDirtyFrame |= ( iPreviousValue1 != m_pPixels[ yPos ][ 0 ] ) || ( iPreviousValue2 != m_pPixels[ yPos ][ 1 ] );
+			}
+		}
+		return;
+	}
 
 	for( uint8_t iYOffset = 0; iYOffset < N; ++iYOffset, ++yPos )
 	{
@@ -342,7 +364,7 @@ void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xPos,uint8_t 
 #ifdef OVERFLOW_CONTROL
 		iOffset &= 0xFFF;
 #endif	
-
+		
 		if( GetResolutionMode() != ResolutionMode::HIRES )
 		{
 			uint64_t iPreviousValue = m_pPixels[ yPos ][ 0 ];
@@ -365,6 +387,9 @@ void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xPos,uint8_t 
 			//Check in wich block we are, or if both
 			if( xPos < 64 && xPos + 8 >= 64 )
 			{
+				uint64_t iPreviousValue = m_pPixels[ yPos ][ 0 ];
+				uint64_t iPreviousValue2 = m_pPixels[ yPos ][ 1 ];
+
 				int xShift = xPos + 8;
 				int iAns = xShift - 64;
 
@@ -374,7 +399,10 @@ void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xPos,uint8_t 
 				iVFFlag |= ( m_pPixels[ yPos ][ 0 ] & iLine1 ) || ( m_pPixels[ yPos ][ 1 ] & iLine2 ) ? 1 : 0;
 
 				m_pPixels[ yPos ][ 0 ] ^= iLine1;
-				m_pPixels[ yPos ][ 1 ] ^= iLine2;//TODO : Wrapping
+				m_pPixels[ yPos ][ 1 ] ^= iLine2;
+
+				m_bDirtyFrame |= ( iPreviousValue != m_pPixels[ yPos ][ 0 ] ) || ( iPreviousValue2 != m_pPixels[ yPos ][ 1 ] );
+
 			}
 			else if( xPos < 64 )
 			{
@@ -390,7 +418,7 @@ void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xPos,uint8_t 
 			{
 				uint64_t iPreviousValue = m_pPixels[ yPos ][ 1 ];
 
-				iLine = static_cast< uint64_t >( iMemoryValue ) << xPos;
+				iLine = static_cast< uint64_t >( iMemoryValue ) << ( xPos - 64 );
 
 				iVFFlag |= ( m_pPixels[ yPos ][ 1 ] & iLine ) ? 1 : 0;
 				m_pPixels[ yPos ][ 1 ] ^= iLine;

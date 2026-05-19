@@ -292,11 +292,8 @@ void Chip8::_FetchDecode_Opcode()
 #endif
 	
 #ifndef USE_SWITCH_BRANCH
-	m_iCurrentOpcode = m_aMemory[ m_iPC ] << 8 | m_aMemory[ m_iPC + 1 ];
 	uint16_t iStartPC = m_iPC;
 	m_iPC += 2;
-
-#ifndef USE_SWITCH_BRANCH
 
 	m_pCurrentOpcode = &m_aMirorMemory[ iStartPC ];
 	if( m_pCurrentOpcode->fct != nullptr )
@@ -329,8 +326,6 @@ void Chip8::_FetchDecode_Opcode()
 			CLS();
 		else if( check == 0xEE )
 			RET();
-		else if( GetY() == 0xC )
-			SCROLL_DOWN();
 		else if( check == 0xFB )
 			SCROLL_RIGHT();
 		else if( check == 0xFC )
@@ -587,10 +582,9 @@ inline void Chip8::RET()
 #endif // OVERFLOW_CONTROL
 
 	m_iPC = m_aStack[ m_iSP ];
-		m_aStack[ m_iSP ] = 0;
-		if( m_iSP != 0 )
-			--m_iSP;
-	}
+	m_aStack[ m_iSP ] = 0;
+	if( m_iSP != 0 )
+		--m_iSP;
 
 #ifdef DEBUG_INFO
 	_AddOpcodeToHistory( std::format( "{:04X} : RET",m_iCurrentOpcode ).c_str() );
@@ -822,11 +816,6 @@ inline void Chip8::LD_I_VX()
 #else // OVERFLOW_CONTROL
 			m_aMemory[ m_iI + i ] = m_aRegisters[ i ];
 #endif
-			++m_iI;
-		}
-		else
-		{
-			m_aMemory[ m_iI + i ] = m_aRegisters[ i ];
 		}
 	}
 
@@ -852,7 +841,6 @@ inline void Chip8::LD_VX_I()
 #else
 			++m_iI;
 #endif
-			++m_iI;
 		}
 		else
 		{
@@ -861,7 +849,6 @@ inline void Chip8::LD_VX_I()
 #else
 			m_aRegisters[ i ] = m_aMemory[ m_iI + i ];
 #endif
-			m_aRegisters[ i ] = m_aMemory[ m_iI + i ];
 		}
 	}
 
@@ -1235,9 +1222,6 @@ inline void Chip8::BCD()
 	m_aMemory[ m_iI + 1 ] = ( m_aRegisters[ X ] / 10 ) % 10;
 	m_aMemory[ m_iI + 2 ] = ( m_aRegisters[ X ] % 100 ) % 10;
 #endif
-	m_aMemory[ m_iI ] = m_aRegisters[ X ] / 100;
-	m_aMemory[ m_iI + 1 ] = ( m_aRegisters[ X ] / 10 ) % 10;
-	m_aMemory[ m_iI + 2 ] = ( m_aRegisters[ X ] % 100 ) % 10;
 
 #ifdef DEBUG_INFO
 	_AddOpcodeToHistory( std::format( "{:04X} : BCD",m_iCurrentOpcode ).c_str() );
