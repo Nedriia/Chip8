@@ -416,13 +416,24 @@ void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xPos,uint8_t 
 			}
 			else if( xPos >= 64 )
 			{
-				uint64_t iPreviousValue = m_pPixels[ yPos ][ 1 ];
-
-				iLine = static_cast< uint64_t >( iMemoryValue ) << ( xPos - 64 );
+				uint64_t iPreviousValue1 = m_pPixels[ yPos ][ 0 ];
+				uint64_t iPreviousValue2 = m_pPixels[ yPos ][ 1 ];
+				uint64_t iLine = static_cast< uint64_t >( iMemoryValue ) << ( xPos - 64 );
 
 				iVFFlag |= ( m_pPixels[ yPos ][ 1 ] & iLine ) ? 1 : 0;
 				m_pPixels[ yPos ][ 1 ] ^= iLine;
-				m_bDirtyFrame |= ( iPreviousValue != m_pPixels[ yPos ][ 1 ] );
+
+				if( !bClipping )
+				{
+					uint64_t iOverflow = ( xPos + 8 ) >= 128 ? static_cast< uint64_t >( iMemoryValue ) >> ( 128 - xPos ) : 0;
+					if( iOverflow )
+					{
+						iVFFlag |= ( m_pPixels[ yPos ][ 0 ] & iOverflow ) ? 1 : 0;
+						m_pPixels[ yPos ][ 0 ] ^= iOverflow;
+					}
+				}
+
+				m_bDirtyFrame |= ( iPreviousValue1 != m_pPixels[ yPos ][ 0 ] ) || ( iPreviousValue2 != m_pPixels[ yPos ][ 1 ] );
 			}
 		}
 	}
