@@ -8,6 +8,8 @@
 #include "Input.h"
 #include "Display.h"
 
+#define OVERFLOW_CONTROL
+
 enum class RunningState
 {
 	Running,
@@ -116,12 +118,12 @@ public:
 	const Data< uint8_t>* GetRegisters() const { return m_aRegisters; }
 	const std::deque<std::string>& GetHistoryOpcode() const { return m_aOpcodeHistory; }
 
-	const Data< uint16_t>& GetI() const { return m_iI; }
-	const Data< uint16_t>& GetPC() const { return m_iPC; }
+	const Data< uint16_t> GetI() const { return m_iI; }
+	const Data< uint16_t> GetPC() const { return m_iPC; }
 
-	const Data< uint8_t>& GetSP() const { return m_iSP; }
-	const Data< uint8_t>& GetDelayTimer() const { return m_iDelay_timer; }
-	const Data< uint8_t>& GetSoundTimer() const { return m_iSound_timer; }
+	const Data< uint8_t> GetSP() const { return m_iSP; }
+	const Data< uint8_t> GetDelayTimer() const { return m_iDelay_timer; }
+	const Data< uint8_t> GetSoundTimer() const { return m_iSound_timer; }
 	int								GetCycleId() const { return m_iCycle; }
 
 	bool							IsPause() const { return m_oState == RunningState::Pause; }

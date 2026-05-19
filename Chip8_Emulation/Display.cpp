@@ -337,11 +337,17 @@ void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xPos,uint8_t 
 		uint16_t iMemoryValue = 0;
 		uint64_t iLine = 0;
 
+		uint16_t iOffset = ( pInstance->GetI() + iYOffset );
+
+#ifdef OVERFLOW_CONTROL
+		iOffset &= 0xFFF;
+#endif	
+
 		if( GetResolutionMode() != ResolutionMode::HIRES )
 		{
 			uint64_t iPreviousValue = m_pPixels[ yPos ][ 0 ];
 
-			iMemoryValue = BitReversal( ( uint8_t& )*( pInstance->GetMemory()->begin() + ( pInstance->GetI() + iYOffset ) ) );
+			iMemoryValue = BitReversal( ( uint8_t& )*( pInstance->GetMemory()->begin() + iOffset ) );
 
 			if( bClipping )
 				iLine = static_cast< uint64_t >( iMemoryValue ) << xPos;
@@ -354,7 +360,7 @@ void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xPos,uint8_t 
 		}
 		else
 		{
-			iMemoryValue = BitReversal( ( uint8_t& )*( pInstance->GetMemory()->begin() + ( pInstance->GetI() + iYOffset ) ) );
+			iMemoryValue = BitReversal( ( uint8_t& )*( pInstance->GetMemory()->begin() + iOffset ) );
 
 			//Check in wich block we are, or if both
 			if( xPos < 64 && xPos + 8 >= 64 )

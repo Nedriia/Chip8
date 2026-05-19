@@ -2,6 +2,7 @@
 #include <chrono>
 #include "Display.h"
 #include <iostream>
+#include "Chip8.h"
 
 Input* Input::m_pSingleton = nullptr;
 
@@ -134,12 +135,9 @@ void Input::InitInputDefault()
 
 uint8_t Input::GetKeyState( uint8_t iIndex ) const
 {
-	if( iIndex >= 0x10 )
-	{
-		std::cerr << "INPUT::OUT_OF_RANGE" << std::endl;
-		return 0;
-	}
-
+#ifdef OVERFLOW_CONTROL
+	iIndex &= 0xF;
+#endif
 	return m_aInputs[ iIndex ];
 }
 

@@ -283,6 +283,15 @@ void Chip8::DestroyCpu()
 
 void Chip8::_FetchDecode_Opcode()
 {
+#ifdef OVERFLOW_CONTROL
+	m_iI &= 0xFFF;
+	m_iPC &= 0xFFF;
+	m_iCurrentOpcode = m_aMemory[ m_iPC ] << 8 | m_aMemory[ ( m_iPC + 1 ) & 0xFFF ];
+#else
+	m_iCurrentOpcode = m_aMemory[ m_iPC ] << 8 | m_aMemory[ m_iPC + 1 ];
+#endif
+	
+#ifndef USE_SWITCH_BRANCH
 	m_iCurrentOpcode = m_aMemory[ m_iPC ] << 8 | m_aMemory[ m_iPC + 1 ];
 	uint16_t iStartPC = m_iPC;
 	m_iPC += 2;
@@ -305,6 +314,8 @@ void Chip8::_FetchDecode_Opcode()
 		CheckOpcodeAndExec( iIndex,m_aMainTable );
 	}
 #else
+	m_iPC += 2;
+
 	//Serve only as comparaison
 	uint16_t opcodeNibble = m_iCurrentOpcode & 0xF000;
 	switch( opcodeNibble )
@@ -312,7 +323,9 @@ void Chip8::_FetchDecode_Opcode()
 	case 0x0000:
 	{
 		uint16_t check = m_iCurrentOpcode & 0x00FF;
-		if( check == 0xE0 )
+		if( GetY() == 0x0C )
+			SCROLL_DOWN();
+		else if( check == 0xE0 )
 			CLS();
 		else if( check == 0xEE )
 			RET();
@@ -565,19 +578,15 @@ inline void Chip8::CLS()
 
 inline void Chip8::RET()
 {
-	//Returns from a subroutine
-	const uint16_t iValue = m_aStack[ m_iSP ];
-	if( iValue == 0 || iValue >= MEMORY_SIZE )
+#ifdef OVERFLOW_CONTROL
+	if( m_iSP >= 0xF )
 	{
-		m_iPC -= 2;
-#ifdef DEBUG_INFO
-		std::cerr << "PC not valid" << std::endl;
-#endif // DEBUG_INFO
 		QUIT();
+		return;
 	}
-	else
-	{
-		m_iPC = iValue;
+#endif // OVERFLOW_CONTROL
+
+	m_iPC = m_aStack[ m_iSP ];
 		m_aStack[ m_iSP ] = 0;
 		if( m_iSP != 0 )
 			--m_iSP;
@@ -623,6 +632,14 @@ inline void Chip8::JMP_NNN()
 
 inline void Chip8::CALL()
 {
+#ifdef OVERFLOW_CONTROL
+	if( m_iSP >= 0xF )
+	{
+		QUIT();
+		return;
+	}
+#endif
+
 	if( m_aStack[ 0 ] != 0 ) //could be simplier to use int and init the value to -1 but I want to keep 0 as start
 		++m_iSP;
 
@@ -792,6 +809,19 @@ inline void Chip8::LD_I_VX()
 		if( !Chip8::m_oCurrentQuirk.bMemoryIncrementByX )
 		{
 			m_aMemory[ m_iI ] = m_aRegisters[ i ];
+#ifdef OVERFLOW_CONTROL
+			m_iI = ( m_iI + 1 ) & 0xFFF;
+#else // OVERFLOW_CONTROL
+			++m_iI;
+#endif
+		}
+		else
+		{
+#ifdef OVERFLOW_CONTROL
+			m_aMemory[ ( m_iI + i ) & 0xFFF ] = m_aRegisters[ i ];
+#else // OVERFLOW_CONTROL
+			m_aMemory[ m_iI + i ] = m_aRegisters[ i ];
+#endif
 			++m_iI;
 		}
 		else
@@ -817,10 +847,20 @@ inline void Chip8::LD_VX_I()
 		if( !Chip8::m_oCurrentQuirk.bMemoryIncrementByX )
 		{
 			m_aRegisters[ i ] = m_aMemory[ m_iI ];
+#ifdef OVERFLOW_CONTROL
+			m_iI = ( m_iI + 1 ) & 0xFFF;
+#else
+			++m_iI;
+#endif
 			++m_iI;
 		}
 		else
 		{
+#ifdef OVERFLOW_CONTROL
+			m_aRegisters[ i ] = m_aMemory[ ( m_iI + i ) & 0xFFF ];
+#else
+			m_aRegisters[ i ] = m_aMemory[ m_iI + i ];
+#endif
 			m_aRegisters[ i ] = m_aMemory[ m_iI + i ];
 		}
 	}
@@ -1186,6 +1226,15 @@ inline void Chip8::BCD()
 	uint8_t X = GetX();
 
 	//Stores the binary-coded decimal representation of VX, with the hundreds digit in memory at location in I, the tens digit at location I+1, and the ones digit at location I+2
+#ifdef OVERFLOW_CONTROL
+	m_aMemory[ m_iI & 0xFFF ] = m_aRegisters[ X ] / 100;
+	m_aMemory[ ( m_iI + 1 ) & 0xFFF ] = ( m_aRegisters[ X ] / 10 ) % 10;
+	m_aMemory[ ( m_iI + 2 ) & 0xFFF ] = ( m_aRegisters[ X ] % 100 ) % 10;
+#else
+	m_aMemory[ m_iI ] = m_aRegisters[ X ] / 100;
+	m_aMemory[ m_iI + 1 ] = ( m_aRegisters[ X ] / 10 ) % 10;
+	m_aMemory[ m_iI + 2 ] = ( m_aRegisters[ X ] % 100 ) % 10;
+#endif
 	m_aMemory[ m_iI ] = m_aRegisters[ X ] / 100;
 	m_aMemory[ m_iI + 1 ] = ( m_aRegisters[ X ] / 10 ) % 10;
 	m_aMemory[ m_iI + 2 ] = ( m_aRegisters[ X ] % 100 ) % 10;
