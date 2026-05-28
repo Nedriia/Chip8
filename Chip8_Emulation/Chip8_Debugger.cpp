@@ -229,6 +229,8 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 			ImGui::Text( "Shifting On ( Registers[X] = Registers[Y] >> 1 )" );
 		if( Chip8::m_oCurrentQuirk.bQuirkJumpingFlag )
 			ImGui::Text( "Jumping On ( NNN + Registers[0] )" );
+		if( Chip8::m_oCurrentQuirk.bLegacySrolling )
+			ImGui::Text( "Legacy Scrolling On" );
 	}
 	ImGui::End();
 
@@ -293,18 +295,36 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 					ImGui::Text( std::format( "{:#06X}:",i ).c_str() );
 					ImGui::SameLine();
 
+					std::string sAscii;
 					for( int n = i; n < i + 0x10; ++n )
 					{
 						if( n == i + 8 )
 						{
-							ImGui::Text( "-" );
+							ImGui::Text( "|" );
 							ImGui::SameLine();
 						}
 						auto pMemoryOffset = m_pCPU->GetMemory()->begin() + n;
 						if( pMemoryOffset != m_pCPU->GetMemory()->end() )
+						{
 							FormatDebugData( "","%02X",*( pMemoryOffset ),m_iMemorySelected,iIndex );
+
+							uint8_t val = *( pMemoryOffset );
+							if( val != 0 )
+							{
+								if( val < 33 || val > 126 )
+									sAscii += ".";
+								else
+									sAscii += val;
+							}
+						}
 						ImGui::SameLine();
 					}
+
+					ImGui::Text( "|" );
+					ImGui::SameLine();
+					ImGui::Text( sAscii.c_str() );
+					ImGui::SameLine();
+
 					ImGui::PopID();
 					ImGui::NewLine();
 				}
