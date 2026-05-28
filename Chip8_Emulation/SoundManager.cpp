@@ -1,5 +1,6 @@
 #include "SoundManager.h"
 #include <iostream>
+#include "Chip8.h"
 
 #define MINIAUDIO_IMPLEMENTATION
 #include "MiniAudio/miniaudio.h"
@@ -44,8 +45,9 @@ void SoundManager::Manage( const uint8_t soundTimer )
 
 static void data_callback( ma_device* pDevice,void* pOutput,const void* pInput,ma_uint32 frameCount )
 {
+	bool bPause = !Chip8::GetInstance()->IsRunning();
 	SoundManager::squareWave = ( ma_waveform* )pDevice->pUserData;
-	if( SoundManager::m_bPlaySound && SoundManager::squareWave != nullptr )
+	if( !bPause && SoundManager::m_bPlaySound && SoundManager::squareWave != nullptr )
 		ma_waveform_read_pcm_frames( SoundManager::squareWave,pOutput,frameCount,NULL );
 	else
 		ma_silence_pcm_frames( pOutput, frameCount,DEVICE_FORMAT,DEVICE_CHANNELS );
