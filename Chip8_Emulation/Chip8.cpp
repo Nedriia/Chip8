@@ -1132,12 +1132,10 @@ inline void Chip8::DRAW()
 	I value does not change after the execution of this instruction*/
 
 	Display::KeyDisplayAccess oKeyDisplay;
-	uint8_t xPos = m_aRegisters[ GetX() ] & ( Display::GetWidth() - 1 );
-	uint8_t yPos = m_aRegisters[ GetY() ] & ( Display::GetHeight() - 1 );
 
-	uint8_t& iVFFlag = ( uint8_t& )m_aRegisters[ 15 ];
-	iVFFlag = 0;
-	Display::DrawPixelAtPos( oKeyDisplay,xPos,yPos,GetN(),iVFFlag,Chip8::m_oCurrentQuirk.bWrapFlag );
+	uint8_t iVFFlag = 0;
+	Display::DrawPixelAtPos( oKeyDisplay,m_aRegisters[ GetX() ],m_aRegisters[ GetY() ],GetN(),iVFFlag,Chip8::m_oCurrentQuirk.bWrapFlag );
+	m_aRegisters[ 15 ] = iVFFlag;
 
 #ifdef DEBUG_INFO
 	_AddOpcodeToHistory( m_sOpcodeInstruct.c_str() );
@@ -1219,11 +1217,11 @@ inline void Chip8::BCD()
 #ifdef OVERFLOW_CONTROL
 	m_aMemory[ m_iI & 0xFFF ] = m_aRegisters[ X ] / 100;
 	m_aMemory[ ( m_iI + 1 ) & 0xFFF ] = ( m_aRegisters[ X ] / 10 ) % 10;
-	m_aMemory[ ( m_iI + 2 ) & 0xFFF ] = ( m_aRegisters[ X ] % 100 ) % 10;
+	m_aMemory[ ( m_iI + 2 ) & 0xFFF ] = m_aRegisters[ X ] % 10;
 #else
 	m_aMemory[ m_iI ] = m_aRegisters[ X ] / 100;
 	m_aMemory[ m_iI + 1 ] = ( m_aRegisters[ X ] / 10 ) % 10;
-	m_aMemory[ m_iI + 2 ] = ( m_aRegisters[ X ] % 100 ) % 10;
+	m_aMemory[ m_iI + 2 ] = m_aRegisters[ X ] % 10;
 #endif
 
 #ifdef DEBUG_INFO
