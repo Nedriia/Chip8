@@ -13,6 +13,7 @@ bool Display::m_bDirtyFrame = false;
 Display* Display::m_pSingleton = nullptr;
 
 unsigned int Display::m_iFBOTexture = 0;
+unsigned int Display::m_iTexture = 0;
 
 int Display::m_iValueMicroSRefresh = 16666;
 std::chrono::microseconds Display::m_iCurrentTick = std::chrono::microseconds( Display::m_iValueMicroSRefresh );
@@ -24,10 +25,10 @@ std::string Display::m_sGameTitle = "";
 
 float vertices[] = {
 	// positions		//Texture coords
-	1.f, 1.0f, 0.0f,	1.0f, 0.0f,		// top right
-	1.0f, -1.0f, 0.0f,	1.0f, 1.0f,		// bottom right
-	-1.0f, -1.0f, 0.0f,	0.0f, 1.0f,		// bottom left 
-	-1.0f, 1.0f, 0.0f,	0.0f, 0.0f,		// top left
+	1.f, 1.0f, 0.0f,	0.0f, 0.0f,		// top right
+	1.0f, -1.0f, 0.0f,	0.0f, 1.0f,		// bottom right
+	-1.0f, -1.0f, 0.0f,	1.0f, 1.0f,		// bottom left 
+	-1.0f, 1.0f, 0.0f,	1.0f, 0.0f,		// top left
 };
 
 unsigned int indices[] = {
@@ -37,7 +38,6 @@ unsigned int indices[] = {
 
 Display::Display() :
 	m_pWindow( nullptr ),
-	m_iTexture( 0 ),
 	m_iVAO( 0 ),
 	m_iVBO( 0 ),
 	m_iEBO( 0 ),
@@ -242,6 +242,8 @@ void Display::framebuffer_size_callback( GLFWwindow* m_pWindow,int width,int hei
 
 	glBindTexture( GL_TEXTURE_2D,0 );
 
+	glBindTexture( GL_TEXTURE_2D,m_iTexture );
+
 	m_bDirtyFrame = true;
 #endif
 }
@@ -275,165 +277,198 @@ void Display::ClearScreen( const KeyDisplayAccess& oKey )
 	_InitPixelsData();
 }
 
-void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xPos,uint8_t yPos,uint8_t N,uint8_t& iVFFlag,bool bWrapping )
+void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xStartingPos,uint8_t yStartingPos,uint8_t N,uint8_t& iVFFlag,bool bWrapping )
 {
 	Chip8* pInstance = Chip8::GetInstance();
+
+	uint8_t iCurrentX = xStartingPos & ( m_iDisplayWidth - 1 );
+	uint8_t iCurrentY = yStartingPos & ( m_iDisplayHeight - 1 );
+
+	int iSpriteSize = 8;
 	if( N == 0 )
 	{
-		for( uint8_t iYOffset = 0; iYOffset < 16; ++iYOffset,++yPos )
-		{
-			if( !bWrapping && yPos >= m_iDisplayHeight )
-				return;
-			else if( bWrapping )
-				yPos &= ( m_iDisplayHeight - 1 );
+		uint8_t iIndex = m_iDisplayWidth == 64 ? 1 : 0;
+		uint8_t iIndex2 = iIndex == 0 ? 1 : 0;
 
-			uint16_t iMemoryValue =	*( pInstance->GetMemory()->begin() + pInstance->GetI() + ( iYOffset * 2 ) ) << 8 | 
+		iSpriteSize = 16;
+		for( uint8_t iYOffset = 0; iYOffset < 16; ++iYOffset,++iCurrentY )
+		{
+			if( !bWrapping )
+			{
+				if( iCurrentY >= m_iDisplayHeight )
+					return;
+			}
+			else if( bWrapping )
+				iCurrentY &= ( m_iDisplayHeight - 1 );
+
+			uint16_t iMemoryValue = *( pInstance->GetMemory()->begin() + pInstance->GetI() + ( iYOffset * 2 ) ) << 8 |
 									*( pInstance->GetMemory()->begin() + pInstance->GetI() + ( iYOffset * 2 ) + 1 );
 
-			iMemoryValue = ( ( iMemoryValue & 0xFF00 ) >> 8 ) | ( ( iMemoryValue & 0x00FF ) << 8 ); // swap bytes
-			iMemoryValue = ( ( iMemoryValue & 0xF0F0 ) >> 4 ) | ( ( iMemoryValue & 0x0F0F ) << 4 ); // swap nibbles
-			iMemoryValue = ( ( iMemoryValue & 0xCCCC ) >> 2 ) | ( ( iMemoryValue & 0x3333 ) << 2 ); // swap pairs
-			iMemoryValue = ( ( iMemoryValue & 0xAAAA ) >> 1 ) | ( ( iMemoryValue & 0x5555 ) << 1 ); // swap bits
+			uint64_t iLine = static_cast< uint64_t >( iMemoryValue ) << 48;
+
+			uint64_t iPreviousValue = m_pPixels[ iCurrentY ][ iIndex ];
+			uint64_t iPreviousValue2 = m_pPixels[ iCurrentY ][ iIndex2 ];
 
 			//Check in wich block we are, or if both
-			if( xPos < 64 && xPos + 16 >= 64 )
+			if( iCurrentX < 64 && iCurrentX + iSpriteSize >= 64 )
 			{
-				int xShift = xPos + 16;
-				int iAns = xShift - 64;
+				if( m_iDisplayWidth > 64 )
+				{
+					int xShift = iCurrentX + iSpriteSize;
+					int iAns = xShift - 64;
 
-				uint64_t iPreviousValue1 = m_pPixels[ yPos ][ 0 ];
-				uint64_t iPreviousValue2 = m_pPixels[ yPos ][ 1 ];
+					uint64_t iLine2 = iLine;
+					iLine <<= ( iSpriteSize - iAns );
+					iLine2 >>= iCurrentX;
 
-				uint64_t iLine1 = static_cast< uint64_t >( iMemoryValue ) << xPos;
-				uint64_t iLine2 = static_cast< uint64_t >( iMemoryValue ) >> ( 16 - iAns );
+					iVFFlag |= ( m_pPixels[ iCurrentY ][ iIndex ] & iLine ) || ( m_pPixels[ iCurrentY ][ iIndex2 ] & iLine2 ) ? 1 : 0;
 
-				iVFFlag |= ( m_pPixels[ yPos ][ 0 ] & iLine1 ) || ( m_pPixels[ yPos ][ 1 ] & iLine2 ) ? 1 : 0;
+					m_pPixels[ iCurrentY ][ iIndex ] ^= iLine;
+					m_pPixels[ iCurrentY ][ iIndex2 ] ^= iLine2;
+				}
+				else
+				{
+					if( bWrapping )
+						iLine = iLine >> iCurrentX | iLine << ( m_iDisplayWidth - iCurrentX );
+					else
+						iLine >>= iCurrentX;
 
-				m_pPixels[ yPos ][ 0 ] ^= iLine1;
-				m_pPixels[ yPos ][ 1 ] ^= iLine2;
+					m_pPixels[ iCurrentY ][ iIndex2 ] ^= iLine;
+				}
 
-				m_bDirtyFrame |= ( iPreviousValue1 != m_pPixels[ yPos ][ 0 ] ) || ( iPreviousValue2 != m_pPixels[ yPos ][ 1 ] );
+				m_bDirtyFrame |= ( iPreviousValue != m_pPixels[ iCurrentY ][ iIndex ] ) || ( iPreviousValue2 != m_pPixels[ iCurrentY ][ iIndex2 ] );
 			}
-			else if( xPos < 64 )
+			else if( iCurrentX < 64 )
 			{
-				uint64_t iPreviousValue = m_pPixels[ yPos ][ 0 ];
+				iLine >>= iCurrentX;
 
-				uint64_t iLine = static_cast< uint64_t >( iMemoryValue ) << xPos;
+				iVFFlag |= ( m_pPixels[ iCurrentY ][ iIndex2 ] & iLine ) ? 1 : 0;
+				m_pPixels[ iCurrentY ][ iIndex2 ] ^= iLine;
 
-				iVFFlag |= ( m_pPixels[ yPos ][ 0 ] & iLine ) ? 1 : 0;
-				m_pPixels[ yPos ][ 0 ] ^= iLine;
-				m_bDirtyFrame |= ( iPreviousValue != m_pPixels[ yPos ][ 0 ] );
+				m_bDirtyFrame |= ( iPreviousValue2 != m_pPixels[ iCurrentY ][ iIndex2 ] );
 			}
-			else if( xPos >= 64 )
+			else if( iCurrentX >= 64 )
 			{
-				uint64_t iPreviousValue1 = m_pPixels[ yPos ][ 0 ];
-				uint64_t iPreviousValue2 = m_pPixels[ yPos ][ 1 ];
-				uint64_t iLine = static_cast< uint64_t >( iMemoryValue ) << ( xPos - 64 );
+				iLine >>= ( iCurrentX - 64 );
 
-				iVFFlag |= ( m_pPixels[ yPos ][ 1 ] & iLine ) ? 1 : 0;
-				m_pPixels[ yPos ][ 1 ] ^= iLine;
+				iVFFlag |= ( m_pPixels[ iCurrentY ][ iIndex ] & iLine ) ? 1 : 0;
+				m_pPixels[ iCurrentY ][ iIndex ] ^= iLine;
 
 				if( bWrapping )
 				{
-					uint64_t iOverflow = ( xPos + 16 ) >= 128 ? static_cast< uint64_t >( iMemoryValue ) >> ( 128 - xPos ) : 0;
-					if( iOverflow )
+					int xShift = iCurrentX + iSpriteSize;
+					if( xShift >= m_iDisplayWidth )
 					{
-						iVFFlag |= ( m_pPixels[ yPos ][ 0 ] & iOverflow ) ? 1 : 0;
-						m_pPixels[ yPos ][ 0 ] ^= iOverflow;
+						int iAns = xShift - 64;
+
+						uint64_t iLine2 = static_cast< uint64_t >( iMemoryValue ) << 48;
+						iLine2 <<= ( iSpriteSize - iAns );
+
+						iVFFlag |= ( m_pPixels[ iCurrentY ][ iIndex2 ] & iLine2 ) ? 1 : 0;
+						m_pPixels[ iCurrentY ][ iIndex2 ] ^= iLine2;
 					}
 				}
 
-				m_bDirtyFrame |= ( iPreviousValue1 != m_pPixels[ yPos ][ 0 ] ) || ( iPreviousValue2 != m_pPixels[ yPos ][ 1 ] );
+				m_bDirtyFrame |= ( iPreviousValue != m_pPixels[ iCurrentY ][ iIndex ] ) || ( iPreviousValue2 != m_pPixels[ iCurrentY ][ iIndex2 ] );
 			}
 		}
 		return;
 	}
 
-	for( uint8_t iYOffset = 0; iYOffset < N; ++iYOffset, ++yPos )
+	for( uint8_t iYOffset = 0; iYOffset < N; ++iYOffset, ++iCurrentY )
 	{
-		if( !bWrapping && yPos >= m_iDisplayHeight )
-			return;
+		if( !bWrapping )
+		{
+			if( iCurrentY >= m_iDisplayHeight )
+				return;
+		}
 		else if( bWrapping )
-			yPos &= ( m_iDisplayHeight - 1 );
+			iCurrentY &= ( m_iDisplayHeight - 1 );
 
 		uint16_t iMemoryValue = 0;
 		uint64_t iLine = 0;
 
-		uint16_t iOffset = ( pInstance->GetI() + iYOffset );
+		uint16_t iMemoryOffset = ( pInstance->GetI() + iYOffset );
 
 #ifdef OVERFLOW_CONTROL
-		iOffset &= 0xFFF;
+		iMemoryOffset &= 0xFFF;
 #endif	
 		
 		if( GetResolutionMode() != ResolutionMode::HIRES )
 		{
-			uint64_t iPreviousValue = m_pPixels[ yPos ][ 0 ];
+			uint64_t iPreviousValue = m_pPixels[ iCurrentY ][ 0 ];
 
-			iMemoryValue = BitReversal( ( uint8_t& )*( pInstance->GetMemory()->begin() + iOffset ) );
+			iMemoryValue = ( uint8_t& )*( pInstance->GetMemory()->begin() + iMemoryOffset );
+			iLine = static_cast<uint64_t>( iMemoryValue ) << 56; //Store as big endian in ram
 
-			if( bWrapping )
-				iLine = static_cast< uint64_t >( iMemoryValue ) << xPos | static_cast< uint64_t >( iMemoryValue ) >> ( m_iDisplayWidth - xPos );
-			else
-				iLine = static_cast< uint64_t >( iMemoryValue ) << xPos;
+			if( iCurrentX != 0 )
+			{
+				if( bWrapping )
+					iLine = iLine >> iCurrentX | iLine << ( m_iDisplayWidth - iCurrentX );
+				else
+					iLine >>= iCurrentX;
+			}
 
-			iVFFlag |= ( m_pPixels[ yPos ][ 0 ] & iLine ) ? 1 : 0;
-			m_pPixels[ yPos ][ 0 ] ^= iLine;
-			m_bDirtyFrame |= ( iPreviousValue != m_pPixels[ yPos ][ 0 ] );
+			iVFFlag |= ( m_pPixels[ iCurrentY ][ 0 ] & iLine ) ? 1 : 0;
+			m_pPixels[ iCurrentY ][ 0 ] ^= iLine;
+ 			m_bDirtyFrame |= ( iPreviousValue != m_pPixels[ iCurrentY ][ 0 ] );
 		}
 		else
 		{
-			iMemoryValue = BitReversal( ( uint8_t& )*( pInstance->GetMemory()->begin() + iOffset ) );
+			iMemoryValue = ( uint8_t& )*( pInstance->GetMemory()->begin() + iMemoryOffset );
+
+			iLine = static_cast< uint64_t >( iMemoryValue ) << 56; //Store as big endian in ram
+
+			uint64_t iPreviousValue = m_pPixels[ iCurrentY ][ 0 ];
+			uint64_t iPreviousValue2 = m_pPixels[ iCurrentY ][ 1 ];
 
 			//Check in wich block we are, or if both
-			if( xPos < 64 && xPos + 8 >= 64 )
+			if( iCurrentX < 64 && iCurrentX + iSpriteSize >= 64 )
 			{
-				uint64_t iPreviousValue = m_pPixels[ yPos ][ 0 ];
-				uint64_t iPreviousValue2 = m_pPixels[ yPos ][ 1 ];
-
-				int xShift = xPos + 8;
+				int xShift = iCurrentX + iSpriteSize;
 				int iAns = xShift - 64;
 
-				uint64_t iLine1 = static_cast< uint64_t >( iMemoryValue ) << xPos;
-				uint64_t iLine2 = static_cast< uint64_t >( iMemoryValue ) >> ( 8 - iAns );
+				uint64_t iLine2 = iLine;
+				iLine  <<= ( iSpriteSize - iAns );
+				iLine2 >>= iCurrentX;
 
-				iVFFlag |= ( m_pPixels[ yPos ][ 0 ] & iLine1 ) || ( m_pPixels[ yPos ][ 1 ] & iLine2 ) ? 1 : 0;
+				iVFFlag |= ( m_pPixels[ iCurrentY ][ 0 ] & iLine ) || ( m_pPixels[ iCurrentY ][ 1 ] & iLine2 ) ? 1 : 0;
 
-				m_pPixels[ yPos ][ 0 ] ^= iLine1;
-				m_pPixels[ yPos ][ 1 ] ^= iLine2;
+				m_pPixels[ iCurrentY ][ 0 ] ^= iLine;
+				m_pPixels[ iCurrentY ][ 1 ] ^= iLine2;
 
-				m_bDirtyFrame |= ( iPreviousValue != m_pPixels[ yPos ][ 0 ] ) || ( iPreviousValue2 != m_pPixels[ yPos ][ 1 ] );
-
+				m_bDirtyFrame |= ( iPreviousValue != m_pPixels[ iCurrentY ][ 0 ] ) || ( iPreviousValue2 != m_pPixels[ iCurrentY ][ 1 ] );
 			}
-			else if( xPos < 64 )
+			else if( iCurrentX < 64 )
 			{
-				uint64_t iPreviousValue = m_pPixels[ yPos ][ 0 ];
+				iLine >>= iCurrentX;
 
-				iLine = static_cast< uint64_t >( iMemoryValue ) << xPos;
+				iVFFlag |= ( m_pPixels[ iCurrentY ][ 1 ] & iLine ) ? 1 : 0;
+				m_pPixels[ iCurrentY ][ 1 ] ^= iLine;
 
-				iVFFlag |= ( m_pPixels[ yPos ][ 0 ] & iLine ) ? 1 : 0;
-				m_pPixels[ yPos ][ 0 ] ^= iLine;
-				m_bDirtyFrame |= ( iPreviousValue != m_pPixels[ yPos ][ 0 ] );
+				m_bDirtyFrame |= iPreviousValue2 != m_pPixels[ iCurrentY ][ 1 ];
 			}
-			else if( xPos >= 64 )
+			else if( iCurrentX >= 64 )
 			{
-				uint64_t iPreviousValue1 = m_pPixels[ yPos ][ 0 ];
-				uint64_t iPreviousValue2 = m_pPixels[ yPos ][ 1 ];
-				uint64_t iLine = static_cast< uint64_t >( iMemoryValue ) << ( xPos - 64 );
+				iLine >>= ( iCurrentX - 64 );
 
-				iVFFlag |= ( m_pPixels[ yPos ][ 1 ] & iLine ) ? 1 : 0;
-				m_pPixels[ yPos ][ 1 ] ^= iLine;
+				iVFFlag |= ( m_pPixels[ iCurrentY ][ 0 ] & iLine ) ? 1 : 0;
+				m_pPixels[ iCurrentY ][ 0 ] ^= iLine;
 
 				if( bWrapping )
 				{
-					uint64_t iOverflow = ( xPos + 8 ) >= 128 ? static_cast< uint64_t >( iMemoryValue ) >> ( 128 - xPos ) : 0;
-					if( iOverflow )
+					int xShift = iCurrentX + iSpriteSize;
+					if( xShift >= m_iDisplayWidth )
 					{
-						iVFFlag |= ( m_pPixels[ yPos ][ 0 ] & iOverflow ) ? 1 : 0;
-						m_pPixels[ yPos ][ 0 ] ^= iOverflow;
+						int iAns = xShift - 64;
+						uint64_t iOverflow = static_cast< uint64_t >( iMemoryValue ) << 56;
+						iOverflow <<= ( iSpriteSize - iAns );
+						iVFFlag |= ( m_pPixels[ iCurrentY ][ 1 ] & iOverflow ) ? 1 : 0;
+						m_pPixels[ iCurrentY ][ 1 ] ^= iOverflow;
 					}
 				}
 
-				m_bDirtyFrame |= ( iPreviousValue1 != m_pPixels[ yPos ][ 0 ] ) || ( iPreviousValue2 != m_pPixels[ yPos ][ 1 ] );
+				m_bDirtyFrame |= ( iPreviousValue != m_pPixels[ iCurrentY ][ 0 ] ) || ( iPreviousValue2 != m_pPixels[ iCurrentY ][ 1 ] );
 			}
 		}
 	}
@@ -466,11 +501,11 @@ void Display::Scroll( const KeyDisplayAccess& oKey,bool bLeft )
 	for( int k = 0; k < m_iDisplayHeight; ++k )
 	{
 		if( GetResolutionMode() == ResolutionMode::LORES )
-			!bLeft ? m_pPixels[ k ][ 0 ] <<= iScrollValue : m_pPixels[ k ][ 0 ] >>= iScrollValue;// MSB == rightmost pixel
+			bLeft ? m_pPixels[ k ][ 0 ] <<= iScrollValue : m_pPixels[ k ][ 0 ] >>= iScrollValue;
 		else
 		{
 			//Check if we push outside the block
-			if( !bLeft )
+			if( bLeft )
 			{
 				uint8_t iBlockErase = ( m_pPixels[ k ][ 0 ] >> 60 ) & 0xF;
 
@@ -530,8 +565,6 @@ void Display::Update( const std::chrono::steady_clock::time_point& time,const bo
 
 #ifdef DEBUG_INFO
 			glBindFramebuffer( GL_FRAMEBUFFER,0 );
-#else
-			glfwSwapBuffers( m_pWindow );
 #endif
 			m_bDirtyFrame = false;
 		}
@@ -548,8 +581,8 @@ void Display::Update( const std::chrono::steady_clock::time_point& time,const bo
 
 void Display::SetResolution( const int iWidth,const int iHeight )
 {
-	//if( m_iDisplayWidth == iWidth && m_iDisplayHeight == iHeight )
-		//return;
+	if( m_iDisplayWidth == iWidth && m_iDisplayHeight == iHeight )
+		return;
 
 	m_iDisplayWidth = iWidth;
 	m_iDisplayHeight = iHeight;
@@ -590,14 +623,4 @@ void Display::SetResolutionMode( const ResolutionMode oResolutionMode )
 		std::cerr << "Should not pass here with that value" << std::endl;
 		break;
 	}
-}
-
-uint8_t Display::BitReversal( uint8_t iValue )
-{
-	//Invert endianess ( only for 8 bit )
-	iValue = ( ( iValue >> 1 ) & 0x55 ) | ( ( iValue << 1 ) & 0xAA );
-	iValue = ( ( iValue >> 2 ) & 0x33 ) | ( ( iValue << 2 ) & 0xCC );
-	iValue = ( iValue >> 4 ) | ( iValue << 4 );
-
-	return iValue;
 }

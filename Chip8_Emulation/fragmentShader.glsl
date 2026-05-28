@@ -13,7 +13,7 @@ uniform int Height;
 void main()
 {
 	vec2 oCoords = vec2( int( TexCoord.x * Width ), int ( TexCoord.y * Height ) );	//Convert texture ratio to coords
-	int iBlock = int( oCoords.x ) / 32;												//Which block are we, texture sent as X block of 32 bits ( 2 for 64res )
+	int iBlock = int( oCoords.x ) / 32;												//Which block are we, texture sent as X block of 32 bits
 	uvec4 texel = texelFetch( oTexture, ivec2( iBlock, oCoords.y ), 0 );			//Extract memory block
 	uint iIndex = uint ( oCoords.x ) % 32u;											//Look for the pixel
 	uint v = ( texel.r >> iIndex ) & 1u;

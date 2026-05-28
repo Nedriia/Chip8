@@ -29,7 +29,7 @@ public:
 
 	int Init( const KeyDisplayAccess& oKey,const Chip8* pCpu );
 	static void ClearScreen( const KeyDisplayAccess& oKey );
-	static void DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xPos,uint8_t yPos,const uint8_t N,uint8_t& iVFFlag,bool bWrapping );
+	static void DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xStartingPos,uint8_t yStartingPos,const uint8_t N,uint8_t& iVFFlag,bool bWrapping );
 	static void ScrollDown( const KeyDisplayAccess& oKey, uint8_t N );
 	static void Scroll( const KeyDisplayAccess& oKey, bool bLeft );
 	void DestroyWindow( const KeyDisplayAccess& oKey );
@@ -66,7 +66,6 @@ public:
 	void SetResolutionMode( const ResolutionMode oResolutionMode );
 	static ResolutionMode GetResolutionMode() { return GetInstance()->m_oResolutionMode;}
 	static void InitResolutionMode( const KeyDisplayAccess& oKey ){ GetInstance()->m_oResolutionMode = ResolutionMode::LORES; }
-	static uint8_t BitReversal( uint8_t iValue );
 
 protected:
 	Display();
@@ -87,7 +86,7 @@ protected:
 	Shader 								m_sShaderProgram;
 
 	static unsigned int					m_iFBOTexture;
-	unsigned int 						m_iTexture;
+	static unsigned int 				m_iTexture;
 	unsigned int 						m_iVAO;
 	unsigned int 						m_iVBO;
 	unsigned int 						m_iEBO;
