@@ -175,8 +175,8 @@ void Init_RomSettings::_LoadPlatformsSpecs( const std::string& sPlatform,const i
 						Display::GetInstance()->SetResolution( iWidth,iHeight );
 					}
 				}
-#ifndef OVERRIDE_DATABASE_QUIRKS
 				Chip8::SetInstructionPerFrame( iRomCustomTickrate == 0 ? static_cast< int >( oData[ "defaultTickrate" ] ) : iRomCustomTickrate );
+#ifndef OVERRIDE_DATABASE_QUIRKS
 				if( oData.contains( "quirks" ) )
 				{
 					Chip8::m_oCurrentQuirk.bShiftingFlag = oData[ "quirks" ].value( "shift",false );
