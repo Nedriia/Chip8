@@ -16,7 +16,8 @@ enum class RunningState
 	Pause,
 	StepNextFrame,
 	Reset,
-	Stop
+	Stop,
+	LoadNewRom
 };
 
 //#define OVERRIDE_DATABASE_QUIRKS //if def set values wanted below, otherwise there are erased by platforms specs quirks
@@ -129,12 +130,15 @@ public:
 	bool							IsPause() const { return m_oState == RunningState::Pause; }
 	bool							IsStop() const { return m_oState == RunningState::Stop; }
 	bool							IsRunning() const { return m_oState == RunningState::Running; }
+#ifdef DEBUG_INFO
+	RunningState					GetState() const { return m_oState; }
+#endif
 
 	static const int				GetInstructPerFrame() { return m_iInstructionsPerFrame; }
 	static void						SetInstructionPerFrame( const int iNewValue ) { m_iInstructionsPerFrame = iNewValue; }
 
-	const char* GetCurrentRomLoaded() const { return m_sCurrentRomLoaded; }
-	void							SetRomToLoad( const KeyAccess& oKey,const std::string& sSrc );
+	const char*						GetCurrentRomLoaded() const { return m_sCurrentRomLoaded; }
+	void							SetROMPathFileToLoad( const KeyAccess& oKey,const std::string& sSrc );
 
 	static const std::array< std::string,6 >* GetPlatformsSupported() { return &m_sSupportedPlatform; }
 	static Quirk					m_oCurrentQuirk;
@@ -217,7 +221,7 @@ private:
 	std::deque<std::string>						m_aOpcodeHistory;
 
 	std::chrono::steady_clock::time_point		m_iLastTimeUpdate;
-	const char* m_sCurrentRomLoaded;//Don't set that without SetRomToLoad function
+	const char* m_sCurrentRomLoaded;//Don't set that without SetROMPathFileToLoad function
 
 	std::chrono::steady_clock::time_point		m_iTimeLastFrame;
 

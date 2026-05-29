@@ -25,7 +25,7 @@ uint8_t Chip8::iHexToIndex[ 0x66 ] = { 0 };
 std::array< std::string,6 > Chip8::m_sSupportedPlatform = { "originalChip8","hybridVIP","modernChip8","chip8x","chip48", "superchip" };
 Quirk  Chip8::m_oCurrentQuirk = Quirk();
 
-void Chip8::SetRomToLoad( const KeyAccess& oKey,const std::string& sSrc )
+void Chip8::SetROMPathFileToLoad( const KeyAccess& oKey,const std::string& sSrc )
 {
 	delete[] m_sCurrentRomLoaded;
 
@@ -209,8 +209,11 @@ void Chip8::_LoadROM( const char* sROMToLoad )
 
 		delete[] memblock;
 
-		KeyAccess oKey;
-		SetRomToLoad( oKey,sROMToLoad );
+		if( m_oState != RunningState::LoadNewRom )
+		{
+			KeyAccess oKey;
+			SetROMPathFileToLoad( oKey,sROMToLoad );
+		}
 	}
 	else
 	{
@@ -221,7 +224,7 @@ void Chip8::_LoadROM( const char* sROMToLoad )
 void Chip8::EmulateCycle( const KeyAccess& key,const std::chrono::steady_clock::time_point& time )
 {
 #ifdef DEBUG_INFO
-	if( m_oState == RunningState::Reset )
+	if( m_oState == RunningState::Reset || m_oState == RunningState::LoadNewRom )
 	{
 		_Reset();
 		m_oState = RunningState::Pause;

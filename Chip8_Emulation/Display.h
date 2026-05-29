@@ -54,7 +54,7 @@ public:
 	static void SetRefreshTick( const std::chrono::microseconds& iNewValue ) { m_iCurrentTick = iNewValue; }
 
 	static void SetGameTitle( const std::string& sTitle ){ m_sGameTitle = sTitle; }
-	void AssignDatabaseColors( const std::vector<std::string >& sColors );
+	void AssignDisplaySettings( bool bDefaultRes = false, const std::vector<std::string >& sColors = {} );
 
 	static Display* GetInstance()
 	{

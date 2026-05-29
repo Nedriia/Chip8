@@ -23,6 +23,9 @@ uint8_t Display::m_iDisplayHeight = 0;
 
 std::string Display::m_sGameTitle = "";
 
+#define WIDTH_DEFAULT_ON_ERROR 64
+#define HEIGHT_DEFAULT_ON_ERROR 32
+
 float vertices[] = {
 	// positions		//Texture coords
 	1.f, 1.0f, 0.0f,	0.0f, 0.0f,		// top right
@@ -186,7 +189,7 @@ void Display::_InitPixelsData()
 	m_bDirtyFrame = true;
 }
 
-void Display::AssignDatabaseColors( const std::vector<std::string >& sColors )
+void Display::AssignDisplaySettings( bool bDefaultRes /*= false*/, const std::vector<std::string >& sColors /*= {}*/ )
 {
 	int iIndex = 0;
 
@@ -199,6 +202,9 @@ void Display::AssignDatabaseColors( const std::vector<std::string >& sColors )
 	{
 		glUniform3f( vertexBgColorLocation,0.67f,0.27f,0.0f );
 		glUniform3f( vertexFontColorLocation,1.0f,0.67f,0.0f );
+
+		if( bDefaultRes )
+			SetResolution( WIDTH_DEFAULT_ON_ERROR, HEIGHT_DEFAULT_ON_ERROR );
 
 		return;
 	}

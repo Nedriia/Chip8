@@ -161,8 +161,8 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 
 				if( GetOpenFileNameA( &ofn ) )
 				{
-					Chip8::GetInstance()->SetRomToLoad( oKey, szFile );
-					Chip8::GetInstance()->AskForState( oKey, RunningState::Reset );
+					m_pCPU->GetInstance()->SetROMPathFileToLoad( oKey, szFile );
+					m_pCPU->GetInstance()->AskForState( oKey, RunningState::LoadNewRom );
 				}
 			}
 
@@ -205,31 +205,31 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 				Display::SetValueMicroSRefresh( ( 1 / fFps ) * 1000000.0f );
 				Display::SetRefreshTick( std::chrono::microseconds( Display::GetValueMicroSRefresh() ) );
 			}
-			int iIPF = Chip8::GetInstructPerFrame();
+			int iIPF = m_pCPU->GetInstructPerFrame();
 			if( ImGui::SliderInt( "IPF",&iIPF,10,2000,NULL ) )
-				Chip8::SetInstructionPerFrame( iIPF );
+				m_pCPU->SetInstructionPerFrame( iIPF );
 		}
 	}
 	ImGui::End();
 	if( ImGui::Begin( "Quirks",nullptr ) )
 	{
-		if( Chip8::m_oCurrentQuirk.bVFResetFlag )
+		if( m_pCPU->m_oCurrentQuirk.bVFResetFlag )
 			ImGui::Text( "VFReset On" );
-		if( Chip8::m_oCurrentQuirk.bMemoryUnchanged )
+		if( m_pCPU->m_oCurrentQuirk.bMemoryUnchanged )
 			ImGui::Text( "Memory Unchanged On" );
-		if( Chip8::m_oCurrentQuirk.bMemoryIncrementByX )
+		if( m_pCPU->m_oCurrentQuirk.bMemoryIncrementByX )
 			ImGui::Text( "Memory Increment On ( Adress Register++ )" );
-		if( Chip8::m_oCurrentQuirk.bDispWaitFlag )
+		if( m_pCPU->m_oCurrentQuirk.bDispWaitFlag )
 			ImGui::Text( "VBlank On" );
-		if( !Chip8::m_oCurrentQuirk.bWrapFlag )
+		if( !m_pCPU->m_oCurrentQuirk.bWrapFlag )
 			ImGui::Text( "Clipping On" );
 		else
 			ImGui::Text( "Wrapping On" );
-		if( Chip8::m_oCurrentQuirk.bShiftingFlag )
+		if( m_pCPU->m_oCurrentQuirk.bShiftingFlag )
 			ImGui::Text( "Shifting On ( Registers[X] = Registers[Y] >> 1 )" );
-		if( Chip8::m_oCurrentQuirk.bQuirkJumpingFlag )
+		if( m_pCPU->m_oCurrentQuirk.bQuirkJumpingFlag )
 			ImGui::Text( "Jumping On ( NNN + Registers[0] )" );
-		if( Chip8::m_oCurrentQuirk.bLegacySrolling )
+		if( m_pCPU->m_oCurrentQuirk.bLegacySrolling )
 			ImGui::Text( "Legacy Scrolling On" );
 	}
 	ImGui::End();
@@ -259,7 +259,7 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 		float width = ImGui::GetContentRegionAvail().x;
 		const char* titleLeft = "Display :";
 
-		std::string textPerfDebug = std::format( "{} ms | {} IPF",std::chrono::duration<double,std::milli>( time ).count(),!m_pCPU->IsPause() ? Chip8::GetInstructPerFrame() : 0 );
+		std::string textPerfDebug = std::format( "{} ms | {} IPF",std::chrono::duration<double,std::milli>( time ).count(),!m_pCPU->IsPause() ? m_pCPU->GetInstructPerFrame() : 0 );
 		ImGui::TextColored( ImVec4( 0.7f,0.7f,0.7f,1.0f ),"%s %s %s",titleLeft,m_pCPU->IsPause() ? "( Pause )" : "( Running )", m_pCPU->GetCurrentRomLoaded() == nullptr ? "None" : m_pCPU->GetCurrentRomLoaded());
 
 		ImGui::SameLine( width - ImGui::CalcTextSize( textPerfDebug.c_str() ).x );

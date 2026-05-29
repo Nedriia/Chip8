@@ -16,7 +16,15 @@ void Init_RomSettings::LookForDatabaseInfos( const char* memblock,const size_t& 
 {
 	//Calculate SHA1 of current ROM
 	int iIndex = _CalculateHash_RetrieveIndex( memblock,size );
-	_LoadProgramsSettings( iIndex );
+	if( iIndex == -1 )
+	{
+		Display::GetInstance()->AssignDisplaySettings( true );
+		return;
+	}
+
+	bool bSuccess = _LoadProgramsSettingsIsSuccesful( iIndex );
+	if( !bSuccess )
+		Display::GetInstance()->AssignDisplaySettings();
 }
 
 int Init_RomSettings::_CalculateHash_RetrieveIndex( const char* memblock,const size_t& size )
@@ -66,7 +74,7 @@ int Init_RomSettings::_FindIndex()
 	return -1;
 }
 
-void Init_RomSettings::_LoadProgramsSettings( const int iIndex )
+bool Init_RomSettings::_LoadProgramsSettingsIsSuccesful( const int iIndex )
 {
 	static std::string sProgramsAbsolutePath;
 	if( sProgramsAbsolutePath.empty() )
@@ -101,11 +109,15 @@ void Init_RomSettings::_LoadProgramsSettings( const int iIndex )
 				std::vector<std::string > sColors;
 				if( oRom[ "colors" ].contains( "pixels" ) )
 					sColors = oRom[ "colors" ][ "pixels" ].get<std::vector<std::string>>();
-				Display::GetInstance()->AssignDatabaseColors( sColors );
+				Display::GetInstance()->AssignDisplaySettings( false, sColors );
 
 				//Platforms Specs
 				if( oRom.contains( "platforms" ) )
-					_LoadPlatformsSettings( oRom[ "platforms" ].get<std::vector<std::string>>(),iRomCustomTickrate );//Load specs if platform found
+					return ( _LoadPlatformsSettingsIsSuccesful( oRom[ "platforms" ].get<std::vector<std::string>>(),iRomCustomTickrate ) ); //Load specs if platform found
+			}
+			else
+			{
+				std::cout<< "WARNING::ROMS_DONT_CONTAIN_HASH::CONTINUE_EXEC" << std::endl;
 			}
 			file.close();
 			file.clear();
@@ -115,35 +127,40 @@ void Init_RomSettings::_LoadProgramsSettings( const int iIndex )
 			std::cerr << "ERROR::DATABASE::INDEX_NOT_VALID : " << iIndex << std::endl;
 			file.close();
 			file.clear();
+			return false;
 		}
 	}
 	else
 	{
 		std::cerr << "ERROR::DATABASE::CANT_FIND_PROGRAMS_FILE : " << PROGRAMS_DEFAULT_FOLDER << std::endl;
 		_ReturnAdditionnalInfoOnErrors( file );
+		return false;
 	}
+	return true;
 }
 
-void Init_RomSettings::_LoadPlatformsSettings( const std::vector<std::string >& sPlatforms,const int iRomCustomTickrate )
+bool Init_RomSettings::_LoadPlatformsSettingsIsSuccesful( const std::vector<std::string >& sPlatforms,const int iRomCustomTickrate )
 {
 	auto sSupportPlatforms = Chip8::GetPlatformsSupported();
 	int iSize = sSupportPlatforms->end() - sSupportPlatforms->begin();
 	for( auto it = sSupportPlatforms->end() - 1; iSize > 0; --iSize )
 	{
-		for( int k = sPlatforms.size() - 1; k >= 0; --k ) //Check for newer chip8 in prior
+		for( int k = sPlatforms.size() - 1; k >= 0; --k ) //Check for newer platform in prior
 		{
 			if( sPlatforms[ k ] == ( *it ) )
 			{
 				_LoadPlatformsSpecs( *it,iRomCustomTickrate );
-				std::cout << "LOAD_ROM_ON_" << ( *it ) << std::endl;
-				return;
+				std::cout << "LOAD_ROM_ON_::" << ( *it ) << std::endl;
+				return true;
 			}
 		}
 
 		if( iSize > 1 )
 			--it;
 	}
-	std::cerr << "ERROR::PLATFORM::NO_SUPPORT_PLATFORM_FOR_THIS_ROM" << std::endl; //We should add a fail process to stop launching the current rom
+	std::cerr << "ERROR::PLATFORM::NO_SUPPORT_PLATFORM_FOR_THIS_ROM" << std::endl;
+	Display::GetInstance()->SetResolution( 64, 32 );
+	return false;
 }
 
 void Init_RomSettings::_LoadPlatformsSpecs( const std::string& sPlatform,const int iRomCustomTickrate )
