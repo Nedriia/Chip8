@@ -1,0 +1,26 @@
+#pragma once
+#include "string"
+#include <vector>
+
+class Disassembler
+{
+public:
+	Disassembler(){};
+
+	static void Disassemble_ROM( const char* memblock, const char* sROMToLoad,const size_t size );
+
+private:
+	static void _WriteInstruction( std::string sText,const int iIndex,const uint16_t iOpcode,std::fstream& file,const uint16_t iAdress = 0,const uint8_t iX = 0,const uint8_t iY = 0,const uint8_t NN = 0 );
+
+	struct DisassembledLine
+	{
+		uint16_t	m_iAddress;
+		std::string m_sText;
+	};
+
+	static std::vector< DisassembledLine > m_aDisassembly;
+
+public:
+	static std::vector< DisassembledLine >& GetDisassemblyInstructions() { return m_aDisassembly; }
+
+};

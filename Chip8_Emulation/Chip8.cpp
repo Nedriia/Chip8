@@ -8,11 +8,10 @@
 #include "SoundManager.h"
 #include <string.h>
 #include "Init_RomSettings.h"
+#ifdef DEBUG_INFO
+#include "Disassembler.h"
+#endif
 
-#define START_FONT_MEMORY_ADDRESS 0x050
-#define START_sFONT_MEMORY_ADDRESS 0x0A0
-#define START_ROM_MEMORY_ADDRESS 0x200
-#define MEMORY_SIZE 4096
 #define DEFAULT_PARENT_ROM_FOLDER "..\\Roms\\"
 #define JMPCHECK_BEFORE_ENDING 4
 #define USE_SWITCH_BRANCH
@@ -25,6 +24,7 @@ uint8_t Chip8::iHexToIndex[ 0x66 ] = { 0 };
 std::array< std::string,6 > Chip8::m_sSupportedPlatform = { "originalChip8","hybridVIP","modernChip8","chip8x","chip48", "superchip" };
 Quirk  Chip8::m_oCurrentQuirk = Quirk();
 
+using namespace MemoryMap;
 void Chip8::SetROMPathFileToLoad( const KeyAccess& oKey,const std::string& sSrc )
 {
 	delete[] m_sCurrentRomLoaded;
@@ -130,7 +130,6 @@ void Chip8::_Reset()
 	m_iI.clear();
 	m_iDelay_timer.clear();
 	m_iSound_timer.clear();
-	m_aOpcodeHistory.clear();
 	m_iLastOpcode = 0;
 	m_iCycle = 0;
 	m_iCurrentOpcode = 0;
@@ -207,6 +206,11 @@ void Chip8::_LoadROM( const char* sROMToLoad )
 		Init_RomSettings oRomSettings;
 		oRomSettings.LookForDatabaseInfos( memblock,size );
 
+#ifdef DEBUG_INFO
+		Disassembler::Disassemble_ROM( memblock,sROMToLoad,size );
+#endif // DEBUG_INFO
+
+
 		delete[] memblock;
 
 		if( m_oState != RunningState::LoadNewRom )
@@ -264,6 +268,7 @@ void Chip8::EmulateCycle( const KeyAccess& key,const std::chrono::steady_clock::
 			if( m_oState == RunningState::Stop || _IsEndReached() || bForceNextStep )
 				break;
 #endif
+			++m_iCycle;
 		}
 
 		_UpdateTimers();
@@ -489,18 +494,6 @@ void Chip8::_UpdateTimers()
 		--m_iSound_timer;
 }
 
-#ifdef DEBUG_INFO
-void Chip8::_AddOpcodeToHistory( const char* pOpcode )
-{
-	//https://github.com/trapexit/chip-8_documentation
-	if( m_aOpcodeHistory.size() >= 0x40 )
-		m_aOpcodeHistory.pop_front();
-
-	m_aOpcodeHistory.push_back( pOpcode );
-	++m_iCycle;
-}
-#endif
-
 bool Chip8::_IsEndReached()
 {
 	if( m_iCurrentOpcode == m_iLastOpcode && ( m_iCurrentOpcode & 0xF000 ) == 0x1000 )
@@ -568,10 +561,6 @@ inline void Chip8::CLS()
 {
 	Display::KeyDisplayAccess oKeyDisplay;
 	Display::ClearScreen( oKeyDisplay );
-
-#ifdef DEBUG_INFO
-	_AddOpcodeToHistory( std::format( "{:04X}  : CLS",m_iCurrentOpcode ).c_str() );
-#endif
 }
 
 inline void Chip8::RET()
@@ -588,20 +577,12 @@ inline void Chip8::RET()
 	m_aStack[ m_iSP ] = 0;
 	if( m_iSP != 0 )
 		--m_iSP;
-
-#ifdef DEBUG_INFO
-	_AddOpcodeToHistory( std::format( "{:04X} : RET",m_iCurrentOpcode ).c_str() );
-#endif
 }
 
 inline void Chip8::JMP()
 {
 	//Jumps to address NNN
 	m_iPC = GetNNN();
-
-#ifdef DEBUG_INFO
-	_AddOpcodeToHistory( std::format( "{:04X}  : JMP",m_iCurrentOpcode ).c_str() );
-#endif
 }
 
 inline void Chip8::JMP_NNN()
@@ -621,10 +602,6 @@ inline void Chip8::JMP_NNN()
 #endif //DEBUG_INFO
 		m_iPC = GetNNN() + m_aRegisters[ GetX() ];
 	}
-
-#ifdef DEBUG_INFO
-	_AddOpcodeToHistory( m_sOpcodeInstruct.c_str() );
-#endif
 }
 
 inline void Chip8::CALL()
@@ -643,10 +620,6 @@ inline void Chip8::CALL()
 	//Calls subroutine at NNN
 	m_aStack[ m_iSP ] = m_iPC;
 	m_iPC = GetNNN();
-
-#ifdef DEBUG_INFO
-	_AddOpcodeToHistory( std::format( "{:04X} : CALL",m_iCurrentOpcode ).c_str() );
-#endif
 }
 
 inline void Chip8::SNE_VX_NN()
@@ -654,10 +627,6 @@ inline void Chip8::SNE_VX_NN()
 	//Skips the next instruction if VX does not equal NN (usually the next instruction is a jump to skip a code block).
 	if( m_aRegisters[ GetX() ] != GetNN() )
 		m_iPC += 2;
-
-#ifdef DEBUG_INFO
-	_AddOpcodeToHistory( std::format( "{:04X} : SNE VX, NN",m_iCurrentOpcode ).c_str() );
-#endif
 }
 
 inline void Chip8::SNE_VX_VY()
@@ -665,10 +634,6 @@ inline void Chip8::SNE_VX_VY()
 	//Skips the next instruction if VX does not equal VY. (Usually the next instruction is a jump to skip a code block)
 	if( m_aRegisters[ GetX() ] != m_aRegisters[ GetY() ] )
 		m_iPC += 2;
-
-#ifdef DEBUG_INFO
-	_AddOpcodeToHistory( std::format( "{:04X} : SNE VX, VY",m_iCurrentOpcode ).c_str() );
-#endif
 }
 
 inline void Chip8::SE_VX_NN()
@@ -676,10 +641,6 @@ inline void Chip8::SE_VX_NN()
 	//Skips the next instruction if VX equals NN (usually the next instruction is a jump to skip a code block)
 	if( m_aRegisters[ GetX() ] == GetNN() )
 		m_iPC += 2;
-
-#ifdef DEBUG_INFO
-	_AddOpcodeToHistory( std::format( "{:04X} : SNE VX, NN",m_iCurrentOpcode ).c_str() );
-#endif
 }
 
 inline void Chip8::SE_VX_VY()
@@ -687,60 +648,36 @@ inline void Chip8::SE_VX_VY()
 	//Skips the next instruction if VX equals VY (usually the next instruction is a jump to skip a code block).
 	if( m_aRegisters[ GetX() ] == m_aRegisters[ GetY() ] )
 		m_iPC += 2;
-
-#ifdef DEBUG_INFO
-	_AddOpcodeToHistory( std::format( "{:04X} : SE VX, VY",m_iCurrentOpcode ).c_str() );
-#endif
 }
 
 inline void Chip8::LD_VX_NN()
 {
 	//Sets NN To VX
 	m_aRegisters[ GetX() ] = GetNN();
-
-#ifdef DEBUG_INFO
-	_AddOpcodeToHistory( std::format( "{:04X} : LD VX, NN",m_iCurrentOpcode ).c_str() );
-#endif
 }
 
 inline void Chip8::LD_VX_VY()
 {
 	//Sets VX to the value of VY.
 	m_aRegisters[ GetX() ] = m_aRegisters[ GetY() ];
-
-#ifdef DEBUG_INFO
-	_AddOpcodeToHistory( std::format( "{:04X} : LD VX, VY",m_iCurrentOpcode ).c_str() );
-#endif
 }
 
 inline void Chip8::LD_I_NNN()
 {
 	//Sets I to the address NNN
 	m_iI = GetNNN();
-
-#ifdef DEBUG_INFO
-	_AddOpcodeToHistory( std::format( "{:04X} : LD I, NNN",m_iCurrentOpcode ).c_str() );
-#endif
 }
 
 inline void Chip8::LD_VX_DT()
 {
 	//Sets VX to the value of the delay timer.
 	m_aRegisters[ GetX() ] = m_iDelay_timer;
-
-#ifdef DEBUG_INFO
-	_AddOpcodeToHistory( std::format( "{:04X} : LD VX, DT",m_iCurrentOpcode ).c_str() );
-#endif
 }
 
 inline void Chip8::LD_DT_VX()
 {
 	//Sets the delay timer to VX
 	m_iDelay_timer = m_aRegisters[ GetX() ];
-
-#ifdef DEBUG_INFO
-	_AddOpcodeToHistory( std::format( "{:04X} : LD DT, VX",m_iCurrentOpcode ).c_str() );
-#endif
 }
 
 inline void Chip8::LD_VX_KEY()
@@ -761,40 +698,24 @@ inline void Chip8::LD_VX_KEY()
 	}
 	else
 		m_iPC -= 2;
-
-#ifdef DEBUG_INFO
-	_AddOpcodeToHistory( std::format( "{:04X} : LD VX, KEY",m_iCurrentOpcode ).c_str() );
-#endif
 }
 
 inline void Chip8::LD_ST_VX()
 {
 	//Sets the sound timer to VX
 	m_iSound_timer = m_aRegisters[ GetX() ];
-
-#ifdef DEBUG_INFO
-	_AddOpcodeToHistory( std::format( "{:04X} : LD ST, VX",m_iCurrentOpcode ).c_str() );
-#endif
 }
 
 inline void Chip8::LD_I_FONT()
 {
 	//Sets I to the location of the sprite for the character in VX(only consider the lowest nibble). Characters 0-F (in hexadecimal) are represented by a 4x5 font.
 	m_iI = START_FONT_MEMORY_ADDRESS + ( ( m_aRegisters[ GetX() ] & 0xF ) * 5 );
-
-#ifdef DEBUG_INFO
-	_AddOpcodeToHistory( std::format( "{:04X} : LD I, FONT( VX )",m_iCurrentOpcode ).c_str() );
-#endif
 }
 
 inline void Chip8::LD_I_SUPER_FONT()
 {
 	//Sets I to the location of the sprite for the character in VX(only consider the lowest nibble). Characters 0-F (in hexadecimal) are represented by a 8x10 font.
 	m_iI = START_sFONT_MEMORY_ADDRESS + ( ( m_aRegisters[ GetX() ] & 0xF ) * 10 );
-
-#ifdef DEBUG_INFO
-	_AddOpcodeToHistory( std::format( "{:04X} : LD I, sFONT( VX )",m_iCurrentOpcode ).c_str() );
-#endif
 }
 
 inline void Chip8::LD_I_VX()
@@ -824,10 +745,6 @@ inline void Chip8::LD_I_VX()
 
 	if( Chip8::m_oCurrentQuirk.bMemoryUnchanged )
 		m_iI = iOriginal_I;
-
-#ifdef DEBUG_INFO
-	_AddOpcodeToHistory( std::format( "{:04X} : LD [I], VX",m_iCurrentOpcode ).c_str() );
-#endif
 }
 
 inline void Chip8::LD_VX_I()
@@ -857,10 +774,6 @@ inline void Chip8::LD_VX_I()
 
 	if( Chip8::m_oCurrentQuirk.bMemoryUnchanged )
 		m_iI = iOriginal_I;
-
-#ifdef DEBUG_INFO
-	_AddOpcodeToHistory( std::format( "{:04X} : LD VX, [I]",m_iCurrentOpcode ).c_str() );
-#endif
 }
 
 inline void Chip8::SAVEFLAGS_VX()
@@ -870,10 +783,6 @@ inline void Chip8::SAVEFLAGS_VX()
 	{
 		m_aFlags[i] = m_aRegisters[i];
 	}
-
-#ifdef DEBUG_INFO
-	_AddOpcodeToHistory( std::format( "{:04X} : SAVEFLAGS VX",m_iCurrentOpcode ).c_str() );
-#endif
 }
 
 inline void Chip8::LOADFLAGS_VX()
@@ -883,77 +792,45 @@ inline void Chip8::LOADFLAGS_VX()
 	{
 		m_aRegisters[ i ] = m_aFlags[ i ];
 	}
-
-#ifdef DEBUG_INFO
-	_AddOpcodeToHistory( std::format( "{:04X} : LOADFLAGS VX",m_iCurrentOpcode ).c_str() );
-#endif
 }
 
 inline void Chip8::HIRES()
 {
 	Display::GetInstance()->SetResolutionMode( ResolutionMode::HIRES );
-
-#ifdef DEBUG_INFO
-	_AddOpcodeToHistory( std::format( "{:04X}  : HIRES",m_iCurrentOpcode ).c_str() );
-#endif
 }
 
 inline void Chip8::LORES()
 {
 	Display::GetInstance()->SetResolutionMode( ResolutionMode::LORES );
-
-#ifdef DEBUG_INFO
-	_AddOpcodeToHistory( std::format( "{:04X}  : LORES",m_iCurrentOpcode ).c_str() );
-#endif
 }
 
 inline void Chip8::SCROLL_DOWN()
 {
 	Display::KeyDisplayAccess oKeyDisplay;
 	Display::ScrollDown( oKeyDisplay,GetN() );
-
-#ifdef DEBUG_INFO
-	_AddOpcodeToHistory( std::format( "{:04X}  : SCROLL_L",m_iCurrentOpcode ).c_str() );
-#endif
 }
 
 inline void Chip8::SCROLL_LEFT()
 {
 	Display::KeyDisplayAccess oKeyDisplay;
 	Display::Scroll( oKeyDisplay,true );
-
-#ifdef DEBUG_INFO
-	_AddOpcodeToHistory( std::format( "{:04X}  : SCROLL_L",m_iCurrentOpcode ).c_str() );
-#endif
 }
 
 inline void Chip8::SCROLL_RIGHT()
 {
 	Display::KeyDisplayAccess oKeyDisplay;
 	Display::Scroll( oKeyDisplay,false );
-
-#ifdef DEBUG_INFO
-	_AddOpcodeToHistory( std::format( "{:04X}  : SCROLL_R",m_iCurrentOpcode ).c_str() );
-#endif
 }
 
 inline void Chip8::QUIT()
 {
 	m_oState = RunningState::Stop;
-
-#ifdef DEBUG_INFO
-	_AddOpcodeToHistory( std::format( "{:04X}  : STOP",m_iCurrentOpcode ).c_str() );
-#endif
 }
 
 inline void Chip8::ADD_VX_NN()
 {
 	//Adds NN to VX (carry flag is not changed).
 	m_aRegisters[ GetX() ] += GetNN();
-
-#ifdef DEBUG_INFO
-	_AddOpcodeToHistory( std::format( "{:04X} : ADD VX, NN",m_iCurrentOpcode ).c_str() );
-#endif
 }
 
 inline void Chip8::ADD_VX_VY()
@@ -964,20 +841,12 @@ inline void Chip8::ADD_VX_VY()
 	m_aRegisters[ X ] = sum & 0xFF;
 	m_aRegisters[ 15 ] = ( sum > 0xFF ) ? 1 : 0;
 	//VF is set to 1 when there's an overflow, and to 0 when there is not.
-
-#ifdef DEBUG_INFO
-	_AddOpcodeToHistory( std::format( "{:04X} : ADD VX, VY ( VF )",m_iCurrentOpcode ).c_str() );
-#endif
 }
 
 inline void Chip8::ADD_I_VX()
 {
 	//Adds VX to I. VF is not affected
 	m_iI += m_aRegisters[ GetX() ];
-
-#ifdef DEBUG_INFO
-	_AddOpcodeToHistory( std::format( "{:04X} : ADD I, VX",m_iCurrentOpcode ).c_str() );
-#endif
 }
 
 inline void Chip8::SUB_VX_VY()
@@ -989,10 +858,6 @@ inline void Chip8::SUB_VX_VY()
 	m_aRegisters[ X ] = diff & 0xFF;
 	m_aRegisters[ 15 ] = diff > 0xFF ? 0 : 1;
 	// VF is set to 0 when there's an underflow, and 1 when there is not. (i.e. VF set to 1 if VX >= VY and 0 if not)
-
-#ifdef DEBUG_INFO
-	_AddOpcodeToHistory( std::format( "{:04X} : SUB VX, VY ( VF )",m_iCurrentOpcode ).c_str() );
-#endif
 }
 
 inline void Chip8::SHR()
@@ -1025,10 +890,6 @@ inline void Chip8::SHR()
 	}
 
 	m_aRegisters[ 15 ] = LSB;
-
-#ifdef DEBUG_INFO
-	_AddOpcodeToHistory( m_sOpcodeInstruct.c_str() );
-#endif
 }
 
 inline void Chip8::SUBN_VX_VY()
@@ -1040,10 +901,6 @@ inline void Chip8::SUBN_VX_VY()
 	m_aRegisters[ X ] = diff & 0xFF;
 	m_aRegisters[ 15 ] = diff > 0xFF ? 0 : 1;
 	// VF is set to 0 when there's an underflow, and 1 when there is not. (i.e. VF set to 1 if VY >= VX).
-
-#ifdef DEBUG_INFO
-	_AddOpcodeToHistory( std::format( "{:04X} : SUBN VX, VY",m_iCurrentOpcode ).c_str() );
-#endif
 }
 
 inline void Chip8::SHL()
@@ -1075,10 +932,6 @@ inline void Chip8::SHL()
 	}
 
 	m_aRegisters[ 15 ] = MSB;
-
-#ifdef DEBUG_INFO
-	_AddOpcodeToHistory( m_sOpcodeInstruct.c_str() );
-#endif
 }
 
 inline void Chip8::RND()
@@ -1086,10 +939,6 @@ inline void Chip8::RND()
 	//Sets VX to the result of a bitwise and operation on a random number (Typically: 0 to 255) and NN
 	std::uniform_int_distribution<std::mt19937::result_type> dist( 0,255 );
 	m_aRegisters[ GetX() ] = dist( m_iRng ) & GetNN();
-
-#ifdef DEBUG_INFO
-	_AddOpcodeToHistory( std::format( "{:04X} : RND VX, NN",m_iCurrentOpcode ).c_str() );
-#endif
 }
 
 inline void Chip8::DRAW()
@@ -1139,10 +988,6 @@ inline void Chip8::DRAW()
 	uint8_t iVFFlag = 0;
 	Display::DrawPixelAtPos( oKeyDisplay,m_aRegisters[ GetX() ],m_aRegisters[ GetY() ],GetN(),iVFFlag,Chip8::m_oCurrentQuirk.bWrapFlag );
 	m_aRegisters[ 15 ] = iVFFlag;
-
-#ifdef DEBUG_INFO
-	_AddOpcodeToHistory( m_sOpcodeInstruct.c_str() );
-#endif
 }
 
 inline void Chip8::SKP()
@@ -1150,10 +995,6 @@ inline void Chip8::SKP()
 	//Skips the next instruction if the key stored in VX(only consider the lowest nibble) is pressed (usually the next instruction is a jump to skip a code block).
 	if( m_pInputInstance->GetKeyState( m_aRegisters[ GetX() ] ) )
 		m_iPC += 2;
-
-#ifdef DEBUG_INFO
-	_AddOpcodeToHistory( std::format( "{:04X} : SKP",m_iCurrentOpcode ).c_str() );
-#endif
 }
 
 inline void Chip8::SKNP()
@@ -1161,10 +1002,6 @@ inline void Chip8::SKNP()
 	//Skips the next instruction if the key stored in VX(only consider the lowest nibble) is not pressed (usually the next instruction is a jump to skip a code block).
 	if( !m_pInputInstance->GetKeyState( m_aRegisters[ GetX() ] ) )
 		m_iPC += 2;
-
-#ifdef DEBUG_INFO
-	_AddOpcodeToHistory( std::format( "{:04X} : SKNP",m_iCurrentOpcode ).c_str() );
-#endif
 }
 
 inline const uint8_t Chip8::GetX()
@@ -1226,10 +1063,6 @@ inline void Chip8::BCD()
 	m_aMemory[ m_iI + 1 ] = ( m_aRegisters[ X ] / 10 ) % 10;
 	m_aMemory[ m_iI + 2 ] = m_aRegisters[ X ] % 10;
 #endif
-
-#ifdef DEBUG_INFO
-	_AddOpcodeToHistory( std::format( "{:04X} : BCD",m_iCurrentOpcode ).c_str() );
-#endif
 }
 
 inline void Chip8::OR()
@@ -1238,10 +1071,6 @@ inline void Chip8::OR()
 	m_aRegisters[ GetX() ] |= m_aRegisters[ GetY() ];
 	if( Chip8::m_oCurrentQuirk.bVFResetFlag )
 		m_aRegisters[ 15 ] = 0;
-
-#ifdef DEBUG_INFO
-	_AddOpcodeToHistory( std::format( "{:04X} : OR VX, VY",m_iCurrentOpcode ).c_str() );
-#endif
 }
 
 inline void Chip8::AND()
@@ -1250,10 +1079,6 @@ inline void Chip8::AND()
 	m_aRegisters[ GetX() ] &= m_aRegisters[ GetY() ];
 	if( Chip8::m_oCurrentQuirk.bVFResetFlag )
 		m_aRegisters[ 15 ] = 0;
-
-#ifdef DEBUG_INFO
-	_AddOpcodeToHistory( std::format( "{:04X} : AND VX, VY",m_iCurrentOpcode ).c_str() );
-#endif
 }
 
 inline void Chip8::XOR()
@@ -1262,8 +1087,4 @@ inline void Chip8::XOR()
 	m_aRegisters[ GetX() ] ^= m_aRegisters[ GetY() ];
 	if( Chip8::m_oCurrentQuirk.bVFResetFlag )
 		m_aRegisters[ 15 ] = 0;
-
-#ifdef DEBUG_INFO
-	_AddOpcodeToHistory( std::format( "{:04X} : XOR VX, VY",m_iCurrentOpcode ).c_str() );
-#endif
 }

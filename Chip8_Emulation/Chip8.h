@@ -8,7 +8,7 @@
 #include "Input.h"
 #include "Display.h"
 
-#define OVERFLOW_CONTROL
+//#define OVERFLOW_CONTROL
 
 enum class RunningState
 {
@@ -19,6 +19,14 @@ enum class RunningState
 	Stop,
 	LoadNewRom
 };
+
+namespace MemoryMap
+{
+	constexpr uint16_t START_FONT_MEMORY_ADDRESS = 0x050;
+	constexpr uint16_t START_sFONT_MEMORY_ADDRESS = 0x0A0;
+	constexpr uint16_t START_ROM_MEMORY_ADDRESS = 0x200;
+	constexpr uint16_t MEMORY_SIZE = 4096;
+}
 
 //#define OVERRIDE_DATABASE_QUIRKS //if def set values wanted below, otherwise there are erased by platforms specs quirks
 struct Quirk
@@ -117,7 +125,6 @@ public:
 
 	const Data< uint16_t>* GetStack() const { return m_aStack; }
 	const Data< uint8_t>* GetRegisters() const { return m_aRegisters; }
-	const std::deque<std::string>& GetHistoryOpcode() const { return m_aOpcodeHistory; }
 
 	const Data< uint16_t> GetI() const { return m_iI; }
 	const Data< uint16_t> GetPC() const { return m_iPC; }
@@ -154,9 +161,6 @@ private:
 
 	void _FetchDecode_Opcode();
 	void _UpdateTimers();
-#ifdef DEBUG_INFO
-	void _AddOpcodeToHistory( const char* pOpcode );
-#endif
 	bool _IsEndReached();
 
 	std::array< Data<uint8_t>,4096 > m_aMemory;
@@ -217,8 +221,6 @@ private:
 
 	uint8_t m_iCountBeforeStop;
 	uint8_t										m_iPreviousKeyPressed;
-
-	std::deque<std::string>						m_aOpcodeHistory;
 
 	std::chrono::steady_clock::time_point		m_iLastTimeUpdate;
 	const char* m_sCurrentRomLoaded;//Don't set that without SetROMPathFileToLoad function

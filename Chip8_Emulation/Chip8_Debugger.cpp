@@ -30,6 +30,7 @@
 #include "Chip8_Debugger.h"
 #include "Display.h"
 #include "Chip8.h"
+#include "Disassembler.h"
 
 #include <windows.h>
 #include <commdlg.h>
@@ -282,7 +283,7 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 	{
 		if( m_pCPU != nullptr )
 		{
-			if( ImGui::BeginListBox( "#",ImVec2( -FLT_MIN,20 * ImGui::GetTextLineHeightWithSpacing() ) ) )
+			if( ImGui::BeginListBox( "#",ImVec2( -FLT_MIN,26 * ImGui::GetTextLineHeightWithSpacing() ) ) )
 			{
 				std::string sAdress;
 				int iIndex = 0;
@@ -335,28 +336,28 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 	}
 	ImGui::End();
 
-	if( ImGui::Begin( "Opcode Decode",nullptr ) )
+	if( ImGui::Begin( "Disasembly",nullptr ) )
 	{
 		if( m_pCPU != nullptr )
 		{
 			static int item_selected_idx = 0;
 			if( ImGui::BeginListBox( "#",ImVec2( -FLT_MIN,35 * ImGui::GetTextLineHeightWithSpacing() ) ) )
 			{
-				for( int n = 0; n < m_pCPU->GetHistoryOpcode().size(); ++n )
+				auto aDisassemblyInstructions = Disassembler::GetDisassemblyInstructions();
+				for( int n = 0; n < Disassembler::GetDisassemblyInstructions().size(); ++n )
 				{
 					ImGui::PushID( n );
-					bool is_selected = ( item_selected_idx == n );
-					if( ImGui::Selectable( m_pCPU->GetHistoryOpcode()[ n ].c_str(),is_selected ) )
-						item_selected_idx = n;
+					bool isCurrent = aDisassemblyInstructions[ n ].m_iAddress == m_pCPU->GetPC();
+
+					char buffer[ 64 ];
+					snprintf( buffer,sizeof( buffer ),"0x%04X  %s",aDisassemblyInstructions[ n ].m_iAddress, aDisassemblyInstructions[ n ].m_sText.c_str() );
+
+					ImGui::Selectable( buffer, isCurrent );
+
+					if( isCurrent && m_pCPU->IsRunning() )
+						ImGui::SetScrollHereY( 0.5f );
 
 					ImGui::PopID();
-				}
-
-				if( ( m_pCPU->GetHistoryOpcode().size() > 0 && m_pCPU->IsRunning() ) || ( m_iCycleIndex != m_pCPU->GetCycleId() ) )
-				{
-					ImGui::SetScrollHereY( 0.5f );
-					item_selected_idx = m_pCPU->GetHistoryOpcode().size() - 1;
-					m_iCycleIndex = m_pCPU->GetCycleId();
 				}
 			}
 			ImGui::EndListBox();
