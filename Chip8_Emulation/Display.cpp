@@ -2,6 +2,7 @@
 #include "Chip8_Debugger.h"
 #include <iostream>
 #include "Chip8.h"
+#include <thread>
 
 // settings
 const uint16_t WINDOW_WIDTH = 1920;
@@ -95,6 +96,7 @@ int Display::_CreateWindowChip()
 		return -1;
 	}
 	glfwMakeContextCurrent( m_pWindow );
+	//glfwSwapInterval( 1 );
 	glfwSetFramebufferSizeCallback( m_pWindow,Display::framebuffer_size_callback );
 
 	// glad: load all OpenGL function pointers
@@ -578,10 +580,15 @@ void Display::Update( const std::chrono::steady_clock::time_point& time,const bo
 #ifdef DEBUG_INFO
 		Chip8_Debugger::GetInstance()->Update( startElapsed );
 		Chip8_Debugger::GetInstance()->Render();
-		glfwSwapBuffers( m_pWindow );
 #endif
 		std::string sPerfDebug = std::format( "{} : {} ms ",m_sGameTitle,std::chrono::duration<double,std::milli>( startElapsed ).count() );
 		glfwSetWindowTitle( m_pWindow,sPerfDebug.c_str() );
+
+		glfwSwapBuffers( m_pWindow );
+	}
+	else
+	{
+		std::this_thread::sleep_for( m_iCurrentTick - elapsed );
 	}
 }
 
