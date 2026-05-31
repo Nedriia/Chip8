@@ -139,6 +139,8 @@ public:
 	bool							IsRunning() const { return m_oState == RunningState::Running; }
 #ifdef DEBUG_INFO
 	RunningState					GetState() const { return m_oState; }
+	uint16_t						GetBreakpointAdress() const { return m_iAdressBreakpoint; }
+	static void						SetBreakpoint( uint16_t iAdress ) { m_iAdressBreakpoint = iAdress; }
 #endif
 
 	static const int				GetInstructPerFrame() { return m_iInstructionsPerFrame; }
@@ -306,6 +308,7 @@ private:
 
 #ifdef DEBUG_INFO
 	std::string m_sOpcodeInstruct;
+	static uint16_t	m_iAdressBreakpoint;
 #endif
 
 	const Input* m_pInputInstance;

@@ -49,7 +49,8 @@ Chip8_Debugger::Chip8_Debugger() :
 	m_iCycleIndex( 0 ),
 	m_iRegisterSelected( 0 ),
 	m_iMemorySelected( 0 ),
-	m_iStackSelected( 0 )
+	m_iStackSelected( 0 ),
+	m_bFollowPc( true )
 {}
 
 void Chip8_Debugger::Init( GLFWwindow* mainWindow,const Chip8* pCPU )
@@ -162,8 +163,11 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 
 				if( GetOpenFileNameA( &ofn ) )
 				{
-					m_pCPU->GetInstance()->SetROMPathFileToLoad( oKey, szFile );
-					m_pCPU->GetInstance()->AskForState( oKey, RunningState::LoadNewRom );
+					if( strcmp( szFile, m_pCPU->GetCurrentRomLoaded() ) != 0 )
+					{
+						m_pCPU->GetInstance()->SetROMPathFileToLoad( oKey,szFile );
+						m_pCPU->GetInstance()->AskForState( oKey,RunningState::LoadNewRom );
+					}
 				}
 			}
 
@@ -209,6 +213,12 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 			int iIPF = m_pCPU->GetInstructPerFrame();
 			if( ImGui::SliderInt( "IPF",&iIPF,10,2000,NULL ) )
 				m_pCPU->SetInstructionPerFrame( iIPF );
+
+			ImGui::Separator();
+			ImGui::Checkbox( "Follow PC",&m_bFollowPc );
+			int iAdress = m_pCPU->GetBreakpointAdress();
+			if( ImGui::InputInt( "Breakpoint", &iAdress,2,10,ImGuiInputTextFlags_CharsHexadecimal ) )
+				m_pCPU->SetBreakpoint( iAdress );
 		}
 	}
 	ImGui::End();
@@ -354,7 +364,7 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 
 					ImGui::Selectable( buffer, isCurrent );
 
-					if( isCurrent && m_pCPU->IsRunning() )
+					if( isCurrent && m_bFollowPc )
 						ImGui::SetScrollHereY( 0.5f );
 
 					ImGui::PopID();

@@ -17,6 +17,9 @@
 #define USE_SWITCH_BRANCH
 
 int Chip8::m_iInstructionsPerFrame = 100;
+#ifdef DEBUG_INFO
+uint16_t Chip8::m_iAdressBreakpoint = 0;
+#endif
 
 Chip8* Chip8::m_pSingleton = nullptr;
 uint8_t Chip8::iHexToIndex[ 0x66 ] = { 0 };
@@ -264,11 +267,18 @@ void Chip8::EmulateCycle( const KeyAccess& key,const std::chrono::steady_clock::
 		{
 			_FetchDecode_Opcode();
 
+			++m_iCycle;
 #ifdef DEBUG_INFO
 			if( m_oState == RunningState::Stop || _IsEndReached() || bForceNextStep )
 				break;
+
+			if( m_iPC == m_iAdressBreakpoint )
+			{
+				m_oState = RunningState::Pause;
+				m_iAdressBreakpoint = 0;
+				break;
+			}
 #endif
-			++m_iCycle;
 		}
 
 		_UpdateTimers();

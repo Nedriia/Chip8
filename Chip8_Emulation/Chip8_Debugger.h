@@ -33,4 +33,6 @@ private:
 	int							m_iRegisterSelected;
 	int							m_iMemorySelected;
 	int							m_iStackSelected;
+
+	bool						m_bFollowPc;
 };
