@@ -25,7 +25,7 @@ namespace MemoryMap
 	constexpr uint16_t START_FONT_MEMORY_ADDRESS = 0x050;
 	constexpr uint16_t START_sFONT_MEMORY_ADDRESS = 0x0A0;
 	constexpr uint16_t START_ROM_MEMORY_ADDRESS = 0x200;
-	constexpr uint16_t MEMORY_SIZE = 4096;
+	constexpr uint16_t MEMORY_SIZE = 0XFFFF;
 }
 
 //#define OVERRIDE_DATABASE_QUIRKS //if def set values wanted below, otherwise there are erased by platforms specs quirks
@@ -121,7 +121,7 @@ public:
 	void							AskForState( const KeyAccess& oKey,RunningState oState ) const;
 	void							DestroyCpu();
 
-	const std::array<Data< uint8_t>,4096>* GetMemory() const { return &m_aMemory; }
+	const std::array<Data< uint8_t>,0xFFFF>* GetMemory() const { return &m_aMemory; }
 
 	const Data< uint16_t>* GetStack() const { return m_aStack; }
 	const Data< uint8_t>* GetRegisters() const { return m_aRegisters; }
@@ -149,7 +149,7 @@ public:
 	const char*						GetCurrentRomLoaded() const { return m_sCurrentRomLoaded; }
 	void							SetROMPathFileToLoad( const KeyAccess& oKey,const std::string& sSrc );
 
-	static const std::array< std::string,6 >* GetPlatformsSupported() { return &m_sSupportedPlatform; }
+	static const std::array< std::string,7 >* GetPlatformsSupported() { return &m_sSupportedPlatform; }
 	static Quirk					m_oCurrentQuirk;
 
 private:
@@ -165,7 +165,7 @@ private:
 	void _UpdateTimers();
 	bool _IsEndReached();
 
-	std::array< Data<uint8_t>,4096 > m_aMemory;
+	std::array< Data<uint8_t>,0xFFFF > m_aMemory;
 	Data<uint8_t> m_aRegisters[ 16 ];
 	Data<uint8_t> m_aFlags[ 16 ]; //for FX75 // FX85
 	Data<uint16_t> m_iI; //Address register
@@ -277,6 +277,7 @@ private:
 	inline void HIRES();
 	inline void LORES();
 	inline void SCROLL_DOWN();
+	inline void SCROLL_UP();
 	inline void SCROLL_LEFT();
 	inline void SCROLL_RIGHT();
 	inline void QUIT();
@@ -328,5 +329,5 @@ private:
 	DecodedOpcode* m_pCurrentOpcode;
 
 	std::mt19937 m_iRng;
-	static std::array< std::string,6 > m_sSupportedPlatform;
+	static std::array< std::string,7 > m_sSupportedPlatform;
 };

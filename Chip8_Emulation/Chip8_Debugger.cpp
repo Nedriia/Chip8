@@ -249,7 +249,7 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 	{
 		if( m_pCPU != nullptr )
 		{
-			if( ImGui::BeginListBox( "#",ImVec2( -FLT_MIN,26 * ImGui::GetTextLineHeightWithSpacing() ) ) )
+			if( ImGui::BeginListBox( "#",ImVec2( -FLT_MIN,24 * ImGui::GetTextLineHeightWithSpacing() ) ) )
 			{
 				const Data<uint16_t>* it = m_pCPU->GetStack();
 				if( it != nullptr )
@@ -293,7 +293,7 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 	{
 		if( m_pCPU != nullptr )
 		{
-			if( ImGui::BeginListBox( "#",ImVec2( -FLT_MIN,26 * ImGui::GetTextLineHeightWithSpacing() ) ) )
+			if( ImGui::BeginListBox( "#",ImVec2( -FLT_MIN,24 * ImGui::GetTextLineHeightWithSpacing() ) ) )
 			{
 				std::string sAdress;
 				int iIndex = 0;

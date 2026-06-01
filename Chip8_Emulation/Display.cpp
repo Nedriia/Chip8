@@ -482,28 +482,50 @@ void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xStartingPos,
 	}
 }
 
-void Display::ScrollDown( const KeyDisplayAccess& oKey,uint8_t N )
+void Display::ScrollVertical( const KeyDisplayAccess& oKey,uint8_t N, bool bDown )
 {
-	N = Chip8::m_oCurrentQuirk.bLegacySrolling ? N / 2 : N;
-	for( int k = m_iDisplayHeight - 1; k >= 0; --k )
+	if( bDown )
 	{
-		int iIndex = k - N;
-		if( iIndex < 0 )
+		N = Chip8::m_oCurrentQuirk.bLegacySrolling ? N / 2 : N;
+		for( int k = m_iDisplayHeight - 1; k >= 0; --k )
 		{
-			m_pPixels[ k ][ 0 ] = 0; //Clip
-			if( GetResolutionMode() == ResolutionMode::HIRES )
-				m_pPixels[ k ][ 1 ] = 0;
+			int iIndex = k - N;
+			if( iIndex < 0 )
+			{
+				m_pPixels[ k ][ 0 ] = 0; //Clip
+				if( GetResolutionMode() == ResolutionMode::HIRES )
+					m_pPixels[ k ][ 1 ] = 0;
+			}
+			else
+			{
+				m_pPixels[ k ][ 0 ] = m_pPixels[ iIndex ][ 0 ];
+				if( GetResolutionMode() == ResolutionMode::HIRES )
+					m_pPixels[ k ][ 1 ] = m_pPixels[ iIndex ][ 1 ];
+			}
 		}
-		else
+	}
+	else
+	{
+		for( int k = 0; k < m_iDisplayHeight; ++k )
 		{
-			m_pPixels[ k ][ 0 ] = m_pPixels[ iIndex ][ 0 ];
-			if( GetResolutionMode() == ResolutionMode::HIRES )
-				m_pPixels[ k ][ 1 ] = m_pPixels[ iIndex ][ 1 ];
+			int iIndex = k + N;
+			if( iIndex < m_iDisplayHeight )
+			{
+				m_pPixels[ k ][ 0 ] = m_pPixels[ iIndex ][ 0 ];
+				if( GetResolutionMode() == ResolutionMode::HIRES )
+					m_pPixels[ k ][ 1 ] = m_pPixels[ iIndex ][ 1 ];
+			}
+			else
+			{
+				m_pPixels[ k ][ 0 ] = 0; //Clip
+				if( GetResolutionMode() == ResolutionMode::HIRES )
+					m_pPixels[ k ][ 1 ] = 0;
+			}
 		}
 	}
 }
 
-void Display::Scroll( const KeyDisplayAccess& oKey,bool bLeft )
+void Display::ScrollHorizontal( const KeyDisplayAccess& oKey,bool bLeft )
 {
 	uint8_t iScrollValue = Chip8::m_oCurrentQuirk.bLegacySrolling ? 2 : 4;
 	for( int k = 0; k < m_iDisplayHeight; ++k )

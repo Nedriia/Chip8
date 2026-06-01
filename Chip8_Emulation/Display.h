@@ -30,8 +30,8 @@ public:
 	int Init( const KeyDisplayAccess& oKey,const Chip8* pCpu );
 	static void ClearScreen( const KeyDisplayAccess& oKey );
 	static void DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xStartingPos,uint8_t yStartingPos,const uint8_t N,uint8_t& iVFFlag,bool bWrapping );
-	static void ScrollDown( const KeyDisplayAccess& oKey, uint8_t N );
-	static void Scroll( const KeyDisplayAccess& oKey, bool bLeft );
+	static void ScrollVertical( const KeyDisplayAccess& oKey, uint8_t N,bool bDown );
+	static void ScrollHorizontal( const KeyDisplayAccess& oKey, bool bLeft );
 	void DestroyWindow( const KeyDisplayAccess& oKey );
 
 	void Update( const std::chrono::steady_clock::time_point& time,const bool cpuPaused );

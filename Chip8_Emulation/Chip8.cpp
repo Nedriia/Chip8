@@ -24,7 +24,7 @@ uint16_t Chip8::m_iAdressBreakpoint = 0;
 Chip8* Chip8::m_pSingleton = nullptr;
 uint8_t Chip8::iHexToIndex[ 0x66 ] = { 0 };
 
-std::array< std::string,6 > Chip8::m_sSupportedPlatform = { "originalChip8","hybridVIP","modernChip8","chip8x","chip48", "superchip" };
+std::array< std::string,7 > Chip8::m_sSupportedPlatform = { "originalChip8","hybridVIP","modernChip8","chip8x","chip48", "superchip", "xochip" };
 Quirk  Chip8::m_oCurrentQuirk = Quirk();
 
 using namespace MemoryMap;
@@ -340,6 +340,8 @@ void Chip8::_FetchDecode_Opcode()
 		uint16_t check = m_iCurrentOpcode & 0x00FF;
 		if( GetY() == 0x0C )
 			SCROLL_DOWN();
+		else if( GetY() == 0x0D )
+			SCROLL_UP();
 		else if( check == 0xE0 )
 			CLS();
 		else if( check == 0xEE )
@@ -817,19 +819,25 @@ inline void Chip8::LORES()
 inline void Chip8::SCROLL_DOWN()
 {
 	Display::KeyDisplayAccess oKeyDisplay;
-	Display::ScrollDown( oKeyDisplay,GetN() );
+	Display::ScrollVertical( oKeyDisplay,GetN(), true );
+}
+
+inline void Chip8::SCROLL_UP()
+{
+	Display::KeyDisplayAccess oKeyDisplay;
+	Display::ScrollVertical( oKeyDisplay,GetN(), false );
 }
 
 inline void Chip8::SCROLL_LEFT()
 {
 	Display::KeyDisplayAccess oKeyDisplay;
-	Display::Scroll( oKeyDisplay,true );
+	Display::ScrollHorizontal( oKeyDisplay,true );
 }
 
 inline void Chip8::SCROLL_RIGHT()
 {
 	Display::KeyDisplayAccess oKeyDisplay;
-	Display::Scroll( oKeyDisplay,false );
+	Display::ScrollHorizontal( oKeyDisplay,false );
 }
 
 inline void Chip8::QUIT()
