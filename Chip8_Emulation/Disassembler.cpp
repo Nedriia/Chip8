@@ -48,6 +48,8 @@ void Disassembler::Disassemble_ROM( const char* memblock, const char* sROMToLoad
 					uint16_t check = iCurrentOpcode & 0x00FF;
 					if( Y == 0x0C )
 						_WriteInstruction( "%04X		SCD %u",iIndex,iCurrentOpcode,file, N );
+					else if( Y == 0x0D )
+						_WriteInstruction( "%04X		SCU %u		( XO_CHIP )",iIndex,iCurrentOpcode,file,N );
 					else if( check == 0xE0 )
 						_WriteInstruction( "%04X		CLS",iIndex,iCurrentOpcode,file );
 					else if( check == 0xEE )
@@ -73,7 +75,17 @@ void Disassembler::Disassemble_ROM( const char* memblock, const char* sROMToLoad
 				case 0x2000: _WriteInstruction( "%04X		CALL %#04X",iIndex,iCurrentOpcode,file, NNN ); break;
 				case 0x3000: _WriteInstruction( "%04X		SE V%u, %#04X",iIndex,iCurrentOpcode,file, X, NN ); break;
 				case 0x4000: _WriteInstruction( "%04X		SNE V%u, %#04X",iIndex,iCurrentOpcode,file, X, NN ); break;
-				case 0x5000: _WriteInstruction( "%04X		SE V%u, V%u",iIndex,iCurrentOpcode,file,X,Y ); break;
+				case 0x5000:
+				{
+					switch( iCurrentOpcode & 0x000F )
+					{
+						case 0: _WriteInstruction( "%04X		SE V%u, V%u",iIndex,iCurrentOpcode,file,X,Y ); break;
+						case 2: _WriteInstruction( "%04X		SAVE V%u - V%u		( XO_CHIP )",iIndex,iCurrentOpcode,file,X,Y ); break;
+						case 3: _WriteInstruction( "%04X		LOAD V%u - V%u		( XO_CHIP )",iIndex,iCurrentOpcode,file,X,Y ); break;
+						default:	_WriteInstruction( "WARNING::UNKNOWN_OPCODE::%#04X",iIndex,iCurrentOpcode,file ); break;
+					}
+				}
+				break;
 				case 0x6000: _WriteInstruction( "%04X		LD V%u, %#04X",iIndex,iCurrentOpcode,file,X, NN ); break;
 				case 0x7000: _WriteInstruction( "%04X		ADD V%u, %#04X",iIndex,iCurrentOpcode,file,X,NN ); break;
 				case 0x8000:
@@ -111,20 +123,30 @@ void Disassembler::Disassemble_ROM( const char* memblock, const char* sROMToLoad
 				break;
 				case 0xF000:
 				{
-					switch( iCurrentOpcode & 0x00FF )
+					switch( iCurrentOpcode & 0xF0FF )
 					{
-						case 7:    _WriteInstruction( "%04X		SKNP V%u, DT",iIndex,iCurrentOpcode,file, X ); break;
-						case 0x0A: _WriteInstruction( "%04X		LD V%u, K",iIndex,iCurrentOpcode,file, X ); break;
-						case 0x15: _WriteInstruction( "%04X		LD DT, V%u",iIndex,iCurrentOpcode,file, X ); break;
-						case 0x18: _WriteInstruction( "%04X		LD ST, V%u",iIndex,iCurrentOpcode,file, X ); break;
-						case 0x1E: _WriteInstruction( "%04X		ADD I, V%u",iIndex,iCurrentOpcode,file, X ); break;
-						case 0x29: _WriteInstruction( "%04X		LD FONT, V%u",iIndex,iCurrentOpcode,file, X ); break;
-						case 0x30: _WriteInstruction( "%04X		LD H_FONT, V%u",iIndex,iCurrentOpcode,file, X ); break;
-						case 0x33: _WriteInstruction( "%04X		LD BCD, V%u",iIndex,iCurrentOpcode,file, X ); break;
-						case 0x55: _WriteInstruction( "%04X		LD [I], V%u",iIndex,iCurrentOpcode,file, X ); break;
-						case 0x65: _WriteInstruction( "%04X		LD V%u, [I]",iIndex,iCurrentOpcode,file, X ); break;
-						case 0x75: _WriteInstruction( "%04X		LD RPL, V%u",iIndex,iCurrentOpcode,file, X ); break;
-						case 0x85: _WriteInstruction( "%04X		LD V%u, RPL",iIndex,iCurrentOpcode,file, X ); break;
+						case 0:
+						{
+							iIndex += 2;
+							uint16_t iNextValue = ( *( pCPU->GetMemory()->begin() + iIndex ) << 8 ) | *( pCPU->GetMemory()->begin() + ( iIndex + 1 ) );
+							_WriteInstruction( "%04X		LD I, NNNN		( XO_CHIP )",iIndex,iCurrentOpcode,file,iNextValue );
+							iPC += 2;
+							break;
+						}
+						case 0xF001: _WriteInstruction( "%04X		PLANE %u		( XO_CHIP )",iIndex,iCurrentOpcode,file,X ); break;
+						case 0xF002: _WriteInstruction( "%04X		AUDIO		( XO_CHIP )",iIndex,iCurrentOpcode,file ); break;
+						case 0xF007: _WriteInstruction( "%04X		SKNP V%u, DT",iIndex,iCurrentOpcode,file, X ); break;
+						case 0xF00A: _WriteInstruction( "%04X		LD V%u, K",iIndex,iCurrentOpcode,file, X ); break;
+						case 0xF015: _WriteInstruction( "%04X		LD DT, V%u",iIndex,iCurrentOpcode,file, X ); break;
+						case 0xF018: _WriteInstruction( "%04X		LD ST, V%u",iIndex,iCurrentOpcode,file, X ); break;
+						case 0xF01E: _WriteInstruction( "%04X		ADD I, V%u",iIndex,iCurrentOpcode,file, X ); break;
+						case 0xF029: _WriteInstruction( "%04X		LD FONT, V%u",iIndex,iCurrentOpcode,file, X ); break;
+						case 0xF030: _WriteInstruction( "%04X		LD H_FONT, V%u",iIndex,iCurrentOpcode,file, X ); break;
+						case 0xF033: _WriteInstruction( "%04X		LD BCD, V%u",iIndex,iCurrentOpcode,file, X ); break;
+						case 0xF055: _WriteInstruction( "%04X		LD [I], V%u",iIndex,iCurrentOpcode,file, X ); break;
+						case 0xF065: _WriteInstruction( "%04X		LD V%u, [I]",iIndex,iCurrentOpcode,file, X ); break;
+						case 0xF075: _WriteInstruction( "%04X		LD RPL, V%u",iIndex,iCurrentOpcode,file, X ); break;
+						case 0xF085: _WriteInstruction( "%04X		LD V%u, RPL",iIndex,iCurrentOpcode,file, X ); break;
 						_WriteInstruction( "WARNING::UNKNOWN_OPCODE::%#04X",iIndex,iCurrentOpcode,file );
 					}
 				}
