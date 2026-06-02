@@ -125,7 +125,7 @@ void Disassembler::Disassemble_ROM( const char* memblock, const char* sROMToLoad
 				{
 					switch( iCurrentOpcode & 0xF0FF )
 					{
-						case 0:
+						case 0xF000:
 						{
 							iIndex += 2;
 							uint16_t iNextValue = ( *( pCPU->GetMemory()->begin() + iIndex ) << 8 ) | *( pCPU->GetMemory()->begin() + ( iIndex + 1 ) );
