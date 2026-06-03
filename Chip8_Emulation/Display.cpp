@@ -8,7 +8,7 @@
 const uint16_t WINDOW_WIDTH = 1920;
 const uint16_t WINDOW_HEIGHT = 1080;
 
-uint64_t Display::m_pPixels[ 64 ][ 2 ] = { 0 };
+uint64_t Display::m_pPixels[ 2 ][ 64 ][ 2 ] = {0};
 
 bool Display::m_bDirtyFrame = false;
 Display* Display::m_pSingleton = nullptr;
@@ -21,6 +21,7 @@ std::chrono::microseconds Display::m_iCurrentTick = std::chrono::microseconds( D
 
 uint8_t Display::m_iDisplayWidth = 0;//TODO : init to 0, so we could check and stop if no resolution is found
 uint8_t Display::m_iDisplayHeight = 0;
+uint8_t Display::m_iBitPlaneDrawIteration = 2;
 
 std::string Display::m_sGameTitle = "";
 
@@ -47,7 +48,8 @@ Display::Display() :
 	m_iEBO( 0 ),
 	m_iFBO( 0 ),
 	m_iLastTimeUpdate( std::chrono::steady_clock::now() ),
-	m_oResolutionMode( ResolutionMode::LORES )
+	m_oResolutionMode( ResolutionMode::LORES ),
+	m_oCurrentBitMask( PlaneBitMask::PLANE1 )
 {
 }
 
@@ -133,14 +135,14 @@ void Display::_InitTexture()
 #endif
 	//*-------------------------------------------------------------------------------------------------*//
 	glGenTextures( 1,&m_iTexture );
-	glBindTexture( GL_TEXTURE_2D,m_iTexture );
+	glBindTexture( GL_TEXTURE_2D_ARRAY,m_iTexture );
 
-	glTexImage2D( GL_TEXTURE_2D,0,GL_R32UI,2,m_iDisplayHeight,0,GL_RED_INTEGER,GL_UNSIGNED_INT,NULL );
+	glTexImage3D( GL_TEXTURE_2D_ARRAY,0,GL_R32UI,2,m_iDisplayHeight,2,0,GL_RED_INTEGER,GL_UNSIGNED_INT,NULL );
 
-	glTexParameteri( GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST );
-	glTexParameteri( GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST );
+	glTexParameteri( GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MIN_FILTER,GL_NEAREST );
+	glTexParameteri( GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MAG_FILTER,GL_NEAREST );
 
-	glBindTexture( GL_TEXTURE_2D,0 );
+	glBindTexture( GL_TEXTURE_2D_ARRAY,0 );
 }
 
 void Display::_InitFramebuffer()
@@ -202,15 +204,21 @@ void Display::AssignDisplaySettings( bool bDefaultRes /*= false*/, const std::ve
 {
 	int iIndex = 0;
 
-	int vertexBgColorLocation = glGetUniformLocation( m_sShaderProgram.ID,"bgColor" );
-	int vertexFontColorLocation = glGetUniformLocation( m_sShaderProgram.ID,"fontColor" );
-
 	glUseProgram( m_sShaderProgram.ID );
+
+	GLint iColorPaletteLocation = glGetUniformLocation( m_sShaderProgram.ID,"colorPalette[0]" );
 
 	if( sColors.empty() )
 	{
-		glUniform3f( vertexBgColorLocation,0.67f,0.27f,0.0f );
-		glUniform3f( vertexFontColorLocation,1.0f,0.67f,0.0f );
+		float fDefaultPalette[ 16 ] = 
+		{
+			0.67f, 0.27f, 0.0f, 1.0f,
+			1.0f,  0.67f, 0.0f, 1.0f,
+			0.0f,  0.0f,  0.0f, 1.0f,
+			1.0f,  1.0f,  1.0f, 1.0f
+		};
+
+		glUniform4fv( iColorPaletteLocation,4,fDefaultPalette );
 
 		if( bDefaultRes )
 			SetResolution( WIDTH_DEFAULT_ON_ERROR, HEIGHT_DEFAULT_ON_ERROR );
@@ -218,28 +226,28 @@ void Display::AssignDisplaySettings( bool bDefaultRes /*= false*/, const std::ve
 		return;
 	}
 
+	float fColorPalette[ 16 ] =
+	{
+		0.0f, 0.0f, 0.0f, 1.0f,
+		0.0f, 0.0f, 0.0f, 1.0f,
+		0.0f, 0.0f, 0.0f, 1.0f,
+		0.0f, 0.0f, 0.0f, 1.0f
+	};
 	for( std::string sColor : sColors )
 	{
 		if( sColor[ 0 ] == '#' )
 			sColor.erase( 0,1 );
 
 		unsigned long iColor = std::stoul( sColor,nullptr,16 );
-		float vColor[ 3 ] = { ( ( iColor >> 16 ) & 0xFF ) / 255.0f, ( ( iColor >> 8 ) & 0xFF ) / 255.0f, ( iColor & 0xFF ) / 255.0f };
+		float vColor[ 4 ] = { ( ( iColor >> 16 ) & 0xFF ) / 255.0f, ( ( iColor >> 8 ) & 0xFF ) / 255.0f, ( iColor & 0xFF ) / 255.0f, 1.0f };
 
-		switch( iIndex )
-		{
-		case 0:
-			glUniform3f( vertexBgColorLocation,vColor[ 0 ],vColor[ 1 ],vColor[ 2 ] );
-			break;
-		case 1:
-			glUniform3f( vertexFontColorLocation,vColor[ 0 ],vColor[ 1 ],vColor[ 2 ] );
-			break;
-		default:
-			std::cerr << "Case Color not handle";
-			break;
-		}
+		
+		for( int i = 0; i < 4; ++i )
+			fColorPalette[ ( iIndex * 4 ) + i ] = vColor[ i ];
+		
 		++iIndex;
 	}
+	glUniform4fv( iColorPaletteLocation,4,fColorPalette ); 
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
@@ -254,10 +262,6 @@ void Display::framebuffer_size_callback( GLFWwindow* m_pWindow,int width,int hei
 	glBindTexture( GL_TEXTURE_2D,m_iFBOTexture );
 
 	glTexImage2D( GL_TEXTURE_2D,0,GL_RGB,width,height,0,GL_RGB,GL_UNSIGNED_BYTE,NULL );//need to reallocate texture
-
-	glBindTexture( GL_TEXTURE_2D,0 );
-
-	glBindTexture( GL_TEXTURE_2D,m_iTexture );
 
 	m_bDirtyFrame = true;
 #endif
@@ -292,8 +296,19 @@ void Display::ClearScreen( const KeyDisplayAccess& oKey )
 	_InitPixelsData();
 }
 
-void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xStartingPos,uint8_t yStartingPos,uint8_t N,uint8_t& iVFFlag,bool bWrapping )
+void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey, const uint8_t xStartingPos, const uint8_t yStartingPos,uint8_t N,uint8_t& iVFFlag,bool bWrapping )
 {
+	uint8_t iBitMask = GetInstance()->m_oCurrentBitMask - 1;
+	if( GetInstance()->m_oCurrentBitMask == PlaneBitMask::BOTH )
+	{
+		if( m_iBitPlaneDrawIteration == 2 )
+			m_iBitPlaneDrawIteration = 0;
+		
+		iBitMask = m_iBitPlaneDrawIteration;
+	}
+	else if( GetInstance()->m_oCurrentBitMask == PlaneBitMask::NONE )
+		return;
+
 	Chip8* pInstance = Chip8::GetInstance();
 
 	uint8_t iCurrentX = xStartingPos & ( m_iDisplayWidth - 1 );
@@ -318,11 +333,17 @@ void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xStartingPos,
 
 			uint16_t iMemoryValue = *( pInstance->GetMemory()->begin() + pInstance->GetI() + ( iYOffset * 2 ) ) << 8 |
 									*( pInstance->GetMemory()->begin() + pInstance->GetI() + ( iYOffset * 2 ) + 1 );
+			if( GetInstance()->m_oCurrentBitMask == PlaneBitMask::BOTH && iBitMask == 1 )
+			{
+				uint16_t iMemoryOffset = ( pInstance->GetI() + 32 ); //32 : 16 * 2
+				iMemoryValue = *( pInstance->GetMemory()->begin() + iMemoryOffset + ( iYOffset * 2 ) ) << 8 |
+							   *( pInstance->GetMemory()->begin() + iMemoryOffset + ( iYOffset * 2 ) + 1 );
+			}
 
 			uint64_t iLine = static_cast< uint64_t >( iMemoryValue ) << 48;
 
-			uint64_t iPreviousValue = m_pPixels[ iCurrentY ][ iIndex ];
-			uint64_t iPreviousValue2 = m_pPixels[ iCurrentY ][ iIndex2 ];
+			uint64_t iPreviousValue = m_pPixels[ iBitMask ][ iCurrentY ][ iIndex ];
+			uint64_t iPreviousValue2 = m_pPixels[ iBitMask ][ iCurrentY ][ iIndex2 ];
 
 			//Check in wich block we are, or if both
 			if( iCurrentX < 64 && iCurrentX + iSpriteSize >= 64 )
@@ -336,10 +357,10 @@ void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xStartingPos,
 					iLine <<= ( iSpriteSize - iAns );
 					iLine2 >>= iCurrentX;
 
-					iVFFlag |= ( m_pPixels[ iCurrentY ][ iIndex ] & iLine ) || ( m_pPixels[ iCurrentY ][ iIndex2 ] & iLine2 ) ? 1 : 0;
+					iVFFlag |= ( m_pPixels[ iBitMask ][ iCurrentY ][ iIndex ] & iLine ) || ( m_pPixels[ iBitMask ][ iCurrentY ][ iIndex2 ] & iLine2 ) ? 1 : 0;
 
-					m_pPixels[ iCurrentY ][ iIndex ] ^= iLine;
-					m_pPixels[ iCurrentY ][ iIndex2 ] ^= iLine2;
+					m_pPixels[ iBitMask ][ iCurrentY ][ iIndex ] ^= iLine;
+					m_pPixels[ iBitMask ][ iCurrentY ][ iIndex2 ] ^= iLine2;
 				}
 				else
 				{
@@ -348,26 +369,26 @@ void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xStartingPos,
 					else
 						iLine >>= iCurrentX;
 
-					m_pPixels[ iCurrentY ][ iIndex2 ] ^= iLine;
+					m_pPixels[ iBitMask ][ iCurrentY ][ iIndex2 ] ^= iLine;
 				}
 
-				m_bDirtyFrame |= ( iPreviousValue != m_pPixels[ iCurrentY ][ iIndex ] ) || ( iPreviousValue2 != m_pPixels[ iCurrentY ][ iIndex2 ] );
+				m_bDirtyFrame |= ( iPreviousValue != m_pPixels[ iBitMask ][ iCurrentY ][ iIndex ] ) || ( iPreviousValue2 != m_pPixels[ iBitMask ][ iCurrentY ][ iIndex2 ] );
 			}
 			else if( iCurrentX < 64 )
 			{
 				iLine >>= iCurrentX;
 
-				iVFFlag |= ( m_pPixels[ iCurrentY ][ iIndex2 ] & iLine ) ? 1 : 0;
-				m_pPixels[ iCurrentY ][ iIndex2 ] ^= iLine;
+				iVFFlag |= ( m_pPixels[ iBitMask ][ iCurrentY ][ iIndex2 ] & iLine ) ? 1 : 0;
+				m_pPixels[ iBitMask ][ iCurrentY ][ iIndex2 ] ^= iLine;
 
-				m_bDirtyFrame |= ( iPreviousValue2 != m_pPixels[ iCurrentY ][ iIndex2 ] );
+				m_bDirtyFrame |= ( iPreviousValue2 != m_pPixels[ iBitMask ][ iCurrentY ][ iIndex2 ] );
 			}
 			else if( iCurrentX >= 64 )
 			{
 				iLine >>= ( iCurrentX - 64 );
 
-				iVFFlag |= ( m_pPixels[ iCurrentY ][ iIndex ] & iLine ) ? 1 : 0;
-				m_pPixels[ iCurrentY ][ iIndex ] ^= iLine;
+				iVFFlag |= ( m_pPixels[ iBitMask ][ iCurrentY ][ iIndex ] & iLine ) ? 1 : 0;
+				m_pPixels[ iBitMask ][ iCurrentY ][ iIndex ] ^= iLine;
 
 				if( bWrapping )
 				{
@@ -379,13 +400,20 @@ void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xStartingPos,
 						uint64_t iLine2 = static_cast< uint64_t >( iMemoryValue ) << 48;
 						iLine2 <<= ( iSpriteSize - iAns );
 
-						iVFFlag |= ( m_pPixels[ iCurrentY ][ iIndex2 ] & iLine2 ) ? 1 : 0;
-						m_pPixels[ iCurrentY ][ iIndex2 ] ^= iLine2;
+						iVFFlag |= ( m_pPixels[ iBitMask ][ iCurrentY ][ iIndex2 ] & iLine2 ) ? 1 : 0;
+						m_pPixels[ iBitMask ][ iCurrentY ][ iIndex2 ] ^= iLine2;
 					}
 				}
 
-				m_bDirtyFrame |= ( iPreviousValue != m_pPixels[ iCurrentY ][ iIndex ] ) || ( iPreviousValue2 != m_pPixels[ iCurrentY ][ iIndex2 ] );
+				m_bDirtyFrame |= ( iPreviousValue != m_pPixels[ iBitMask ][ iCurrentY ][ iIndex ] ) || ( iPreviousValue2 != m_pPixels[ iBitMask ][ iCurrentY ][ iIndex2 ] );
 			}
+		}
+
+		if( GetInstance()->m_oCurrentBitMask == PlaneBitMask::BOTH )
+		{
+			++m_iBitPlaneDrawIteration;
+			if( m_iBitPlaneDrawIteration != 2 )
+				DrawPixelAtPos( oKey,xStartingPos,yStartingPos,N,iVFFlag,bWrapping );
 		}
 		return;
 	}
@@ -404,6 +432,8 @@ void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xStartingPos,
 		uint64_t iLine = 0;
 
 		uint16_t iMemoryOffset = ( pInstance->GetI() + iYOffset );
+		if( GetInstance()->m_oCurrentBitMask == PlaneBitMask::BOTH && iBitMask == 1 )
+			iMemoryOffset = ( pInstance->GetI() + N + iYOffset );
 
 #ifdef OVERFLOW_CONTROL
 		iMemoryOffset &= 0xFFF;
@@ -411,9 +441,9 @@ void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xStartingPos,
 		
 		if( GetResolutionMode() != ResolutionMode::HIRES )
 		{
-			uint64_t iPreviousValue = m_pPixels[ iCurrentY ][ 0 ];
+			uint64_t iPreviousValue = m_pPixels[ iBitMask ][ iCurrentY ][ 0 ];
 
-			iMemoryValue = ( uint8_t& )*( pInstance->GetMemory()->begin() + iMemoryOffset );
+			iMemoryValue = ( uint8_t )*( pInstance->GetMemory()->begin() + iMemoryOffset );
 			iLine = static_cast<uint64_t>( iMemoryValue ) << 56; //Store as big endian in ram
 
 			if( iCurrentX != 0 )
@@ -424,18 +454,18 @@ void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xStartingPos,
 					iLine >>= iCurrentX;
 			}
 
-			iVFFlag |= ( m_pPixels[ iCurrentY ][ 0 ] & iLine ) ? 1 : 0;
-			m_pPixels[ iCurrentY ][ 0 ] ^= iLine;
- 			m_bDirtyFrame |= ( iPreviousValue != m_pPixels[ iCurrentY ][ 0 ] );
+			iVFFlag |= ( m_pPixels[ iBitMask ][ iCurrentY ][ 0 ] & iLine ) ? 1 : 0;
+			m_pPixels[ iBitMask ][ iCurrentY ][ 0 ] ^= iLine;
+ 			m_bDirtyFrame |= ( iPreviousValue != m_pPixels[ iBitMask ][ iCurrentY ][ 0 ] );
 		}
 		else
 		{
-			iMemoryValue = ( uint8_t& )*( pInstance->GetMemory()->begin() + iMemoryOffset );
+			iMemoryValue = ( uint8_t )*( pInstance->GetMemory()->begin() + iMemoryOffset );
 
 			iLine = static_cast< uint64_t >( iMemoryValue ) << 56; //Store as big endian in ram
 
-			uint64_t iPreviousValue = m_pPixels[ iCurrentY ][ 0 ];
-			uint64_t iPreviousValue2 = m_pPixels[ iCurrentY ][ 1 ];
+			uint64_t iPreviousValue = m_pPixels[ iBitMask ][ iCurrentY ][ 0 ];
+			uint64_t iPreviousValue2 = m_pPixels[ iBitMask ][ iCurrentY ][ 1 ];
 
 			//Check in wich block we are, or if both
 			if( iCurrentX < 64 && iCurrentX + iSpriteSize >= 64 )
@@ -447,28 +477,28 @@ void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xStartingPos,
 				iLine  <<= ( iSpriteSize - iAns );
 				iLine2 >>= iCurrentX;
 
-				iVFFlag |= ( m_pPixels[ iCurrentY ][ 0 ] & iLine ) || ( m_pPixels[ iCurrentY ][ 1 ] & iLine2 ) ? 1 : 0;
+				iVFFlag |= ( m_pPixels[ iBitMask ][ iCurrentY ][ 0 ] & iLine ) || ( m_pPixels[ iBitMask ][ iCurrentY ][ 1 ] & iLine2 ) ? 1 : 0;
 
-				m_pPixels[ iCurrentY ][ 0 ] ^= iLine;
-				m_pPixels[ iCurrentY ][ 1 ] ^= iLine2;
+				m_pPixels[ iBitMask ][ iCurrentY ][ 0 ] ^= iLine;
+				m_pPixels[ iBitMask ][ iCurrentY ][ 1 ] ^= iLine2;
 
-				m_bDirtyFrame |= ( iPreviousValue != m_pPixels[ iCurrentY ][ 0 ] ) || ( iPreviousValue2 != m_pPixels[ iCurrentY ][ 1 ] );
+				m_bDirtyFrame |= ( iPreviousValue != m_pPixels[ iBitMask ][ iCurrentY ][ 0 ] ) || ( iPreviousValue2 != m_pPixels[ iBitMask ][ iCurrentY ][ 1 ] );
 			}
 			else if( iCurrentX < 64 )
 			{
 				iLine >>= iCurrentX;
 
-				iVFFlag |= ( m_pPixels[ iCurrentY ][ 1 ] & iLine ) ? 1 : 0;
-				m_pPixels[ iCurrentY ][ 1 ] ^= iLine;
+				iVFFlag |= ( m_pPixels[ iBitMask ][ iCurrentY ][ 1 ] & iLine ) ? 1 : 0;
+				m_pPixels[ iBitMask ][ iCurrentY ][ 1 ] ^= iLine;
 
-				m_bDirtyFrame |= iPreviousValue2 != m_pPixels[ iCurrentY ][ 1 ];
+				m_bDirtyFrame |= iPreviousValue2 != m_pPixels[ iBitMask ][ iCurrentY ][ 1 ];
 			}
 			else if( iCurrentX >= 64 )
 			{
 				iLine >>= ( iCurrentX - 64 );
 
-				iVFFlag |= ( m_pPixels[ iCurrentY ][ 0 ] & iLine ) ? 1 : 0;
-				m_pPixels[ iCurrentY ][ 0 ] ^= iLine;
+				iVFFlag |= ( m_pPixels[ iBitMask ][ iCurrentY ][ 0 ] & iLine ) ? 1 : 0;
+				m_pPixels[ iBitMask ][ iCurrentY ][ 0 ] ^= iLine;
 
 				if( bWrapping )
 				{
@@ -478,19 +508,37 @@ void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xStartingPos,
 						int iAns = xShift - 64;
 						uint64_t iOverflow = static_cast< uint64_t >( iMemoryValue ) << 56;
 						iOverflow <<= ( iSpriteSize - iAns );
-						iVFFlag |= ( m_pPixels[ iCurrentY ][ 1 ] & iOverflow ) ? 1 : 0;
-						m_pPixels[ iCurrentY ][ 1 ] ^= iOverflow;
+						iVFFlag |= ( m_pPixels[ iBitMask ][ iCurrentY ][ 1 ] & iOverflow ) ? 1 : 0;
+						m_pPixels[ iBitMask ][ iCurrentY ][ 1 ] ^= iOverflow;
 					}
 				}
 
-				m_bDirtyFrame |= ( iPreviousValue != m_pPixels[ iCurrentY ][ 0 ] ) || ( iPreviousValue2 != m_pPixels[ iCurrentY ][ 1 ] );
+				m_bDirtyFrame |= ( iPreviousValue != m_pPixels[ iBitMask ][ iCurrentY ][ 0 ] ) || ( iPreviousValue2 != m_pPixels[ iBitMask ][ iCurrentY ][ 1 ] );
 			}
 		}
 	}
+
+	if( GetInstance()->m_oCurrentBitMask == PlaneBitMask::BOTH )
+	{
+		++m_iBitPlaneDrawIteration;
+		if( m_iBitPlaneDrawIteration < 2 )
+			DrawPixelAtPos( oKey,xStartingPos, yStartingPos, N,iVFFlag, bWrapping );
+	}
 }
 
-void Display::ScrollVertical( const KeyDisplayAccess& oKey,uint8_t N, bool bDown )
+void Display::ScrollVertical( const KeyDisplayAccess& oKey,uint8_t N, const bool bDown )
 {
+	uint8_t iBitMask = GetInstance()->m_oCurrentBitMask - 1;
+	if( GetInstance()->m_oCurrentBitMask == PlaneBitMask::BOTH )
+	{
+		if( m_iBitPlaneDrawIteration == 2 )
+			m_iBitPlaneDrawIteration = 0;
+
+		iBitMask = m_iBitPlaneDrawIteration;
+	}
+	else if( GetInstance()->m_oCurrentBitMask == PlaneBitMask::NONE )
+		return;
+
 	if( bDown )
 	{
 		N = Chip8::m_oCurrentQuirk.bLegacySrolling ? N / 2 : N;
@@ -499,15 +547,15 @@ void Display::ScrollVertical( const KeyDisplayAccess& oKey,uint8_t N, bool bDown
 			int iIndex = k - N;
 			if( iIndex < 0 )
 			{
-				m_pPixels[ k ][ 0 ] = 0; //Clip
+				m_pPixels[ iBitMask ][ k ][ 0 ] = 0; //Clip
 				if( GetResolutionMode() == ResolutionMode::HIRES )
-					m_pPixels[ k ][ 1 ] = 0;
+					m_pPixels[ iBitMask ][ k ][ 1 ] = 0;
 			}
 			else
 			{
-				m_pPixels[ k ][ 0 ] = m_pPixels[ iIndex ][ 0 ];
+				m_pPixels[ iBitMask ][ k ][ 0 ] = m_pPixels[ iBitMask ][ iIndex ][ 0 ];
 				if( GetResolutionMode() == ResolutionMode::HIRES )
-					m_pPixels[ k ][ 1 ] = m_pPixels[ iIndex ][ 1 ];
+					m_pPixels[ iBitMask ][ k ][ 1 ] = m_pPixels[ iBitMask ][ iIndex ][ 1 ];
 			}
 		}
 	}
@@ -518,45 +566,70 @@ void Display::ScrollVertical( const KeyDisplayAccess& oKey,uint8_t N, bool bDown
 			int iIndex = k + N;
 			if( iIndex < m_iDisplayHeight )
 			{
-				m_pPixels[ k ][ 0 ] = m_pPixels[ iIndex ][ 0 ];
+				m_pPixels[ iBitMask ][ k ][ 0 ] = m_pPixels[ iBitMask ][ iIndex ][ 0 ];
 				if( GetResolutionMode() == ResolutionMode::HIRES )
-					m_pPixels[ k ][ 1 ] = m_pPixels[ iIndex ][ 1 ];
+					m_pPixels[ iBitMask ][ k ][ 1 ] = m_pPixels[ iBitMask ][ iIndex ][ 1 ];
 			}
 			else
 			{
-				m_pPixels[ k ][ 0 ] = 0; //Clip
+				m_pPixels[ iBitMask ][ k ][ 0 ] = 0; //Clip
 				if( GetResolutionMode() == ResolutionMode::HIRES )
-					m_pPixels[ k ][ 1 ] = 0;
+					m_pPixels[ iBitMask ][ k ][ 1 ] = 0;
 			}
 		}
 	}
+
+	if( GetInstance()->m_oCurrentBitMask == PlaneBitMask::BOTH )
+	{
+		++m_iBitPlaneDrawIteration;
+		if( m_iBitPlaneDrawIteration < 2 )
+			ScrollVertical( oKey, N, bDown );
+	}
 }
 
-void Display::ScrollHorizontal( const KeyDisplayAccess& oKey,bool bLeft )
+void Display::ScrollHorizontal( const KeyDisplayAccess& oKey, const bool bLeft )
 {
+	uint8_t iBitMask = GetInstance()->m_oCurrentBitMask - 1;
+	if( GetInstance()->m_oCurrentBitMask == PlaneBitMask::BOTH )
+	{
+		if( m_iBitPlaneDrawIteration == 2 )
+			m_iBitPlaneDrawIteration = 0;
+
+		iBitMask = m_iBitPlaneDrawIteration;
+	}
+	else if( GetInstance()->m_oCurrentBitMask == PlaneBitMask::NONE )
+		return;
+
 	uint8_t iScrollValue = Chip8::m_oCurrentQuirk.bLegacySrolling ? 2 : 4;
 	for( int k = 0; k < m_iDisplayHeight; ++k )
 	{
 		if( GetResolutionMode() == ResolutionMode::LORES )
-			bLeft ? m_pPixels[ k ][ 0 ] <<= iScrollValue : m_pPixels[ k ][ 0 ] >>= iScrollValue;
+			bLeft ? m_pPixels[ iBitMask ][ k ][ 0 ] <<= iScrollValue : m_pPixels[ iBitMask ][ k ][ 0 ] >>= iScrollValue;
 		else
 		{
 			//Check if we push outside the block
 			if( bLeft )
 			{
-				uint8_t iBlockErase = ( m_pPixels[ k ][ 0 ] >> 60 ) & 0xF;
+				uint8_t iBlockErase = ( m_pPixels[ iBitMask ][ k ][ 0 ] >> 60 ) & 0xF;
 
-				m_pPixels[ k ][ 0 ] <<= iScrollValue;
-				m_pPixels[ k ][ 1 ] = ( m_pPixels[ k ][ 1 ] << iScrollValue ) | iBlockErase;
+				m_pPixels[ iBitMask ][ k ][ 0 ] <<= iScrollValue;
+				m_pPixels[ iBitMask ][ k ][ 1 ] = ( m_pPixels[ iBitMask ][ k ][ 1 ] << iScrollValue ) | iBlockErase;
 			}
 			else
 			{
-				uint64_t iBlockErase = m_pPixels[ k ][ 1 ] & 0xF;
+				uint64_t iBlockErase = m_pPixels[ iBitMask ][ k ][ 1 ] & 0xF;
 
-				m_pPixels[ k ][ 1 ] >>= iScrollValue;
-				m_pPixels[ k ][ 0 ] = ( m_pPixels[ k ][ 0 ] >> iScrollValue ) | ( iBlockErase << 60 );
+				m_pPixels[ iBitMask ][ k ][ 1 ] >>= iScrollValue;
+				m_pPixels[ iBitMask ][ k ][ 0 ] = ( m_pPixels[ iBitMask ][ k ][ 0 ] >> iScrollValue ) | ( iBlockErase << 60 );
 			}
 		}
+	}
+
+	if( GetInstance()->m_oCurrentBitMask == PlaneBitMask::BOTH )
+	{
+		++m_iBitPlaneDrawIteration;
+		if( m_iBitPlaneDrawIteration < 2 )
+			ScrollHorizontal( oKey, bLeft );
 	}
 }
 
@@ -594,7 +667,7 @@ void Display::Update( const std::chrono::steady_clock::time_point& time,const bo
 #ifdef DEBUG_INFO
 			glBindFramebuffer( GL_FRAMEBUFFER,m_iFBO );
 #endif
-			glTexSubImage2D( GL_TEXTURE_2D,0,0,0,4,Display::GetHeight(),GL_RED_INTEGER,GL_UNSIGNED_INT,m_pPixels );
+			glTexSubImage3D( GL_TEXTURE_2D_ARRAY,0,0,0,0,4,Display::GetHeight(),2,GL_RED_INTEGER,GL_UNSIGNED_INT,m_pPixels );
 
 			m_sShaderProgram.Use();
 
@@ -638,8 +711,9 @@ void Display::SetResolution( const int iWidth,const int iHeight )
 	glUniform1i( iHeightLocation,m_iDisplayHeight );
 
 	//Update texture with new res
-	glBindTexture( GL_TEXTURE_2D,m_iTexture );
-	glTexImage2D( GL_TEXTURE_2D,0,GL_R32UI,4,iHeight,0,GL_RED_INTEGER,GL_UNSIGNED_INT,NULL );//Beware to Display::Update glTexSubImage2D call
+	glBindTexture( GL_TEXTURE_2D_ARRAY,m_iTexture );
+	glTexImage3D( GL_TEXTURE_2D_ARRAY,0,GL_R32UI,4,iHeight,2,0,GL_RED_INTEGER,GL_UNSIGNED_INT,NULL );//Beware to Display::Update glTexSubImage2D call
+
 	m_bDirtyFrame = true;
 
 #ifdef DEBUG_INFO

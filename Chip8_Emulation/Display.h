@@ -38,16 +38,14 @@ public:
 	int Init( const KeyDisplayAccess& oKey,const Chip8* pCpu );
 	static void Reset( const KeyDisplayAccess& oKey );
 	static void ClearScreen( const KeyDisplayAccess& oKey );
-	static void DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xStartingPos,uint8_t yStartingPos,const uint8_t N,uint8_t& iVFFlag,bool bWrapping );
-	static void ScrollVertical( const KeyDisplayAccess& oKey, uint8_t N,bool bDown );
-	static void ScrollHorizontal( const KeyDisplayAccess& oKey, bool bLeft );
+	static void DrawPixelAtPos( const KeyDisplayAccess& oKey, const uint8_t xStartingPos,const uint8_t yStartingPos,const uint8_t N,uint8_t& iVFFlag,bool bWrapping );
+	static void ScrollVertical( const KeyDisplayAccess& oKey, uint8_t N,const bool bDown );
+	static void ScrollHorizontal( const KeyDisplayAccess& oKey, const bool bLeft );
 	void DestroyWindow( const KeyDisplayAccess& oKey );
 
 	void Update( const std::chrono::steady_clock::time_point& time,const bool cpuPaused );
 
 	const unsigned int& GetFBOTexture() const { return m_iFBOTexture; }
-	const unsigned int& GetTexture() const { return m_iTexture; }
-	const unsigned int& GetFBO() const { return m_iFBO; }
 	GLFWwindow* GetWindow() const { return m_pWindow; }
 	const std::chrono::steady_clock::time_point& GetLastTimeUpdate() const { return m_iLastTimeUpdate; }
 
@@ -73,8 +71,8 @@ public:
 	}
 
 	void SetResolutionMode( const ResolutionMode oResolutionMode );
+	void SetPlaneBitmask( const uint8_t oPlaneBitMask ){ m_oCurrentBitMask = ( PlaneBitMask )oPlaneBitMask; }
 	static ResolutionMode GetResolutionMode() { return GetInstance()->m_oResolutionMode;}
-	static void InitResolutionMode( const KeyDisplayAccess& oKey ){ GetInstance()->m_oResolutionMode = ResolutionMode::LORES; }
 
 protected:
 	Display();
@@ -101,7 +99,7 @@ protected:
 	unsigned int 						m_iEBO;
 	unsigned int						m_iFBO;
 
-	static uint64_t						m_pPixels[ 64 ][ 2 ];
+	static uint64_t						m_pPixels[ 2 ][ 64 ][ 2 ]; //bitmask || Width || 32Bit block
 
 	std::chrono::steady_clock::time_point m_iLastTimeUpdate;
 
@@ -117,4 +115,6 @@ protected:
 
 	
 	ResolutionMode						m_oResolutionMode;
+	PlaneBitMask						m_oCurrentBitMask;
+	static uint8_t						m_iBitPlaneDrawIteration;
 };
