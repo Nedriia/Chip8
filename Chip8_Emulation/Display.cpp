@@ -84,6 +84,13 @@ int Display::Init( const KeyDisplayAccess& oKey,const Chip8* pCpu )
 	return 0;
 }
 
+void Display::Reset( const KeyDisplayAccess& oKey )
+{
+	ClearScreen( oKey );
+	GetInstance()->m_oResolutionMode = ResolutionMode::LORES;
+	GetInstance()->m_oCurrentBitMask = PlaneBitMask::PLANE1;
+}
+
 int Display::_CreateWindowChip()
 {
 	// glfw window creation

@@ -13,6 +13,14 @@ enum ResolutionMode
 	HIRES
 };
 
+enum PlaneBitMask
+{
+	NONE, //Can happen on xochip, we don't draw anything in this case
+	PLANE1, //By default for CHIP 8 / Superchip
+	PLANE2,
+	BOTH
+};
+
 class Chip8;
 class alignas( 16 ) Display
 {
@@ -28,6 +36,7 @@ public:
 	};
 
 	int Init( const KeyDisplayAccess& oKey,const Chip8* pCpu );
+	static void Reset( const KeyDisplayAccess& oKey );
 	static void ClearScreen( const KeyDisplayAccess& oKey );
 	static void DrawPixelAtPos( const KeyDisplayAccess& oKey,uint8_t xStartingPos,uint8_t yStartingPos,const uint8_t N,uint8_t& iVFFlag,bool bWrapping );
 	static void ScrollVertical( const KeyDisplayAccess& oKey, uint8_t N,bool bDown );

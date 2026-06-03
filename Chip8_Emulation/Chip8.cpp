@@ -138,8 +138,7 @@ void Chip8::_Reset()
 	m_iCurrentOpcode = 0;
 	auto test = m_aMemory;
 	Display::KeyDisplayAccess oKeyDisplay;
-	Display::ClearScreen( oKeyDisplay );
-	Display::InitResolutionMode( oKeyDisplay );
+	Display::Reset( oKeyDisplay );
 
 	for( auto it = m_aMemory.begin(); it != m_aMemory.end(); ++it )
 		it->clear();
@@ -373,8 +372,24 @@ void Chip8::_FetchDecode_Opcode()
 		SNE_VX_NN();
 		break;
 	case 0x5000:
-		SE_VX_VY();
-		break;
+	{
+		switch( m_iCurrentOpcode & 0x000F )
+		{
+			case 0:
+				SE_VX_VY();
+				break;
+			case 2: 
+				SAVE_RANGE();
+				break;
+			case 3:
+				LOAD_RANGE();
+				break;
+			default:
+				std::cerr << "ERROR::OPCODE_UNKNOWN_" << std::hex << m_iCurrentOpcode << std::endl;
+				break;
+		}
+	}
+	break;
 	case 0x6000:
 		LD_VX_NN();
 		break;
@@ -446,47 +461,59 @@ void Chip8::_FetchDecode_Opcode()
 	break;
 	case 0xF000:
 	{
-		switch( m_iCurrentOpcode & 0x00FF )
+		switch( m_iCurrentOpcode & 0xF0FF )
 		{
-		case 7:
-			LD_VX_DT();
+			case 0xF000:
+				LD_I_NNNN();
 			break;
-		case 0x0A:
-			LD_VX_KEY();
-			break;
-		case 0x15:
-			LD_DT_VX();
-			break;
-		case 0x18:
-			LD_ST_VX();
-			break;
-		case 0x1E:
-			ADD_I_VX();
-			break;
-		case 0x29:
-			LD_I_FONT();
-			break;
-		case 0x30:
-			LD_I_SUPER_FONT();
-			break;
-		case 0x33:
-			BCD();
-			break;
-		case 0x55:
-			LD_I_VX();
-			break;
-		case 0x65:
-			LD_VX_I();
-			break;
-		case 0x75:
-			SAVEFLAGS_VX();
-			break;
-		case 0x85:
-			LOADFLAGS_VX();
-			break;
-		default:
-			std::cerr << "ERROR::OPCODE_UNKNOWN_" << std::hex << m_iCurrentOpcode << std::endl;
-			break;
+			case 0xF001:
+				PLANE();
+				break;
+			case 0xF002:
+				AUDIO();
+				break;
+			case 0xF007:
+				LD_VX_DT();
+				break;
+			case 0xF00A:
+				LD_VX_KEY();
+				break;
+			case 0xF015:
+				LD_DT_VX();
+				break;
+			case 0xF018:
+				LD_ST_VX();
+				break;
+			case 0xF01E:
+				ADD_I_VX();
+				break;
+			case 0xF029:
+				LD_I_FONT();
+				break;
+			case 0xF030:
+				LD_I_SUPER_FONT();
+				break;
+			case 0xF033:
+				BCD();
+				break;
+			case 0xF03A:
+				AUDIO_PITCH();
+				break;
+			case 0xF055:
+				LD_I_VX();
+				break;
+			case 0xF065:
+				LD_VX_I();
+				break;
+			case 0xF075:
+				SAVEFLAGS_VX();
+				break;
+			case 0xF085:
+				LOADFLAGS_VX();
+				break;
+			default:
+				std::cerr << "ERROR::OPCODE_UNKNOWN_" << std::hex << m_iCurrentOpcode << std::endl;
+				break;
 		}
 	}
 	break;
@@ -598,22 +625,12 @@ inline void Chip8::JMP()
 }
 
 inline void Chip8::JMP_NNN()
-{
+{	
+	//Jumps to the address NNN plus V0
 	if( !Chip8::m_oCurrentQuirk.bQuirkJumpingFlag )
-	{
-		//Jumps to the address NNN plus V0
-#ifdef DEBUF_INFO
-		m_sOpcodeInstruct = std::format( "{:04X} : JMP V0, NNN",m_iCurrentOpcode );
-#endif //DEBUG_INFO
 		m_iPC = GetNNN() + m_aRegisters[ 0 ];
-	}
 	else
-	{
-#ifdef DEBUG_INFO
-		m_sOpcodeInstruct = std::format( "{:04X} : JMP VX",m_iCurrentOpcode );
-#endif //DEBUG_INFO
 		m_iPC = GetNNN() + m_aRegisters[ GetX() ];
-	}
 }
 
 inline void Chip8::CALL()
@@ -672,6 +689,18 @@ inline void Chip8::LD_VX_VY()
 {
 	//Sets VX to the value of VY.
 	m_aRegisters[ GetX() ] = m_aRegisters[ GetY() ];
+}
+
+inline void Chip8::LD_I_NNNN()
+{
+#ifdef OVERFLOW_CONTROL
+	m_iPC &= 0xFFF;
+	m_iI = m_aMemory[ m_iPC ] << 8 | m_aMemory[ ( m_iPC + 1 ) & 0xFFF ];
+#else
+	m_iI = m_aMemory[ m_iPC ] << 8 | m_aMemory[ m_iPC + 1 ];
+#endif
+
+	m_iPC += 2;
 }
 
 inline void Chip8::LD_I_NNN()
@@ -806,6 +835,20 @@ inline void Chip8::LOADFLAGS_VX()
 	}
 }
 
+inline void Chip8::SAVE_RANGE()
+{
+	int k = 0;
+	for( int i = GetX(); i <= GetY(); ++i, ++k )
+		m_aMemory[ GetI() + k ] = m_aRegisters[i];
+}
+
+inline void Chip8::LOAD_RANGE()
+{
+	int k = 0;
+	for( int i = GetX(); i <= GetY(); ++i,++k )
+		m_aRegisters[ i ] = m_aMemory[ GetI() + k ];
+}
+
 inline void Chip8::HIRES()
 {
 	Display::GetInstance()->SetResolutionMode( ResolutionMode::HIRES );
@@ -887,10 +930,6 @@ inline void Chip8::SHR()
 
 	if( !Chip8::m_oCurrentQuirk.bShiftingFlag )
 	{
-#ifdef DEBUF_INFO
-		m_sOpcodeInstruct = std::format( "{:04X} : SHR VX, VY",m_iCurrentOpcode );
-#endif //DEBUF_INFO
-
 		uint8_t Y = GetY();
 		LSB = ( m_aRegisters[ Y ] & 0x01 );
 
@@ -898,10 +937,6 @@ inline void Chip8::SHR()
 	}
 	else
 	{
-#ifdef DEBUG_INFO
-		m_sOpcodeInstruct = std::format( "{:04X} : SHR VX",m_iCurrentOpcode );
-#endif
-
 		LSB = ( m_aRegisters[ X ] & 0x01 );
 
 		m_aRegisters[ X ] >>= 1;
@@ -926,10 +961,6 @@ inline void Chip8::SHL()
 	uint8_t MSB = 0;
 	if( !Chip8::m_oCurrentQuirk.bShiftingFlag )
 	{
-#ifdef DEBUG_INFO//DEBUG_INFO
-		m_sOpcodeInstruct = std::format( "{:04X} : SHL VX, VY",m_iCurrentOpcode );
-#endif //DEBUG_INFO
-
 		uint8_t Y = GetY();
 		// If the most-significant bit of Vy is 1.
 		MSB = ( m_aRegisters[ Y ] & 0x80 ) == 0x80 ? 1 : 0;
@@ -939,9 +970,6 @@ inline void Chip8::SHL()
 	else
 	{
 		uint8_t X = GetX();
-#ifdef DEBUG_INFO//DEBUG_INFO
-		m_sOpcodeInstruct = std::format( "{:04X} : SHL VX",m_iCurrentOpcode );
-#endif //DEBUG_INFO
 
 		// If the most-significant bit of Vx is 1, then VF is set to 1, otherwise to 0. Then Vx is multiplied by 2.
 		MSB = ( m_aRegisters[ X ] & 0x80 ) == 0x80 ? 1 : 0;
@@ -965,10 +993,6 @@ inline void Chip8::DRAW()
 	{
 		if( !Chip8::m_oCurrentQuirk.bLegacySrolling || ( Chip8::m_oCurrentQuirk.bLegacySrolling && Display::GetInstance()->GetResolutionMode() == ResolutionMode::LORES ) )
 		{
-#ifdef DEBUG_INFO
-			m_sOpcodeInstruct = std::format( "{:04X} : DRW VX, VY VBlank",m_iCurrentOpcode );
-#endif //DEBUG_INFO
-
 			//VBlank, waiting for next frame
 			if( m_iTimeLastFrame.time_since_epoch().count() == 0 )
 			{
@@ -986,12 +1010,6 @@ inline void Chip8::DRAW()
 				return;
 			}
 		}
-	}
-	else
-	{
-#ifdef DEBUG_INFO
-		m_sOpcodeInstruct = std::format( "{:04X} : DRW VX, VY",m_iCurrentOpcode );
-#endif //DEBUG_INFO
 	}
 
 	/*Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision.
@@ -1020,6 +1038,21 @@ inline void Chip8::SKNP()
 	//Skips the next instruction if the key stored in VX(only consider the lowest nibble) is not pressed (usually the next instruction is a jump to skip a code block).
 	if( !m_pInputInstance->GetKeyState( m_aRegisters[ GetX() ] ) )
 		m_iPC += 2;
+}
+
+inline void Chip8::PLANE()
+{
+	Display::GetInstance()->SetPlaneBitmask( GetX() );
+}
+
+inline void Chip8::AUDIO()
+{
+
+}
+
+inline void Chip8::AUDIO_PITCH()
+{
+
 }
 
 inline const uint8_t Chip8::GetX()

@@ -132,7 +132,7 @@ public:
 	const Data< uint8_t> GetSP() const { return m_iSP; }
 	const Data< uint8_t> GetDelayTimer() const { return m_iDelay_timer; }
 	const Data< uint8_t> GetSoundTimer() const { return m_iSound_timer; }
-	int								GetCycleId() const { return m_iCycle; }
+	long long unsigned				GetCycleId() const { return m_iCycle; }
 
 	bool							IsPause() const { return m_oState == RunningState::Pause; }
 	bool							IsStop() const { return m_oState == RunningState::Stop; }
@@ -175,7 +175,7 @@ private:
 	uint16_t m_iCurrentOpcode;
 
 	uint16_t m_iLastOpcode;
-	int		m_iCycle;
+	long long unsigned							m_iCycle;
 	mutable RunningState						m_oState;
 
 	Data<uint8_t> m_iDelay_timer;
@@ -263,6 +263,7 @@ private:
 
 	inline void LD_VX_NN();
 	inline void LD_VX_VY();
+	inline void LD_I_NNNN();
 	inline void LD_I_NNN();
 	inline void LD_VX_DT();
 	inline void LD_DT_VX();
@@ -274,6 +275,8 @@ private:
 	inline void LD_VX_I();
 	inline void SAVEFLAGS_VX();
 	inline void LOADFLAGS_VX();
+	inline void SAVE_RANGE();
+	inline void LOAD_RANGE();
 	inline void HIRES();
 	inline void LORES();
 	inline void SCROLL_DOWN();
@@ -301,6 +304,10 @@ private:
 	inline void SKP();
 	inline void SKNP();
 
+	inline void PLANE();
+	inline void AUDIO();
+	inline void AUDIO_PITCH();
+
 	inline const uint8_t GetX();
 	inline const uint8_t GetY();
 	inline const uint16_t GetNNN();
@@ -308,7 +315,6 @@ private:
 	inline const uint8_t GetN();
 
 #ifdef DEBUG_INFO
-	std::string m_sOpcodeInstruct;
 	static uint16_t	m_iAdressBreakpoint;
 #endif
 
