@@ -55,6 +55,7 @@ Chip8_Debugger::Chip8_Debugger() :
 
 void Chip8_Debugger::Init( GLFWwindow* mainWindow,const Chip8* pCPU )
 {
+#ifdef DEBUG_INFO
 	float main_scale = ImGui_ImplGlfw_GetContentScaleForMonitor( glfwGetPrimaryMonitor() ); // Valid on GLFW 3.3+ only
 
 	m_pWindow = mainWindow;
@@ -289,7 +290,88 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 	{
 	}*/
 
-	if( ImGui::Begin( "Memory",nullptr ) )
+	if( ImGui::Begin( "Memory",nullptr ) && m_pCPU != nullptr )
+	{
+		static int iBytesPerLine = 32;
+		ImGui::SliderInt( "Bytes per line",&iBytesPerLine,2,32 );
+		if( ImGui::BeginListBox( "#",ImVec2( -FLT_MIN,24 * ImGui::GetTextLineHeightWithSpacing() ) ) )
+		{
+			int num_items = ( m_pCPU->GetMemory()->end() - m_pCPU->GetMemory()->begin() ) / iBytesPerLine;
+			ImGuiListClipper clipper;
+			clipper.Begin( num_items,ImGui::GetTextLineHeightWithSpacing() );
+
+			while( clipper.Step() )
+			{
+				std::string sAdress;
+				int iIndex = 0;
+
+				for( int line = clipper.DisplayStart; line < clipper.DisplayEnd; ++line )
+				{
+					ImGui::PushID( line );
+
+					char buffer[ 64 ];
+					auto oData = ( *m_pCPU->GetMemory()->begin() + ( line * iBytesPerLine ) );
+					snprintf( buffer,sizeof( buffer ),"0x%04X : ",oData );
+					
+					ImGui::Text( buffer );
+					ImGui::SameLine();
+					for( int i = 0; i < iBytesPerLine; ++i )
+					{
+						ImGui::PushID( i );
+
+						if( i == iBytesPerLine / 2 )
+						{
+							ImGui::Text( "|" );
+							ImGui::SameLine();
+						}
+						
+						auto iMemory = oData + i;
+						char byteBuffer[ 4 ];
+						auto oDataBytes = m_pCPU->GetMemory()->begin() + iMemory;
+						snprintf( byteBuffer,sizeof( byteBuffer ),"%02X ", ( uint8_t )*oDataBytes );
+
+						ImGui::Selectable( byteBuffer );
+						
+						ImGui::SameLine();
+						ImGui::PopID();
+					}
+
+					ImGui::Text( "|" );
+					ImGui::SameLine();
+
+					for( int k = 0; k < iBytesPerLine; ++k )
+					{
+						ImGui::PushID( k );
+
+						auto iMemory = oData + k;
+						auto oDataBytes = m_pCPU->GetMemory()->begin() + iMemory;
+
+						std::string sAscii;
+						uint8_t val = ( uint8_t )*oDataBytes;
+						if( val != 0 )
+						{
+							if( val < 33 || val > 126 )
+								sAscii += ".";
+							else
+								sAscii += val;
+						}
+
+						ImGui::Selectable( sAscii.c_str() );
+
+						ImGui::SameLine();
+						ImGui::PopID();
+					}
+
+					ImGui::NewLine();
+					ImGui::PopID();
+				}
+			}
+			clipper.End();
+			ImGui::EndListBox();
+		}
+	}
+
+	/*if( ImGui::Begin( "Memory",nullptr ) )
 	{
 		if( m_pCPU != nullptr )
 		{
@@ -343,8 +425,9 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 			}
 			ImGui::EndListBox();
 		}
-	}
+	}*/
 	ImGui::End();
+
 
 	if( ImGui::Begin( "Disasembly",nullptr ) )
 	{
@@ -353,33 +436,46 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 			static int item_selected_idx = 0;
 			if( ImGui::BeginListBox( "#",ImVec2( -FLT_MIN,35 * ImGui::GetTextLineHeightWithSpacing() ) ) )
 			{
-				auto aDisassemblyInstructions = Disassembler::GetDisassemblyInstructions();
-				for( int n = 0; n < Disassembler::GetDisassemblyInstructions().size(); ++n )
+				auto& aDisassemblyInstructions = Disassembler::GetDisassemblyInstructions();
+
+				int num_items = static_cast< int >( aDisassemblyInstructions.size() );
+				ImGuiListClipper clipper;
+				clipper.Begin( num_items,ImGui::GetTextLineHeightWithSpacing() );
+
+				while( clipper.Step() )
 				{
-					ImGui::PushID( n );
-					bool isCurrent = aDisassemblyInstructions[ n ].m_iAddress == m_pCPU->GetPC();
+					for( int n = clipper.DisplayStart; n < clipper.DisplayEnd; ++n )
+					{
+						ImGui::PushID( n );
 
-					char buffer[ 64 ];
-					snprintf( buffer,sizeof( buffer ),"0x%04X  %s",aDisassemblyInstructions[ n ].m_iAddress, aDisassemblyInstructions[ n ].m_sText.c_str() );
+						const auto& inst = aDisassemblyInstructions[ n ];
+						bool isCurrent = inst.m_iAddress == m_pCPU->GetPC();
 
-					ImGui::Selectable( buffer, isCurrent );
+						char buffer[ 64 ];
+						snprintf( buffer,sizeof( buffer ),"0x%04X  %s",inst.m_iAddress,inst.m_sText.c_str() );
 
-					if( isCurrent && m_bFollowPc )
-						ImGui::SetScrollHereY( 0.5f );
+						ImGui::Selectable( buffer, isCurrent );
 
-					ImGui::PopID();
+						if( isCurrent && m_bFollowPc )
+							ImGui::SetScrollHereY( 0.5f );
+
+						ImGui::PopID();
+					}
 				}
+				clipper.End();
+				ImGui::EndListBox();
 			}
-			ImGui::EndListBox();
 		}
 	}
 	ImGui::End();
 
 	//glBindFramebuffer( GL_FRAMEBUFFER,0 );
+	#endif
 }
 
 void Chip8_Debugger::Render()
 {
+#ifdef DEBUG_INFO
 	int display_w,display_h;
 	glfwGetFramebufferSize( m_pWindow,&display_w,&display_h );
 	glViewport( 0,0,display_w,display_h );
@@ -387,11 +483,13 @@ void Chip8_Debugger::Render()
 	ImGui::Render();
 
 	ImGui_ImplOpenGL3_RenderDrawData( ImGui::GetDrawData() );
+#endif
 }
 
 template< typename T >
 void Chip8_Debugger::FormatDebugData( std::string sText,const char* sFormat,const T& oData,int& iIndexSelectable,int& iIndexPosition )
 {
+#ifdef DEBUG_INFO
 	static_assert( std::is_same_v<T,Data<uint8_t>> || std::is_same_v<T,Data<uint16_t>>,"Function is being call with an unsupported type" );
 
 #ifdef DEBUG_INFO
@@ -425,4 +523,5 @@ void Chip8_Debugger::FormatDebugData( std::string sText,const char* sFormat,cons
 
 	++iIndexPosition;
 	ImGui::PopStyleColor();
+#endif
 }
