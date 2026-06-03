@@ -143,6 +143,7 @@ void Disassembler::Disassemble_ROM( const char* memblock, const char* sROMToLoad
 						case 0xF029: _WriteInstruction( "%04X		LD FONT, V%u",iIndex,iCurrentOpcode,file, X ); break;
 						case 0xF030: _WriteInstruction( "%04X		LD H_FONT, V%u",iIndex,iCurrentOpcode,file, X ); break;
 						case 0xF033: _WriteInstruction( "%04X		LD BCD, V%u",iIndex,iCurrentOpcode,file, X ); break;
+						case 0xF03A: _WriteInstruction( "%04X		PITCH, V%u",iIndex,iCurrentOpcode,file, X ); break;
 						case 0xF055: _WriteInstruction( "%04X		LD [I], V%u",iIndex,iCurrentOpcode,file, X ); break;
 						case 0xF065: _WriteInstruction( "%04X		LD V%u, [I]",iIndex,iCurrentOpcode,file, X ); break;
 						case 0xF075: _WriteInstruction( "%04X		LD RPL, V%u",iIndex,iCurrentOpcode,file, X ); break;
