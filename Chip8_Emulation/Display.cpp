@@ -88,7 +88,7 @@ int Display::Init( const KeyDisplayAccess& oKey,const Chip8* pCpu )
 
 void Display::Reset( const KeyDisplayAccess& oKey )
 {
-	ClearScreen( oKey );
+	ClearScreen( oKey, true );
 	GetInstance()->m_oResolutionMode = ResolutionMode::LORES;
 	GetInstance()->m_oCurrentBitMask = PlaneBitMask::PLANE1;
 }
@@ -291,9 +291,14 @@ void Display::DestroyWindow( const KeyDisplayAccess& oKey )
 	delete m_pSingleton;
 }
 
-void Display::ClearScreen( const KeyDisplayAccess& oKey )
+void Display::ClearScreen( const KeyDisplayAccess& oKey, const bool bReset /*= false*/ )
 {
-	_InitPixelsData();
+	PlaneBitMask oBitMask = GetInstance()->m_oCurrentBitMask;
+	if( oBitMask == PlaneBitMask::BOTH || bReset )
+		memset( m_pPixels,0,sizeof( m_pPixels ) );
+	else
+		memset( m_pPixels[ oBitMask ],0,sizeof ( m_pPixels[ oBitMask ] ) );
+	m_bDirtyFrame = true;
 }
 
 void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey, const uint8_t xStartingPos, const uint8_t yStartingPos,uint8_t N,uint8_t& iVFFlag,bool bWrapping )
