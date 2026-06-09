@@ -297,7 +297,7 @@ void Display::ClearScreen( const KeyDisplayAccess& oKey, const bool bReset /*= f
 	if( oBitMask == PlaneBitMask::BOTH || bReset )
 		memset( m_pPixels,0,sizeof( m_pPixels ) );
 	else
-		memset( m_pPixels[ oBitMask ],0,sizeof ( m_pPixels[ oBitMask ] ) );
+		memset( m_pPixels[ oBitMask - 1 ],0,sizeof ( m_pPixels[ oBitMask - 1 ] ) );
 	m_bDirtyFrame = true;
 }
 
