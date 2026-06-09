@@ -655,28 +655,28 @@ inline void Chip8::SNE_VX_NN()
 {
 	//Skips the next instruction if VX does not equal NN (usually the next instruction is a jump to skip a code block).
 	if( m_aRegisters[ GetX() ] != GetNN() )
-		m_iPC += 2;
+		SkipNextBlock();
 }
 
 inline void Chip8::SNE_VX_VY()
 {
 	//Skips the next instruction if VX does not equal VY. (Usually the next instruction is a jump to skip a code block)
 	if( m_aRegisters[ GetX() ] != m_aRegisters[ GetY() ] )
-		m_iPC += 2;
+		SkipNextBlock();
 }
 
 inline void Chip8::SE_VX_NN()
 {
 	//Skips the next instruction if VX equals NN (usually the next instruction is a jump to skip a code block)
 	if( m_aRegisters[ GetX() ] == GetNN() )
-		m_iPC += 2;
+		SkipNextBlock();
 }
 
 inline void Chip8::SE_VX_VY()
 {
 	//Skips the next instruction if VX equals VY (usually the next instruction is a jump to skip a code block).
 	if( m_aRegisters[ GetX() ] == m_aRegisters[ GetY() ] )
-		m_iPC += 2;
+		SkipNextBlock();
 }
 
 inline void Chip8::LD_VX_NN()
@@ -1030,14 +1030,14 @@ inline void Chip8::SKP()
 {
 	//Skips the next instruction if the key stored in VX(only consider the lowest nibble) is pressed (usually the next instruction is a jump to skip a code block).
 	if( m_pInputInstance->GetKeyState( m_aRegisters[ GetX() ] ) )
-		m_iPC += 2;
+		SkipNextBlock();
 }
 
 inline void Chip8::SKNP()
 {
 	//Skips the next instruction if the key stored in VX(only consider the lowest nibble) is not pressed (usually the next instruction is a jump to skip a code block).
 	if( !m_pInputInstance->GetKeyState( m_aRegisters[ GetX() ] ) )
-		m_iPC += 2;
+		SkipNextBlock();
 }
 
 inline void Chip8::PLANE()
@@ -1098,6 +1098,22 @@ inline const uint8_t Chip8::GetN()
 #else
 	return m_iCurrentOpcode & 0x000F;
 #endif
+}
+
+inline void Chip8::SkipNextBlock()
+{
+	uint16_t iNextOpcode = 0;
+#ifdef OVERFLOW_CONTROL
+	m_iPC &= 0xFFF;
+	iNextOpcode = m_aMemory[ m_iPC ] << 8 | m_aMemory[ ( m_iPC + 1 ) & 0xFFF ];
+#else
+	iNextOpcode = m_aMemory[ m_iPC ] << 8 | m_aMemory[ m_iPC + 1 ];
+#endif
+
+	if( iNextOpcode == 0xF000 )
+		m_iPC += 4;
+	else
+		m_iPC += 2;
 }
 
 inline void Chip8::BCD()

@@ -8,7 +8,7 @@
 #include "Input.h"
 #include "Display.h"
 
-//#define OVERFLOW_CONTROL
+//#define OVERFLOW_CONTROL for test purpose, will not work as is in xo chip
 
 enum class RunningState
 {
@@ -314,6 +314,8 @@ private:
 	inline const uint16_t GetNNN();
 	inline const uint8_t GetNN();
 	inline const uint8_t GetN();
+
+	inline void SkipNextBlock();
 
 #ifdef DEBUG_INFO
 	static uint16_t	m_iAdressBreakpoint;
