@@ -97,7 +97,10 @@ void Disassembler::Disassemble_ROM( const char* memblock, const char* sROMToLoad
 					else if( check == 0xFC )
 						_WriteInstruction( "%04X		SCL",iAdress,iCurrentOpcode,file );
 					else if( check == 0xFD )
+					{
 						_WriteInstruction( "%04X		EXIT",iAdress,iCurrentOpcode,file );
+						return;
+					}
 					else if( check == 0xFE )
 						_WriteInstruction( "%04X		LORES",iAdress,iCurrentOpcode,file );
 					else if( check == 0xFF )
