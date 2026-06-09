@@ -1,6 +1,8 @@
 #pragma once
 #include "string"
 #include <vector>
+#include <queue>
+#include <map>
 
 class Disassembler
 {
@@ -18,9 +20,12 @@ private:
 		std::string m_sText;
 	};
 
-	static std::vector< DisassembledLine > m_aDisassembly;
+	static void		_AddToWorklist( const uint16_t iAddr );
+
+	static std::map< uint16_t, DisassembledLine > m_aDisassembly;
+	static std::queue<uint16_t> m_aWorklist;
 
 public:
-	static std::vector< DisassembledLine >& GetDisassemblyInstructions() { return m_aDisassembly; }
+	static const std::map< uint16_t, DisassembledLine >& GetDisassemblyInstructions() { return m_aDisassembly; }
 
 };

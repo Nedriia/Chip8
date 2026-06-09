@@ -42,6 +42,7 @@
 #define DEFAULT_DATA_COLOR IM_COL32( 255,255,255,180 )
 
 Chip8_Debugger* Chip8_Debugger::m_pSingleton = nullptr;
+static std::vector<uint16_t> m_aAdress = {};
 
 Chip8_Debugger::Chip8_Debugger() :
 	m_pWindow( nullptr ),
@@ -166,6 +167,7 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 				{
 					if( strcmp( szFile, m_pCPU->GetCurrentRomLoaded() ) != 0 )
 					{
+						m_aAdress.clear();
 						m_pCPU->GetInstance()->SetROMPathFileToLoad( oKey,szFile );
 						m_pCPU->GetInstance()->AskForState( oKey,RunningState::LoadNewRom );
 					}
@@ -200,7 +202,10 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 				ImGui::PushStyleColor( ImGuiCol_Button,ImVec4( 0.35f,0.40f,0.61f,0.62f ) );
 
 			if( ImGui::Button( "Reset" ) )
+			{
+				m_aAdress.clear();
 				m_pCPU->AskForState( oKey,RunningState::Reset );
+			}
 
 			ImGui::PopStyleColor();
 			ImGui::Separator();
@@ -431,12 +436,32 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 
 	if( ImGui::Begin( "Disasembly",nullptr ) )
 	{
-		if( m_pCPU != nullptr )
+		if( m_pCPU != nullptr && m_pCPU->GetState() != RunningState::LoadNewRom )
 		{
-			static int item_selected_idx = 0;
 			if( ImGui::BeginListBox( "#",ImVec2( -FLT_MIN,35 * ImGui::GetTextLineHeightWithSpacing() ) ) )
 			{
-				auto& aDisassemblyInstructions = Disassembler::GetDisassemblyInstructions();
+				
+
+				const auto& aDisassemblyInstructions = Disassembler::GetDisassemblyInstructions();
+				if( m_aAdress.empty() )
+				{
+					for ( auto it = aDisassemblyInstructions.begin(); it != aDisassemblyInstructions.end(); ++it )
+						m_aAdress.push_back( ( *it ).first );
+				}
+				
+				if( m_bFollowPc )
+				{
+					std::vector<uint16_t>::iterator it = std::lower_bound( m_aAdress.begin(),m_aAdress.end(),m_pCPU->GetPC() );
+					if( it != m_aAdress.end() )
+					{
+						int iIndex = std::distance( m_aAdress.begin(),it );
+						if( iIndex >= 0 )
+						{
+							float scroll_target = iIndex * ImGui::GetTextLineHeightWithSpacing() - ImGui::GetWindowHeight() * 0.5f;
+							ImGui::SetScrollY( scroll_target );
+						}
+					}
+				}
 
 				int num_items = static_cast< int >( aDisassemblyInstructions.size() );
 				ImGuiListClipper clipper;
@@ -448,17 +473,16 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 					{
 						ImGui::PushID( n );
 
-						const auto& inst = aDisassemblyInstructions[ n ];
+						const auto& inst = aDisassemblyInstructions.at( m_aAdress[ n ] );
 						bool isCurrent = inst.m_iAddress == m_pCPU->GetPC();
 
-						char buffer[ 64 ];
-						snprintf( buffer,sizeof( buffer ),"0x%04X  %s",inst.m_iAddress,inst.m_sText.c_str() );
+						if( isCurrent )
+							ImGui::PushStyleColor( ImGuiCol_Text,ImVec4( 1,1,0,1 ) );
 
-						ImGui::Selectable( buffer, isCurrent );
+						ImGui::Selectable( inst.m_sText.c_str(),isCurrent );
 
-						if( isCurrent && m_bFollowPc )
-							ImGui::SetScrollHereY( 0.5f );
-
+						if( isCurrent )
+							ImGui::PopStyleColor();
 						ImGui::PopID();
 					}
 				}

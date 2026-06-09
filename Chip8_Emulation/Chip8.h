@@ -122,6 +122,7 @@ public:
 	void							DestroyCpu();
 
 	const std::array<Data< uint8_t>,0xFFFF>* GetMemory() const { return &m_aMemory; }
+	Data<uint8_t> GetMemoryAtAddr( const uint16_t iAddr ) const { return m_aMemory[ iAddr ]; }
 
 	const Data< uint16_t>* GetStack() const { return m_aStack; }
 	const Data< uint8_t>* GetRegisters() const { return m_aRegisters; }
