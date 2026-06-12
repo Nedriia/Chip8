@@ -4,6 +4,7 @@
 #include <queue>
 #include <map>
 
+class Chip8;
 class Disassembler
 {
 public:
@@ -21,6 +22,7 @@ private:
 	};
 
 	static void		_AddToWorklist( const uint16_t iAddr );
+	static void		_SkipBlock( const uint16_t iAdress );
 
 	static std::map< uint16_t, DisassembledLine > m_aDisassembly;
 	static std::queue<uint16_t> m_aWorklist;

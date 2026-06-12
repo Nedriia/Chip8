@@ -128,15 +128,13 @@ void Disassembler::Disassemble_ROM( const char* memblock, const char* sROMToLoad
 				case 0x3000:
 				{
 					_WriteInstruction( "%04X		SE V%u, %#04X",iAdress,iCurrentOpcode,file,X,NN );
-					_AddToWorklist( iAdress + 2 );
-					_AddToWorklist( iAdress + 4 );
+					_SkipBlock( iAdress );
 					break;
 				}
 				case 0x4000: 
 				{
 					_WriteInstruction( "%04X		SNE V%u, %#04X",iAdress,iCurrentOpcode,file,X,NN );
-					_AddToWorklist( iAdress + 2 );
-					_AddToWorklist( iAdress + 4 );
+					_SkipBlock( iAdress );
 					break;
 				}
 				case 0x5000:
@@ -146,8 +144,7 @@ void Disassembler::Disassemble_ROM( const char* memblock, const char* sROMToLoad
 					case 0: 
 					{
 						_WriteInstruction( "%04X		SE V%u, V%u",iAdress,iCurrentOpcode,file,X,Y );
-						_AddToWorklist( iAdress + 2 );
-						_AddToWorklist( iAdress + 4 );
+						_SkipBlock( iAdress );
 						break;
 					}
 					case 2: _WriteInstruction( "%04X		SAVE V%u - V%u		( XO_CHIP )",iAdress,iCurrentOpcode,file,X,Y ); break;
@@ -178,8 +175,7 @@ void Disassembler::Disassemble_ROM( const char* memblock, const char* sROMToLoad
 				case 0x9000:
 				{
 					_WriteInstruction( "%04X		SNE V%u, V%u",iAdress,iCurrentOpcode,file,X,Y );
-					_AddToWorklist( iAdress + 2 );
-					_AddToWorklist( iAdress + 4 );
+					_SkipBlock( iAdress );
 					break;
 				}
 				case 0xA000: _WriteInstruction( "%04X		LD I %#04X",iAdress,iCurrentOpcode,file,NNN ); break;
@@ -197,14 +193,12 @@ void Disassembler::Disassemble_ROM( const char* memblock, const char* sROMToLoad
 					if( check == 0x9E )
 					{
 						_WriteInstruction( "%04X		SKP V%u",iAdress,iCurrentOpcode,file,X );
-						_AddToWorklist( iAdress + 2 );
-						_AddToWorklist( iAdress + 4 );
+						_SkipBlock( iAdress );
 					}
 					else if( check == 0xA1 )
 					{
 						_WriteInstruction( "%04X		SKNP V%u",iAdress,iCurrentOpcode,file,X );
-						_AddToWorklist( iAdress + 2 );
-						_AddToWorklist( iAdress + 4 );
+						_SkipBlock( iAdress );
 					}
 					else
 						_WriteInstruction( "WARNING::UNKNOWN_OPCODE::%#04X",iAdress,iCurrentOpcode,file );
@@ -279,4 +273,10 @@ inline void Disassembler::_WriteInstruction( std::string sText, const int iIndex
 void Disassembler::_AddToWorklist( const uint16_t iAddr )
 {
 	m_aWorklist.push( iAddr );
+}
+
+void Disassembler::_SkipBlock( const uint16_t iAdress )
+{
+	_AddToWorklist( iAdress + 4 );
+	_AddToWorklist( iAdress + 2 );
 }
