@@ -10,10 +10,9 @@ public:
 
 	void Init();
 	void DestroySoundManager();
-	void Manage( const uint8_t soundTimer );
-	
-	static bool m_bPlaySound;
-	static ma_waveform* squareWave;
+	void Manage( const uint8_t iSoundTimer );
+	void LoadPatternInSoundBuffer( const uint8_t* aAudioPattern );
+	void ClearAudioBuffer();
 
 	static SoundManager* GetInstance()
 	{
@@ -24,13 +23,15 @@ public:
 
 private:
 
-	SoundManager();
+	SoundManager(){};
 	~SoundManager();
 
 	void Play_Sound();
 	void Stop_Sound();
-	static SoundManager*	m_pSingleton;
-	ma_device device;
 
+	static SoundManager*	m_pSingleton;
+	ma_device				m_oDevice;
+
+	float					m_aSoundBuffer[128] = { 0 };
 };
 

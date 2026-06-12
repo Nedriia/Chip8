@@ -6,89 +6,123 @@
 #include "MiniAudio/miniaudio.h"
 
 #define DEVICE_FORMAT		ma_format_f32
-#define DEVICE_CHANNELS		2
-#define DEVICE_SAMPLE_RATE  48000
+#define SAMPLE_RATE			48000
+#define CHUNK_SIZE			128
+
+static ma_audio_buffer	g_oAudioBuffer;
+static ma_waveform		g_oWaveForm;
+static bool				g_bPlaySound = false;
+
+static float m_aAudioData[ CHUNK_SIZE ];
 
 SoundManager* SoundManager::m_pSingleton = nullptr;
-ma_waveform* SoundManager::squareWave = nullptr;
-
-bool SoundManager::m_bPlaySound = false;
-
-SoundManager::SoundManager() :
-	device( nullptr )
-{
-}
-
 SoundManager::~SoundManager()
 {
-	SoundManager::squareWave = nullptr;
 	m_pSingleton = nullptr;
 }
 
 void SoundManager::DestroySoundManager()
 {
-	if( ma_device_is_started( &device ) )
-		ma_device_stop( &device );
+	if( ma_device_is_started( &m_oDevice ) )
+		ma_device_stop( &m_oDevice );
 
-	ma_device_uninit( &device );
-	delete SoundManager::squareWave;
+	ClearAudioBuffer();
+
+	ma_audio_buffer_uninit( &g_oAudioBuffer );
+	ma_waveform_uninit( &g_oWaveForm );
+
+	ma_device_uninit( &m_oDevice );
+
 	delete m_pSingleton;
 }
 
-void SoundManager::Manage( const uint8_t soundTimer )
+void SoundManager::Manage( const uint8_t iSoundTimer )
 {
-	if( soundTimer > 0 )
+	if( iSoundTimer > 0 )
 		Play_Sound();
 	else
 		Stop_Sound();
 }
 
+void SoundManager::LoadPatternInSoundBuffer( const uint8_t* aAudioPattern )
+{
+	int iIndex = 0;
+	for( int i = 0; i < 16; i++ )
+	{
+		for( int k = 7; k >= 0; --k )
+		{
+			float fValue = ( aAudioPattern[ i ] >> k ) & 1;
+			m_aAudioData[ iIndex ] = fValue;
+			++iIndex;
+		}
+	}
+
+	ma_audio_buffer_seek_to_pcm_frame( &g_oAudioBuffer,0 );
+}
+
+void SoundManager::ClearAudioBuffer()
+{
+	memset( m_aAudioData, 0, sizeof( float ) * CHUNK_SIZE );
+}
+
 static void data_callback( ma_device* pDevice,void* pOutput,const void* pInput,ma_uint32 frameCount )
 {
 	bool bPause = !Chip8::GetInstance()->IsRunning();
-	SoundManager::squareWave = ( ma_waveform* )pDevice->pUserData;
-	if( !bPause && SoundManager::m_bPlaySound && SoundManager::squareWave != nullptr )
-		ma_waveform_read_pcm_frames( SoundManager::squareWave,pOutput,frameCount,NULL );
-	else
-		ma_silence_pcm_frames( pOutput, frameCount,DEVICE_FORMAT,DEVICE_CHANNELS );
+	if( !bPause )
+	{
+		ma_data_source_read_pcm_frames( &g_oAudioBuffer,pOutput,frameCount,MA_FALSE );
+		if( g_bPlaySound )
+			ma_waveform_read_pcm_frames( &g_oWaveForm,pOutput,frameCount,NULL );
+	}
+	else if( bPause || !g_bPlaySound )
+	{
+		ma_silence_pcm_frames( pOutput,frameCount,DEVICE_FORMAT,1 );
+	}
 
-	( void* )pInput;
+	( void )pInput;
 }
 
 void SoundManager::Init()
 {
-	SoundManager::squareWave = new ma_waveform;
+	ClearAudioBuffer();
 
-	ma_device_config deviceConfig = ma_device_config_init( ma_device_type_playback );
-	deviceConfig.playback.format = DEVICE_FORMAT;
-	deviceConfig.playback.channels = DEVICE_CHANNELS;
-	deviceConfig.sampleRate = DEVICE_SAMPLE_RATE;
-	deviceConfig.dataCallback = data_callback;
-	deviceConfig.pUserData = SoundManager::squareWave;
+	ma_waveform_config oSquareWaveConfig = ma_waveform_config_init( DEVICE_FORMAT,1,SAMPLE_RATE,ma_waveform_type_square,0.1,220 );
+	if( ma_waveform_init( &oSquareWaveConfig,&g_oWaveForm ) != MA_SUCCESS )
+		std::cerr << "SOUNDMANAGER::FAILED_TO_INIT_WAVEFORM" << std::endl;
 
-	if( ma_device_init( NULL,&deviceConfig,&device ) != MA_SUCCESS )
+	ma_audio_buffer_config oAudioBufferConfig = ma_audio_buffer_config_init( DEVICE_FORMAT,1,CHUNK_SIZE,m_aAudioData,NULL );
+	if( ma_audio_buffer_init( &oAudioBufferConfig,&g_oAudioBuffer ) != MA_SUCCESS )
+		std::cerr << "SOUNDMANAGER::FAILED_TO_INIT_AUDIO_BUFFER" << std::endl;
+
+	ma_device_config oDeviceConfig = ma_device_config_init( ma_device_type_playback );
+					oDeviceConfig.playback.format = DEVICE_FORMAT;
+					oDeviceConfig.playback.channels = 1;
+					oDeviceConfig.sampleRate = SAMPLE_RATE;
+					oDeviceConfig.dataCallback = data_callback;
+
+	if( ma_device_init( NULL,&oDeviceConfig,&m_oDevice ) != MA_SUCCESS )
 	{
 		std::cerr << "SOUNDMANAGER::FAILED_TO_INITIALIZE_DEVICE" << std::endl;
+		ma_audio_buffer_uninit( &g_oAudioBuffer );
+		ma_waveform_uninit( &g_oWaveForm );
 		return;
 	}
-
-	ma_waveform_config squareWaveConfig = ma_waveform_config_init( device.playback.format,device.playback.channels,device.sampleRate,ma_waveform_type_square,0.1,220 );
-	ma_waveform_init( &squareWaveConfig,SoundManager::squareWave );
-
-	if( ma_device_start( &device ) != MA_SUCCESS )
+	if( ma_device_start( &m_oDevice ) != MA_SUCCESS )
 	{
-		std::cerr << "SOUNDMANAGER::FAILED_TO_START_PLAYBACK_DEVICE" << std::endl;
-		ma_device_uninit( &device );
+		std::cerr << "SOUNDMANAGER::FAILED_TO_START_DEVICE" << std::endl;
+		ma_audio_buffer_uninit( &g_oAudioBuffer );
+		ma_waveform_uninit( &g_oWaveForm );
+		ma_device_uninit( &m_oDevice );
 		return;
 	}
 }
 
 void SoundManager::Play_Sound()
 {
-	m_bPlaySound = true;
+	g_bPlaySound = true;
 }
 
 void SoundManager::Stop_Sound()
 {
-	m_bPlaySound = false;
+	g_bPlaySound = false;
 }

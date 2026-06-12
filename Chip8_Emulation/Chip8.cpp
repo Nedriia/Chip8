@@ -136,7 +136,7 @@ void Chip8::_Reset()
 	m_iLastOpcode = 0;
 	m_iCycle = 0;
 	m_iCurrentOpcode = 0;
-	auto test = m_aMemory;
+
 	Display::KeyDisplayAccess oKeyDisplay;
 	Display::Reset( oKeyDisplay );
 
@@ -147,6 +147,8 @@ void Chip8::_Reset()
 	memset( m_aRegisters,0,sizeof( m_aRegisters ) );
 	memset( m_aStack,0,sizeof( m_aStack ) );
 	memset( m_aFlags,0,sizeof( m_aFlags ) );
+
+	m_pSoundManagerInstance->ClearAudioBuffer();
 
 	Chip8::KeyAccess oKey;
 	Init( oKey,m_sCurrentRomLoaded );
@@ -281,7 +283,7 @@ void Chip8::EmulateCycle( const KeyAccess& key,const std::chrono::steady_clock::
 		}
 
 		_UpdateTimers();
-		m_pSoundManagerInstance->Manage( ( uint8_t )m_iSound_timer );
+		m_pSoundManagerInstance->Manage( m_iSound_timer );
 
 		m_iLastTimeUpdate += Display::GetRefreshTick();
 	}
@@ -1047,7 +1049,17 @@ inline void Chip8::PLANE()
 
 inline void Chip8::AUDIO()
 {
+	uint8_t aSoundBuffer[ 16 ];
+	std::transform(
+		m_aMemory.begin() + m_iI,
+		m_aMemory.begin() + m_iI + 16,
+		aSoundBuffer,
+		[]( const Data<uint8_t>& data ) {
+			return data;
+		}
+	);
 
+	m_pSoundManagerInstance->LoadPatternInSoundBuffer( aSoundBuffer );
 }
 
 inline void Chip8::AUDIO_PITCH()

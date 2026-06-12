@@ -11,8 +11,8 @@ int Quit()
 	Display::KeyDisplayAccess oKeyDisplay;
 
 	Input::GetInstance()->DestroyInputManager();
-	Display::GetInstance()->DestroyWindow( oKeyDisplay );
 	SoundManager::GetInstance()->DestroySoundManager();
+	Display::GetInstance()->DestroyWindow( oKeyDisplay );
 	Chip8::GetInstance()->DestroyCpu();
 
 	return -1;
