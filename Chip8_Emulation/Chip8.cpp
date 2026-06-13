@@ -148,7 +148,7 @@ void Chip8::_Reset()
 	memset( m_aStack,0,sizeof( m_aStack ) );
 	memset( m_aFlags,0,sizeof( m_aFlags ) );
 
-	m_pSoundManagerInstance->ClearAudioBuffer();
+	m_pSoundManagerInstance->OnReset();
 
 	Chip8::KeyAccess oKey;
 	Init( oKey,m_sCurrentRomLoaded );

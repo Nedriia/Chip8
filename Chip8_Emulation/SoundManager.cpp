@@ -76,6 +76,14 @@ void SoundManager::ClearAudioBuffer()
 	memset( m_aAudioData, 0, sizeof( float ) * CHUNK_SIZE );
 }
 
+void SoundManager::OnReset()
+{
+	ClearAudioBuffer();
+
+	m_iPitch = SAMPLE_RATE;
+	m_fFloatingIndex = 0.0f;
+}
+
 static void data_callback( ma_device* pDevice,void* pOutput,const void* pInput,ma_uint32 frameCount )
 {
 	bool bPause = !Chip8::GetInstance()->IsRunning();

@@ -14,6 +14,7 @@ public:
 	void LoadPatternInSoundBuffer( const uint8_t* aAudioPattern );
 	void CalculateAndSetNewPitch( const uint8_t iXValue );
 	void ClearAudioBuffer();
+	void OnReset();
 	void SetFloatingIndex( float fFloatingIndex ) { m_fFloatingIndex = fFloatingIndex; }
 
 	float GetFloatingIndex() const { return m_fFloatingIndex; }

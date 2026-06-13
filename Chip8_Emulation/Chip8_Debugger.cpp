@@ -147,6 +147,7 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 
 			if( ImGui::Button( "Load Rom" ) )
 			{
+				m_pCPU->AskForState( oKey, RunningState::Pause );//The thread should be put in pause with GetOpenFileNameA call anyway
 				OPENFILENAMEA ofn;
 				char szFile[ 260 ];
 
@@ -171,6 +172,10 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 						m_pCPU->GetInstance()->SetROMPathFileToLoad( oKey,szFile );
 						m_pCPU->GetInstance()->AskForState( oKey,RunningState::LoadNewRom );
 					}
+				}
+				else
+				{
+					m_pCPU->AskForState( oKey,RunningState::Running );
 				}
 			}
 
