@@ -217,7 +217,7 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 				Display::SetRefreshTick( std::chrono::microseconds( Display::GetValueMicroSRefresh() ) );
 			}
 			int iIPF = m_pCPU->GetInstructPerFrame();
-			if( ImGui::SliderInt( "IPF",&iIPF,10,2000,NULL ) )
+			if( ImGui::SliderInt( "IPF",&iIPF,10,50000,NULL ) )
 				m_pCPU->SetInstructionPerFrame( iIPF );
 
 			ImGui::Separator();

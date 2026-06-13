@@ -16,7 +16,7 @@
 #define JMPCHECK_BEFORE_ENDING 4
 #define USE_SWITCH_BRANCH
 
-int Chip8::m_iInstructionsPerFrame = 100;
+int Chip8::m_iInstructionsPerFrame = 20000;
 #ifdef DEBUG_INFO
 uint16_t Chip8::m_iAdressBreakpoint = 0;
 #endif
@@ -1064,7 +1064,7 @@ inline void Chip8::AUDIO()
 
 inline void Chip8::AUDIO_PITCH()
 {
-
+	m_pSoundManagerInstance->CalculateAndSetNewPitch( m_aRegisters[ GetX() ]);
 }
 
 inline const uint8_t Chip8::GetX()

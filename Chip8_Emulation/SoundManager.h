@@ -12,7 +12,12 @@ public:
 	void DestroySoundManager();
 	void Manage( const uint8_t iSoundTimer );
 	void LoadPatternInSoundBuffer( const uint8_t* aAudioPattern );
+	void CalculateAndSetNewPitch( const uint8_t iXValue );
 	void ClearAudioBuffer();
+	void SetFloatingIndex( float fFloatingIndex ) { m_fFloatingIndex = fFloatingIndex; }
+
+	float GetFloatingIndex() const { return m_fFloatingIndex; }
+	float GetPitch() const { return m_iPitch; }
 
 	static SoundManager* GetInstance()
 	{
@@ -23,7 +28,7 @@ public:
 
 private:
 
-	SoundManager(){};
+	SoundManager();
 	~SoundManager();
 
 	void Play_Sound();
@@ -33,5 +38,8 @@ private:
 	ma_device				m_oDevice;
 
 	float					m_aSoundBuffer[128] = { 0 };
+
+	int						m_iPitch;
+	float					m_fFloatingIndex;
 };
 

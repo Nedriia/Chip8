@@ -6,7 +6,7 @@
 #include "MiniAudio/miniaudio.h"
 
 #define DEVICE_FORMAT		ma_format_f32
-#define SAMPLE_RATE			48000
+#define SAMPLE_RATE			44100
 #define CHUNK_SIZE			128
 
 static ma_audio_buffer	g_oAudioBuffer;
@@ -16,6 +16,14 @@ static bool				g_bPlaySound = false;
 static float m_aAudioData[ CHUNK_SIZE ];
 
 SoundManager* SoundManager::m_pSingleton = nullptr;
+
+SoundManager::SoundManager()
+	: m_iPitch( 0 )
+	 ,m_fFloatingIndex( 0.0f )
+{
+
+}
+
 SoundManager::~SoundManager()
 {
 	m_pSingleton = nullptr;
@@ -52,12 +60,15 @@ void SoundManager::LoadPatternInSoundBuffer( const uint8_t* aAudioPattern )
 		for( int k = 7; k >= 0; --k )
 		{
 			float fValue = ( aAudioPattern[ i ] >> k ) & 1;
-			m_aAudioData[ iIndex ] = fValue;
+			m_aAudioData[ iIndex ] = fValue == 0.0f ? -1.0f : fValue;
 			++iIndex;
 		}
 	}
+}
 
-	ma_audio_buffer_seek_to_pcm_frame( &g_oAudioBuffer,0 );
+void SoundManager::CalculateAndSetNewPitch( const uint8_t iXValue )
+{
+	m_iPitch = 4000 * exp2( ( iXValue - 64 ) / 48.f );
 }
 
 void SoundManager::ClearAudioBuffer()
@@ -70,9 +81,24 @@ static void data_callback( ma_device* pDevice,void* pOutput,const void* pInput,m
 	bool bPause = !Chip8::GetInstance()->IsRunning();
 	if( !bPause )
 	{
-		ma_data_source_read_pcm_frames( &g_oAudioBuffer,pOutput,frameCount,MA_FALSE );
-		if( g_bPlaySound )
-			ma_waveform_read_pcm_frames( &g_oWaveForm,pOutput,frameCount,NULL );
+		SoundManager* pInstance = SoundManager::GetInstance();
+		float fValueIncrement = pInstance->GetPitch() / SAMPLE_RATE;
+		float* pData = ( float* )pOutput;
+
+		for( ma_uint64 iFrameRead = 0; iFrameRead < frameCount; ++iFrameRead )
+		{
+			float fCurrentIndex = pInstance->GetFloatingIndex();
+
+			pData[iFrameRead] = m_aAudioData[ ( int )fCurrentIndex ];
+
+			float fNewValue = fCurrentIndex + fValueIncrement;
+			if( fNewValue >= 128.0f )
+				fNewValue -= 128.0f;
+			pInstance->SetFloatingIndex( fNewValue );
+		}
+
+		//if( g_bPlaySound /*&& iFrameRead >= frameCount*/ )
+			//ma_waveform_read_pcm_frames( &g_oWaveForm,pOutput,frameCount,NULL );
 	}
 	else if( bPause || !g_bPlaySound )
 	{
