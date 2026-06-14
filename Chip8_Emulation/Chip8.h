@@ -152,6 +152,7 @@ public:
 
 	static const std::array< std::string,7 >* GetPlatformsSupported() { return &m_sSupportedPlatform; }
 	static Quirk					m_oCurrentQuirk;
+	void							SetIfCurrentRomXoChip( bool bXoChip ) { m_bXoCHIP = bXoChip; }
 
 private:
 

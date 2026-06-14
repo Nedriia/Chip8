@@ -152,6 +152,7 @@ void Chip8::_Reset()
 		m_pSoundManagerInstance = SoundManager::GetInstance();
 
 	m_pSoundManagerInstance->OnReset();
+	m_bXoCHIP = false;
 
 	Chip8::KeyAccess oKey;
 	Init( oKey,m_sCurrentRomLoaded );
@@ -847,7 +848,7 @@ inline void Chip8::SAVE_RANGE()
 	uint8_t iY = GetY();
 
 	int iStep = 1;
-	if( iX > iY )
+	if( m_bXoCHIP && iX > iY )
 		iStep = -1;
 
 	for( int i = GetX(); i != iY + iStep; i += iStep, ++k )
@@ -861,7 +862,7 @@ inline void Chip8::LOAD_RANGE()
 	uint8_t iY = GetY();
 
 	int iStep = 1;
-	if( iX > iY )
+	if( m_bXoCHIP && iX > iY )
 		iStep = -1;
 
 	for( int i = GetX(); i != iY + iStep; i += iStep,++k )

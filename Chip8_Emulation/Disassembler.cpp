@@ -80,7 +80,10 @@ void Disassembler::Disassemble_ROM( const char* memblock, const char* sROMToLoad
 					if( Y == 0x0C )
 						_WriteInstruction( "%04X		SCD %u",iAdress,iCurrentOpcode,file,N );
 					else if( Y == 0x0D )
+					{
 						_WriteInstruction( "%04X		SCU %u		( XO_CHIP )",iAdress,iCurrentOpcode,file,N );
+						pCPU->SetIfCurrentRomXoChip( true );
+					}
 					else if( check == 0xE0 )
 						_WriteInstruction( "%04X		CLS",iAdress,iCurrentOpcode,file );
 					else if( check == 0xEE )
@@ -213,10 +216,21 @@ void Disassembler::Disassemble_ROM( const char* memblock, const char* sROMToLoad
 						uint16_t iNextValue = ( *( pCPU->GetMemory()->begin() + iAdress + 2 ) << 8 ) | *( pCPU->GetMemory()->begin() + ( iAdress + 3 ) );
 						_WriteInstruction( "%04X		LD I, NNNN		( XO_CHIP )",iAdress,iCurrentOpcode,file,iNextValue );
 						_AddToWorklist( iAdress + 4 );
+						pCPU->SetIfCurrentRomXoChip( true );
 						break;
 					}
-					case 0xF001: _WriteInstruction( "%04X		PLANE %u		( XO_CHIP )",iAdress,iCurrentOpcode,file,X ); break;
-					case 0xF002: _WriteInstruction( "%04X		AUDIO		( XO_CHIP )",iAdress,iCurrentOpcode,file ); break;
+					case 0xF001:
+					{
+						_WriteInstruction( "%04X		PLANE %u		( XO_CHIP )",iAdress,iCurrentOpcode,file,X );
+						pCPU->SetIfCurrentRomXoChip( true );
+						break;
+					}
+					case 0xF002:
+					{
+						_WriteInstruction( "%04X		AUDIO		( XO_CHIP )",iAdress,iCurrentOpcode,file );
+						pCPU->SetIfCurrentRomXoChip( true );
+						break;
+					}
 					case 0xF007: _WriteInstruction( "%04X		LD V%u, DT",iAdress,iCurrentOpcode,file,X ); break;
 					case 0xF00A: _WriteInstruction( "%04X		LD V%u, K",iAdress,iCurrentOpcode,file,X ); break;
 					case 0xF015: _WriteInstruction( "%04X		LD DT, V%u",iAdress,iCurrentOpcode,file,X ); break;
@@ -225,7 +239,12 @@ void Disassembler::Disassemble_ROM( const char* memblock, const char* sROMToLoad
 					case 0xF029: _WriteInstruction( "%04X		LD FONT, V%u",iAdress,iCurrentOpcode,file,X ); break;
 					case 0xF030: _WriteInstruction( "%04X		LD H_FONT, V%u",iAdress,iCurrentOpcode,file,X ); break;
 					case 0xF033: _WriteInstruction( "%04X		LD BCD, V%u",iAdress,iCurrentOpcode,file,X ); break;
-					case 0xF03A: _WriteInstruction( "%04X		PITCH, V%u",iAdress,iCurrentOpcode,file,X ); break;
+					case 0xF03A:
+					{
+						_WriteInstruction( "%04X		PITCH, V%u",iAdress,iCurrentOpcode,file,X );
+						pCPU->SetIfCurrentRomXoChip( true );
+						break;
+					}
 					case 0xF055: _WriteInstruction( "%04X		LD [I], V%u",iAdress,iCurrentOpcode,file,X ); break;
 					case 0xF065: _WriteInstruction( "%04X		LD V%u, [I]",iAdress,iCurrentOpcode,file,X ); break;
 					case 0xF075: _WriteInstruction( "%04X		LD RPL, V%u",iAdress,iCurrentOpcode,file,X ); break;
