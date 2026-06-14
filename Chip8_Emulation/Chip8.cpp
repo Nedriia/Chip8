@@ -843,14 +843,28 @@ inline void Chip8::LOADFLAGS_VX()
 inline void Chip8::SAVE_RANGE()
 {
 	int k = 0;
-	for( int i = GetX(); i <= GetY(); ++i, ++k )
-		m_aMemory[ GetI() + k ] = m_aRegisters[i];
+	uint8_t iX = GetX();
+	uint8_t iY = GetY();
+
+	int iStep = 1;
+	if( iX > iY )
+		iStep = -1;
+
+	for( int i = GetX(); i != iY + iStep; i += iStep, ++k )
+		m_aMemory[ GetI() + k ] = m_aRegisters[ i ];
 }
 
 inline void Chip8::LOAD_RANGE()
 {
 	int k = 0;
-	for( int i = GetX(); i <= GetY(); ++i,++k )
+	uint8_t iX = GetX();
+	uint8_t iY = GetY();
+
+	int iStep = 1;
+	if( iX > iY )
+		iStep = -1;
+
+	for( int i = GetX(); i != iY + iStep; i += iStep,++k )
 		m_aRegisters[ i ] = m_aMemory[ GetI() + k ];
 }
 
