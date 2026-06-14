@@ -955,9 +955,11 @@ inline void Chip8::SUBN_VX_VY()
 	uint8_t X = GetX();
 
 	//Sets VX equals to VY minus VX.
-	uint16_t diff = m_aRegisters[ GetY() ] - m_aRegisters[ X ];
-	m_aRegisters[ X ] = diff & 0xFF;
-	m_aRegisters[ 15 ] = diff > 0xFF ? 0 : 1;
+	uint8_t vx = m_aRegisters[ X ];
+	uint8_t vy = m_aRegisters[ GetY() ];
+
+	m_aRegisters[ X ] = ( vy - vx ) & 0xFF;
+	m_aRegisters[ 15 ] = vy >= vx ? 1 : 0;
 	// VF is set to 0 when there's an underflow, and 1 when there is not. (i.e. VF set to 1 if VY >= VX).
 }
 
