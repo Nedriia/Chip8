@@ -8,6 +8,7 @@
 #define DEVICE_FORMAT		ma_format_f32
 #define SAMPLE_RATE			44100
 #define CHUNK_SIZE			128
+#define AMPLITUDE			0.2f
 
 static ma_audio_buffer	g_oAudioBuffer;
 static ma_waveform		g_oWaveForm;
@@ -20,6 +21,7 @@ SoundManager* SoundManager::m_pSingleton = nullptr;
 SoundManager::SoundManager()
 	: m_iPitch( 0 )
 	 ,m_fFloatingIndex( 0.0f )
+	 ,m_iAudioStateFlag( AudioState::AUDIO_BUFFER_EMPTY )
 {
 
 }
@@ -60,10 +62,11 @@ void SoundManager::LoadPatternInSoundBuffer( const uint8_t* aAudioPattern )
 		for( int k = 7; k >= 0; --k )
 		{
 			float fValue = ( aAudioPattern[ i ] >> k ) & 1;
-			m_aAudioData[ iIndex ] = fValue == 0.0f ? -1.0f : fValue;
+			m_aAudioData[ iIndex ] = fValue == 0.0f ? -AMPLITUDE : std::clamp( fValue, 0.0f, AMPLITUDE );
 			++iIndex;
 		}
 	}
+	m_iAudioStateFlag = AudioState::AUDIO_BUFFER_FILLED;
 }
 
 void SoundManager::CalculateAndSetNewPitch( const uint8_t iXValue )
@@ -82,6 +85,7 @@ void SoundManager::OnReset()
 
 	m_iPitch = SAMPLE_RATE;
 	m_fFloatingIndex = 0.0f;
+	m_iAudioStateFlag = AudioState::AUDIO_BUFFER_EMPTY;
 }
 
 static void data_callback( ma_device* pDevice,void* pOutput,const void* pInput,ma_uint32 frameCount )
@@ -90,6 +94,8 @@ static void data_callback( ma_device* pDevice,void* pOutput,const void* pInput,m
 	if( !bPause )
 	{
 		SoundManager* pInstance = SoundManager::GetInstance();
+		if( pInstance->GetState() == AudioState::AUDIO_BUFFER_FILLED )
+		{
 		float fValueIncrement = pInstance->GetPitch() / SAMPLE_RATE;
 		float* pData = ( float* )pOutput;
 
@@ -105,8 +111,14 @@ static void data_callback( ma_device* pDevice,void* pOutput,const void* pInput,m
 			pInstance->SetFloatingIndex( fNewValue );
 		}
 
-		//if( g_bPlaySound /*&& iFrameRead >= frameCount*/ )
-			//ma_waveform_read_pcm_frames( &g_oWaveForm,pOutput,frameCount,NULL );
+			if( g_bPlaySound == false )
+				pInstance->SetState( AudioState::AUDIO_BUFFER_EMPTY );
+		}
+		else
+		{
+			if( g_bPlaySound )
+				ma_waveform_read_pcm_frames( &g_oWaveForm,pOutput,frameCount,NULL );
+		}
 	}
 	else if( bPause || !g_bPlaySound )
 	{
@@ -120,7 +132,7 @@ void SoundManager::Init()
 {
 	ClearAudioBuffer();
 
-	ma_waveform_config oSquareWaveConfig = ma_waveform_config_init( DEVICE_FORMAT,1,SAMPLE_RATE,ma_waveform_type_square,0.1,220 );
+	ma_waveform_config oSquareWaveConfig = ma_waveform_config_init( DEVICE_FORMAT,1,SAMPLE_RATE,ma_waveform_type_square,AMPLITUDE,220 );
 	if( ma_waveform_init( &oSquareWaveConfig,&g_oWaveForm ) != MA_SUCCESS )
 		std::cerr << "SOUNDMANAGER::FAILED_TO_INIT_WAVEFORM" << std::endl;
 

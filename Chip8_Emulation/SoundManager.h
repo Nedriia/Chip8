@@ -3,6 +3,12 @@
 
 #include "MiniAudio/miniaudio.h"
 
+enum AudioState
+{
+	AUDIO_BUFFER_EMPTY = 1,
+	AUDIO_BUFFER_FILLED = 2,
+};
+
 class alignas ( 16 ) SoundManager
 {
 
@@ -19,6 +25,9 @@ public:
 
 	float GetFloatingIndex() const { return m_fFloatingIndex; }
 	float GetPitch() const { return m_iPitch; }
+
+	AudioState GetState() const { return m_iAudioStateFlag; }
+	void SetState( AudioState oState ) { m_iAudioStateFlag = oState; }
 
 	static SoundManager* GetInstance()
 	{
@@ -42,5 +51,6 @@ private:
 
 	int						m_iPitch;
 	float					m_fFloatingIndex;
+	AudioState				m_iAudioStateFlag;
 };
 

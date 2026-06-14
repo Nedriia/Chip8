@@ -148,6 +148,9 @@ void Chip8::_Reset()
 	memset( m_aStack,0,sizeof( m_aStack ) );
 	memset( m_aFlags,0,sizeof( m_aFlags ) );
 
+	if( m_pSoundManagerInstance == nullptr )
+		m_pSoundManagerInstance = SoundManager::GetInstance();
+
 	m_pSoundManagerInstance->OnReset();
 
 	Chip8::KeyAccess oKey;
