@@ -166,7 +166,7 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 
 				if( GetOpenFileNameA( &ofn ) )
 				{
-					if( strcmp( szFile, m_pCPU->GetCurrentRomLoaded() ) != 0 )
+					if( m_pCPU->GetCurrentRomLoaded() == nullptr || strcmp( szFile, m_pCPU->GetCurrentRomLoaded() ) != 0 )
 					{
 						m_aAdress.clear();
 						m_pCPU->GetInstance()->SetROMPathFileToLoad( oKey,szFile );
@@ -280,7 +280,7 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 	{
 		float width = ImGui::GetContentRegionAvail().x;
 		const char* titleLeft = "Display :";
-
+		
 		std::string textPerfDebug = std::format( "{} ms | {} IPF",std::chrono::duration<double,std::milli>( time ).count(),!m_pCPU->IsPause() ? m_pCPU->GetInstructPerFrame() : 0 );
 		ImGui::TextColored( ImVec4( 0.7f,0.7f,0.7f,1.0f ),"%s %s %s",titleLeft,m_pCPU->IsPause() ? "( Pause )" : "( Running )", m_pCPU->GetCurrentRomLoaded() == nullptr ? "None" : m_pCPU->GetCurrentRomLoaded());
 
