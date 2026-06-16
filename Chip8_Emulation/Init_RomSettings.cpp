@@ -6,9 +6,9 @@
 
 using json = nlohmann::json;
 
-#define HASHES_DEFAULT_FOLDER "chip-8-database\\database\\sha1-hashes.json"
-#define PROGRAMS_DEFAULT_FOLDER "chip-8-database\\database\\programs.json"
-#define PLATFORMS_DEFAULT_FOLDER "chip-8-database\\database\\platforms.json"
+#define HASHES_DEFAULT_FOLDER "sha1-hashes.json"
+#define PROGRAMS_DEFAULT_FOLDER "programs.json"
+#define PLATFORMS_DEFAULT_FOLDER "platforms.json"
 
 static std::stringstream sHash;
 
@@ -46,7 +46,7 @@ int Init_RomSettings::_FindIndex()
 {
 	static std::string sAbsolutePath;
 	if( sAbsolutePath.empty() )
-		sAbsolutePath = std::filesystem::absolute( HASHES_DEFAULT_FOLDER ).string();
+		sAbsolutePath = std::string( PATH_DATABASE ) + HASHES_DEFAULT_FOLDER;
 	std::ifstream file( sAbsolutePath,std::ios::in );
 
 	if( file.is_open() )
@@ -67,7 +67,7 @@ int Init_RomSettings::_FindIndex()
 	}
 	else
 	{
-		std::cerr << "ERROR::DATABASE::CANT_FIND_HASHES_FILE : " << HASHES_DEFAULT_FOLDER << std::endl;
+		std::cerr << "ERROR::DATABASE::CANT_FIND_HASHES_FILE : " << std::string( PATH_DATABASE ) + HASHES_DEFAULT_FOLDER << std::endl;
 		_ReturnAdditionnalInfoOnErrors( file );
 	}
 
@@ -78,7 +78,7 @@ bool Init_RomSettings::_LoadProgramsSettingsIsSuccesful( const int iIndex )
 {
 	static std::string sProgramsAbsolutePath;
 	if( sProgramsAbsolutePath.empty() )
-		sProgramsAbsolutePath = std::filesystem::absolute( PROGRAMS_DEFAULT_FOLDER ).string();
+		sProgramsAbsolutePath = std::string( PATH_DATABASE ) + PROGRAMS_DEFAULT_FOLDER;
 
 	std::ifstream file( sProgramsAbsolutePath,std::ios::in );
 	if( file.is_open() )
@@ -167,7 +167,7 @@ void Init_RomSettings::_LoadPlatformsSpecs( const std::string& sPlatform,const i
 {
 	static std::string sPlatformsAbsolutePath;
 	if( sPlatformsAbsolutePath.empty() )
-		sPlatformsAbsolutePath = std::filesystem::absolute( PLATFORMS_DEFAULT_FOLDER ).string();
+		sPlatformsAbsolutePath = std::string( PATH_DATABASE ) + PLATFORMS_DEFAULT_FOLDER;
 
 	std::ifstream file( sPlatformsAbsolutePath,std::ios::in );
 	if( file.is_open() )

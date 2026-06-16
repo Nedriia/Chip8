@@ -23,8 +23,8 @@ Shader::Shader( const char* VertexPath, const char* FragmentPath )
 	fShaderFile.exceptions( std::ifstream::failbit | std::ifstream::badbit );
 	try
 	{
-		vShaderFile.open( VertexPath );
-		fShaderFile.open( FragmentPath );
+		vShaderFile.open( std::string(PATH_SHADERS) + VertexPath );
+		fShaderFile.open( std::string(PATH_SHADERS) + FragmentPath );
 		std::stringstream vShaderStream, fShaderStream;
 		vShaderStream << vShaderFile.rdbuf();
 		fShaderStream << fShaderFile.rdbuf();
