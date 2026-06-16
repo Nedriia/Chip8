@@ -9,9 +9,8 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-set(ROOT_DIR "../Chip8")
-set(PROJECT_DIR "${ROOT_DIR}/Chip8_Emulation")
-set(LIBS_DIR "${ROOT_DIR}/Librairies")
+set(PROJECT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Chip8_Emulation")
+set(LIBS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Librairies")
 set(IMGUI_DIR "${PROJECT_DIR}/imgui")
 
 set(IMGUI_SOURCES
@@ -61,4 +60,9 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 target_compile_options(${PROJECT_NAME} PRIVATE
         $<$<CXX_COMPILER_ID:MSVC>:/W4>
         $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra>
+)
+
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+        PATH_SHADERS="${CMAKE_CURRENT_SOURCE_DIR}/assets/"
+        PATH_DATABASE="${PROJECT_DIR}/chip-8-database/database/"
 )
