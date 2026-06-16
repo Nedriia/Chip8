@@ -340,4 +340,5 @@ private:
 
 	std::mt19937 m_iRng;
 	static std::array< std::string,7 > m_sSupportedPlatform;
+	bool								m_bXoCHIP;
 };
