@@ -57,11 +57,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         OpenGL::GL
 )
 
-target_compile_options(${PROJECT_NAME} PRIVATE
-        $<$<CXX_COMPILER_ID:MSVC>:/W4>
-        $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra>
-)
-
 target_compile_definitions(${PROJECT_NAME} PRIVATE
         PATH_SHADERS="${CMAKE_CURRENT_SOURCE_DIR}/assets/"
         PATH_DATABASE="${PROJECT_DIR}/chip-8-database/database/"
