@@ -36,8 +36,8 @@ int Init_RomSettings::_CalculateHash_RetrieveIndex( const char* memblock,const s
 
 	sHash.str( std::string() );
 	sHash.clear();
-	for( int i = 0; i < 5; ++i )
-		sHash << std::hex << std::setw( 8 ) << std::setfill( '0' ) << digest[ i ];
+	for ( uint32_t i : digest )
+		sHash << std::hex << std::setw( 8 ) << std::setfill( '0' ) << i;
 
 	return _FindIndex();
 }
@@ -142,7 +142,7 @@ bool Init_RomSettings::_LoadProgramsSettingsIsSuccesful( const int iIndex )
 bool Init_RomSettings::_LoadPlatformsSettingsIsSuccesful( const std::vector<std::string >& sPlatforms,const int iRomCustomTickrate )
 {
 	auto sSupportPlatforms = Chip8::GetPlatformsSupported();
-	int iSize = sSupportPlatforms->end() - sSupportPlatforms->begin();
+	ptrdiff_t iSize = sSupportPlatforms->end() - sSupportPlatforms->begin();
 	for( auto it = sSupportPlatforms->end() - 1; iSize > 0; --iSize )
 	{
 		for( int k = sPlatforms.size() - 1; k >= 0; --k ) //Check for newer platform in prior
@@ -178,10 +178,9 @@ void Init_RomSettings::_LoadPlatformsSpecs( const std::string& sPlatform,const i
 			if( oData.contains( "id" ) && oData[ "id" ] == sPlatform )
 			{
 				//Resolution
-				std::string sRes;
 				if( oData.contains( "displayResolutions" ) )
 				{
-					sRes = oData[ "displayResolutions" ][ 0 ];
+					std::string sRes = oData[ "displayResolutions" ][ 0 ];
 					size_t xPos = sRes.find( 'x' );
 
 					if( xPos != std::string::npos )

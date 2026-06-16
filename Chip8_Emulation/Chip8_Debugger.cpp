@@ -439,14 +439,12 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 	ImGui::End();
 
 
-	if( ImGui::Begin( "Disasembly",nullptr ) )
+	if( ImGui::Begin( "Disassembly",nullptr ) )
 	{
 		if( m_pCPU != nullptr && m_pCPU->GetState() != RunningState::LoadNewRom )
 		{
 			if( ImGui::BeginListBox( "#",ImVec2( -FLT_MIN,35 * ImGui::GetTextLineHeightWithSpacing() ) ) )
 			{
-				
-
 				const auto& aDisassemblyInstructions = Disassembler::GetDisassemblyInstructions();
 				if( m_aAdress.empty() )
 				{
