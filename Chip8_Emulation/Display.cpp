@@ -298,7 +298,11 @@ void Display::ClearScreen( const KeyDisplayAccess& oKey, const bool bReset /*= f
 	if( oBitMask == PlaneBitMask::BOTH || bReset )
 		memset( m_pPixels,0,sizeof( m_pPixels ) );
 	else
-		memset( m_pPixels[ oBitMask - 1 ],0,sizeof ( m_pPixels[ oBitMask - 1 ] ) );
+	{
+		int iMask = oBitMask - 1;
+		oBitMask = ( PlaneBitMask )iMask;
+		memset( m_pPixels[ iMask ],0,sizeof( m_pPixels[ iMask ] ) );
+	}
 	m_bDirtyFrame = true;
 }
 
@@ -696,7 +700,7 @@ void Display::Update( const std::chrono::steady_clock::time_point& time,const bo
 	}
 	else
 	{
-		std::this_thread::sleep_for( m_iCurrentTick - ( std::chrono::steady_clock::now() - m_iLastTimeUpdate ) );
+		std::this_thread::sleep_for( m_iCurrentTick - elapsed );
 	}
 }
 
