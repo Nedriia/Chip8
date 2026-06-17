@@ -13,6 +13,7 @@ jobs:
       fail-fast: false
       matrix:
         build_type: [Debug, Release]
+        compiler: [msvc, clang-cl]
  
     steps:
       - name: Checkout
@@ -26,8 +27,13 @@ jobs:
       - name: Setup MSVC dev environment
         uses: ilammy/msvc-dev-cmd@v1
  
-      - name: Configure CMake
-        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+      - name: Configure CMake (msvc)
+        if: matrix.compiler == 'msvc'
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DCMAKE_CXX_COMPILER=cl -DCMAKE_C_COMPILER=cl
+ 
+      - name: Configure CMake (clang-cl)
+        if: matrix.compiler == 'clang-cl'
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DCMAKE_CXX_COMPILER=clang-cl -DCMAKE_C_COMPILER=clang-cl
  
       - name: Build
         run: cmake --build build
