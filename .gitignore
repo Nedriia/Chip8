@@ -80,3 +80,5 @@ Chip8_Emulation/.vs/Chip8_Emulation/v17/.suo
 Dissasembly/
 
 .idea/
+
+Librairies/lib/MiniAudio.lib
