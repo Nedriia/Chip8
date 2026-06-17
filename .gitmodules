@@ -11,3 +11,9 @@
 [submodule "Chip8_Emulation/TinySHA1"]
 	path = Chip8_Emulation/TinySHA1
 	url = https://github.com/mohaps/TinySHA1.git
+[submodule "Chip8_Emulation/Chip8_Emulation/glfw"]
+	path = Chip8_Emulation/Chip8_Emulation/glfw
+	url = https://github.com/glfw/glfw.git
+[submodule "Chip8_Emulation/glfw"]
+	path = Chip8_Emulation/glfw
+	url = https://github.com/glfw/glfw.git
