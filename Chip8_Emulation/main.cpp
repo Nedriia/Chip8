@@ -1,5 +1,4 @@
 #include "Chip8.h"
-#include <windows.h>
 #include "Display.h"
 #include <chrono>
 #include "Input.h"

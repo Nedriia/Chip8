@@ -32,7 +32,9 @@
 #include "Chip8.h"
 #include "Disassembler.h"
 
+#ifdef _WIN32
 #include <windows.h>
+#endif
 #include <commdlg.h>
 #include <string>
 #include <iostream>
@@ -148,6 +150,7 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 			if( ImGui::Button( "Load Rom" ) )
 			{
 				m_pCPU->AskForState( oKey, RunningState::Pause );//The thread should be put in pause with GetOpenFileNameA call anyway
+#ifdef _WIN32
 				OPENFILENAMEA ofn;
 				char szFile[ 260 ];
 
@@ -177,6 +180,9 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 				{
 					m_pCPU->AskForState( oKey,RunningState::Running );
 				}
+#else
+
+#endif
 			}
 
 			ImGui::Separator();
