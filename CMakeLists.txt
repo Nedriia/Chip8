@@ -48,7 +48,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
-add_subdirectory(${PROJECT_DIR}/glfw)
+add_subdirectory(${PROJECT_DIR}/glfw ${CMAKE_BINARY_DIR}/glfw_build)
 
 find_package(OpenGL REQUIRED)
 

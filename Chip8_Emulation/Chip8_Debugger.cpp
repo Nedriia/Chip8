@@ -34,8 +34,9 @@
 
 #ifdef _WIN32
 #include <windows.h>
-#endif
 #include <commdlg.h>
+#endif
+
 #include <string>
 #include <iostream>
 
