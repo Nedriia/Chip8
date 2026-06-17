@@ -3,6 +3,7 @@
 #include <iostream>
 #include "Chip8.h"
 #include <thread>
+#include <cstring>
 
 // settings
 const uint16_t WINDOW_WIDTH = 1920;
@@ -695,7 +696,7 @@ void Display::Update( const std::chrono::steady_clock::time_point& time,const bo
 	}
 	else
 	{
-		std::this_thread::sleep_for( m_iCurrentTick - elapsed );
+		std::this_thread::sleep_for( m_iCurrentTick - ( std::chrono::steady_clock::now() - m_iLastTimeUpdate ) );
 	}
 }
 
