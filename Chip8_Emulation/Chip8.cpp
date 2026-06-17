@@ -7,6 +7,7 @@
 #include "Input.h"
 #include "SoundManager.h"
 #include <string.h>
+#include <cstring>
 #include "Init_RomSettings.h"
 #ifdef DEBUG_INFO
 #include "Disassembler.h"
