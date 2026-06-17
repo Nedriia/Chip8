@@ -35,7 +35,7 @@ void Chip8::SetROMPathFileToLoad( const KeyAccess& oKey,const std::string& sSrc 
 
 	size_t iSize = sSrc.length() + 1;
 	char* sDest = new char[ iSize ];
-	strcpy_s( sDest,iSize,sSrc.c_str() );
+	memcpy( sDest, sSrc.c_str(), iSize );
 
 	m_sCurrentRomLoaded = sDest;
 }
