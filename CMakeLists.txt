@@ -45,14 +45,15 @@ target_include_directories(${PROJECT_NAME} PRIVATE
         ${PROJECT_DIR}/TinySHA1
 )
 
-target_link_directories(${PROJECT_NAME} PRIVATE
-        ${LIBS_DIR}/lib
-)
+set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+add_subdirectory(${PROJECT_DIR}/glfw)
 
 find_package(OpenGL REQUIRED)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
-        glfw3
+        glfw
         OpenGL::GL
 )
 
