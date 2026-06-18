@@ -685,6 +685,8 @@ void Display::Update( const std::chrono::steady_clock::time_point& time,const bo
 
 #ifdef DEBUG_INFO
 			glBindFramebuffer( GL_FRAMEBUFFER,0 );
+#else
+			glfwSwapBuffers( m_pWindow );
 #endif
 			m_bDirtyFrame = false;
 		}
@@ -692,11 +694,11 @@ void Display::Update( const std::chrono::steady_clock::time_point& time,const bo
 #ifdef DEBUG_INFO
 		Chip8_Debugger::GetInstance()->Update( startElapsed );
 		Chip8_Debugger::GetInstance()->Render();
+		glfwSwapBuffers( m_pWindow );
 #endif
+
 		std::string sPerfDebug = std::format( "{} : {} ms ",m_sGameTitle,std::chrono::duration<double,std::milli>( startElapsed ).count() );
 		glfwSetWindowTitle( m_pWindow,sPerfDebug.c_str() );
-
-		glfwSwapBuffers( m_pWindow );
 	}
 	else
 	{
