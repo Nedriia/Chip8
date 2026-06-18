@@ -179,10 +179,32 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 				}
 				else
 				{
-					m_pCPU->AskForState( oKey,RunningState::Running );
+					if( m_pCPU->GetCurrentRomLoaded() != nullptr )
+						m_pCPU->AskForState( oKey,RunningState::Running );
 				}
 #else
+				char szFile[ 260 ];
+				FILE *f = popen("zenity --file-selection", "r");
+				char* result = fgets( szFile, 260, f) ;
+				if ( result != nullptr )
+				{
+					if( m_pCPU->GetCurrentRomLoaded() == nullptr )
+					{
+						std::string sPath = std::string( result );
+						size_t size = sPath.size();
+						if ( sPath[size - 1] == '\n' )
+							sPath.resize( size - 1 );
 
+						m_aAdress.clear();
+						m_pCPU->GetInstance()->SetROMPathFileToLoad( oKey, sPath );
+						m_pCPU->GetInstance()->AskForState( oKey,RunningState::LoadNewRom );
+					}
+				}
+				else
+				{
+					if( m_pCPU->GetCurrentRomLoaded() != nullptr )
+						m_pCPU->AskForState( oKey,RunningState::Running );
+				}
 #endif
 			}
 
