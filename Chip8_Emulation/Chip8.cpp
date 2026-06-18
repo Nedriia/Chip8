@@ -236,6 +236,7 @@ void Chip8::_LoadROM( const char* sROMToLoad )
 	else
 	{
 		std::cerr << "ERROR::CHIP8::LOADING::FILE_NOT_FOUND " << romPath  << std::endl;
+		m_oState = RunningState::Pause;
 	}
 }
 
