@@ -179,6 +179,9 @@ void Chip8::_LoadROM( const char* sROMToLoad )
 	if( sROMToLoad == nullptr )
 	{
 		m_oState = RunningState::Pause;
+#ifndef DEBUG_INFO
+		std::cerr << "No ROM path in argument" << std::endl;
+#endif
 		return;
 	}
 
@@ -244,7 +247,7 @@ void Chip8::EmulateCycle( const KeyAccess& key,const std::chrono::steady_clock::
 		_Reset();
 		m_oState = RunningState::Pause;
 	}
-
+#endif
 	if( m_oState == RunningState::Pause || m_oState == RunningState::Stop )
 	{
 		m_iLastTimeUpdate = time;
@@ -252,6 +255,7 @@ void Chip8::EmulateCycle( const KeyAccess& key,const std::chrono::steady_clock::
 	}
 
 	bool bForceNextStep = false;
+#ifdef DEBUG_INFO
 	if( m_oState == RunningState::StepNextFrame )
 	{
 		m_oState = RunningState::Pause;
@@ -276,6 +280,7 @@ void Chip8::EmulateCycle( const KeyAccess& key,const std::chrono::steady_clock::
 			_FetchDecode_Opcode();
 
 			++m_iCycle;
+
 #ifdef DEBUG_INFO
 			if( m_oState == RunningState::Stop || _IsEndReached() || bForceNextStep )
 				break;
@@ -284,6 +289,12 @@ void Chip8::EmulateCycle( const KeyAccess& key,const std::chrono::steady_clock::
 			{
 				m_oState = RunningState::Pause;
 				m_iAdressBreakpoint = 0;
+				break;
+			}
+#else
+			if ( _IsEndReached() )
+			{
+				std::cout << "End of current program has been reached";
 				break;
 			}
 #endif
