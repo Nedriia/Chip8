@@ -62,3 +62,5 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
         PATH_SHADERS="${PROJECT_DIR}/assets/"
         PATH_DATABASE="${PROJECT_DIR}/chip-8-database/database/"
 )
+
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/Roms)
