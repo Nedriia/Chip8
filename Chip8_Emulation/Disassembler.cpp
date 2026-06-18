@@ -5,7 +5,7 @@
 #include <filesystem>
 #include <unordered_set>
 
-#define DEFAULT_DISSASEMBLY_FOLDER "..\\Dissasembly\\"
+#define DEFAULT_DISASSEMBLY_FOLDER "../Disassembly/"
 
 std::map< uint16_t, Disassembler::DisassembledLine > Disassembler::m_aDisassembly;
 std::queue<uint16_t> Disassembler::m_aWorklist = {};
@@ -19,7 +19,7 @@ void Disassembler::Disassemble_ROM( const char* memblock, const char* sROMToLoad
 	m_aDisassembly.clear();
 
 	std::filesystem::path romPath( sROMToLoad );
-	std::filesystem::path outputPath = std::filesystem::path( DEFAULT_DISSASEMBLY_FOLDER ) / romPath.filename();
+	std::filesystem::path outputPath = std::filesystem::path( DEFAULT_DISASSEMBLY_FOLDER ) / romPath.filename();
 	outputPath.replace_extension( ".asm" );
 
 	m_bCurrentRomDissasemblyExist = std::filesystem::exists( outputPath );
