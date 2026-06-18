@@ -188,7 +188,7 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 				char* result = fgets( szFile, 260, f) ;
 				if ( result != nullptr )
 				{
-					if( m_pCPU->GetCurrentRomLoaded() == nullptr )
+					if( m_pCPU->GetCurrentRomLoaded() == nullptr || strcmp( szFile, m_pCPU->GetCurrentRomLoaded() ) != 0 )
 					{
 						std::string sPath = std::string( result );
 						size_t size = sPath.size();
