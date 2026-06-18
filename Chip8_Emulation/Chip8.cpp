@@ -8,12 +8,14 @@
 #include "SoundManager.h"
 #include <string.h>
 #include <cstring>
+#include <filesystem>
+
 #include "Init_RomSettings.h"
 #ifdef DEBUG_INFO
 #include "Disassembler.h"
 #endif
 
-#define DEFAULT_PARENT_ROM_FOLDER "..\\Roms\\"
+#define DEFAULT_PARENT_ROM_FOLDER "../Roms/"
 #define JMPCHECK_BEFORE_ENDING 4
 #define USE_SWITCH_BRANCH
 
@@ -180,11 +182,11 @@ void Chip8::_LoadROM( const char* sROMToLoad )
 		return;
 	}
 
-	std::string sPath = sROMToLoad;
-	if( std::strchr( sROMToLoad,'\\' ) == nullptr )
-		sPath = std::string( DEFAULT_PARENT_ROM_FOLDER ) + sROMToLoad;
+	std::filesystem::path romPath( sROMToLoad );
+	if( !romPath.has_parent_path() )
+		romPath = std::string( PATH_ROMS ) + sROMToLoad;
 
-	std::ifstream file( sPath,std::ios::binary | std::ios::in | std::ios::ate );
+	std::ifstream file( romPath,std::ios::binary | std::ios::in | std::ios::ate );
 	if( file.is_open() )
 	{
 		std::streamsize size = file.tellg();
@@ -230,7 +232,7 @@ void Chip8::_LoadROM( const char* sROMToLoad )
 	}
 	else
 	{
-		std::cerr << "ERROR::CHIP8::LOADING::FILE_NOT_FOUND " << sROMToLoad << std::endl;
+		std::cerr << "ERROR::CHIP8::LOADING::FILE_NOT_FOUND " << romPath  << std::endl;
 	}
 }
 
