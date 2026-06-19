@@ -323,8 +323,8 @@ private:
 #endif
 
 	const Input* m_pInputInstance;
-	const SoundManager* m_pSoundManagerInstance;
-	const Display* m_pDisplayInstance;
+	SoundManager* m_pSoundManagerInstance;
+	Display* m_pDisplayInstance;
 	static uint8_t iHexToIndex[];
 
 	struct alignas ( 16 ) DecodedOpcode
