@@ -58,6 +58,7 @@ Chip8::Chip8() :
 	,m_iTimeLastFrame{}
 	,m_pInputInstance( nullptr )
 	,m_pSoundManagerInstance( nullptr )
+	,m_pDisplayInstance( nullptr )
 	,m_pCurrentOpcode( nullptr )
 {
 	m_aMainTable[ 0x0 ] = { &Chip8::x0_Dispatch };
@@ -126,6 +127,13 @@ void Chip8::Init( const KeyAccess& key,const char* sROMToLoad )
 
 	m_iPC = START_ROM_MEMORY_ADDRESS;
 	m_iSP = 0;
+
+	if( m_pSoundManagerInstance == nullptr )
+		m_pSoundManagerInstance = SoundManager::GetInstance();
+	if( m_pInputInstance == nullptr )
+		m_pInputInstance = Input::GetInstance();
+	if( m_pDisplayInstance == nullptr )
+		m_pDisplayInstance = Display::GetInstance();
 }
 
 void Chip8::_Reset()
@@ -150,9 +158,6 @@ void Chip8::_Reset()
 	memset( m_aRegisters,0,sizeof( m_aRegisters ) );
 	memset( m_aStack,0,sizeof( m_aStack ) );
 	memset( m_aFlags,0,sizeof( m_aFlags ) );
-
-	if( m_pSoundManagerInstance == nullptr )
-		m_pSoundManagerInstance = SoundManager::GetInstance();
 
 	m_pSoundManagerInstance->OnReset();
 	m_bXoCHIP = false;
@@ -271,11 +276,6 @@ void Chip8::EmulateCycle( const KeyAccess& key,const std::chrono::steady_clock::
 	if( elapsed >= Display::GetRefreshTick() )
 #endif
 	{
-		if( m_pInputInstance == nullptr )
-			m_pInputInstance = Input::GetInstance();
-		if( m_pSoundManagerInstance == nullptr )
-			m_pSoundManagerInstance = SoundManager::GetInstance();
-
 		for( int i = 0; i < m_iInstructionsPerFrame; ++i )
 		{
 			_FetchDecode_Opcode();
@@ -866,7 +866,7 @@ inline void Chip8::SAVE_RANGE()
 	if( m_bXoCHIP && iX > iY )
 		iStep = -1;
 
-	for( int i = GetX(); i != iY + iStep; i += iStep, ++k )
+	for( int i = iX; i != iY + iStep; i += iStep, ++k )
 		m_aMemory[ GetI() + k ] = m_aRegisters[ i ];
 }
 
@@ -880,18 +880,24 @@ inline void Chip8::LOAD_RANGE()
 	if( m_bXoCHIP && iX > iY )
 		iStep = -1;
 
-	for( int i = GetX(); i != iY + iStep; i += iStep,++k )
+	for( int i = iX; i != iY + iStep; i += iStep,++k )
 		m_aRegisters[ i ] = m_aMemory[ GetI() + k ];
 }
 
 inline void Chip8::HIRES()
 {
-	Display::GetInstance()->SetResolutionMode( ResolutionMode::HIRES );
+	m_pDisplayInstance->SetResolutionMode( ResolutionMode::HIRES );
+
+	Display::KeyDisplayAccess oKeyDisplay;
+	Display::ClearScreen( oKeyDisplay, true );
 }
 
 inline void Chip8::LORES()
 {
-	Display::GetInstance()->SetResolutionMode( ResolutionMode::LORES );
+	m_pDisplayInstance->SetResolutionMode( ResolutionMode::LORES );
+
+	Display::KeyDisplayAccess oKeyDisplay;
+	Display::ClearScreen( oKeyDisplay, true);
 }
 
 inline void Chip8::SCROLL_DOWN()
@@ -983,10 +989,11 @@ inline void Chip8::SHR()
 inline void Chip8::SUBN_VX_VY()
 {
 	uint8_t X = GetX();
+	uint8_t Y = GetY();
 
 	//Sets VX equals to VY minus VX.
 	uint8_t vx = m_aRegisters[ X ];
-	uint8_t vy = m_aRegisters[ GetY() ];
+	uint8_t vy = m_aRegisters[ Y ];
 
 	m_aRegisters[ X ] = ( vy - vx ) & 0xFF;
 	m_aRegisters[ 15 ] = vy >= vx ? 1 : 0;
@@ -1028,7 +1035,7 @@ inline void Chip8::DRAW()
 {
 	if( Chip8::m_oCurrentQuirk.bDispWaitFlag )
 	{
-		if( !Chip8::m_oCurrentQuirk.bLegacySrolling || ( Chip8::m_oCurrentQuirk.bLegacySrolling && Display::GetInstance()->GetResolutionMode() == ResolutionMode::LORES ) )
+		if( !Chip8::m_oCurrentQuirk.bLegacySrolling || ( Chip8::m_oCurrentQuirk.bLegacySrolling && m_pDisplayInstance->GetResolutionMode() == ResolutionMode::LORES ) )
 		{
 			//VBlank, waiting for next frame
 			if( m_iTimeLastFrame.time_since_epoch().count() == 0 )
