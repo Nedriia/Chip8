@@ -135,10 +135,10 @@ void Input::InitInputDefault()
 
 uint8_t Input::GetKeyState( uint8_t iIndex ) const
 {
-#ifdef OVERFLOW_CONTROL
-	iIndex &= 0xF;
-#endif
-	return m_aInputs[ iIndex ];
+	if ( iIndex >= 0x10 )
+		return 0;
+	else
+		return m_aInputs[ iIndex ];
 }
 
 uint8_t Input::IsAnyKeyPress() const
