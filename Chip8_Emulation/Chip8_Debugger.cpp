@@ -87,10 +87,14 @@ void Chip8_Debugger::Init( GLFWwindow* mainWindow,const Chip8* pCPU )
 		m_pCPU = pCPU;
 
 	ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+#endif
 }
 
 void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 {
+#ifdef DEBUG_INFO
+	assert( m_pCPU != nullptr );
+
 	// Poll and handle events (inputs, window resize, etc.)
 	// You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
 	// - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
@@ -103,11 +107,6 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 		return;
 	}
 
-	// Start the Dear ImGui frame
-	//glBindFramebuffer( GL_FRAMEBUFFER,Display::GetInstance()->GetFBO() );
-
-	// render
-	// ------
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
@@ -115,151 +114,140 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 
 	if( ImGui::Begin( "CPU",nullptr ) )
 	{
-		if( m_pCPU != nullptr )
+		if( ImGui::BeginListBox( "#",ImVec2( -FLT_MIN,26 * ImGui::GetTextLineHeightWithSpacing() ) ) )
 		{
-			if( ImGui::BeginListBox( "#",ImVec2( -FLT_MIN,26 * ImGui::GetTextLineHeightWithSpacing() ) ) )
+			int iIndex = 0;
+			for( int i = 0; i < 0x10; ++i )
 			{
-				const Data<uint8_t>* it = m_pCPU->GetRegisters();
-				if( it != nullptr )
-				{
-					int iIndex = 0;
-					for( int i = 0; i < 0x10; ++i )
-					{
-						std::string sText = "V" + std::format( "{:X}:",i );
-						FormatDebugData( sText,"%02X",it[ i ],m_iRegisterSelected,iIndex );
-					}
-
-					ImGui::NewLine();
-					FormatDebugData( "I :","%#06X",m_pCPU->GetI(),m_iRegisterSelected,iIndex );
-					FormatDebugData( "SP:","%#06X",m_pCPU->GetSP(),m_iRegisterSelected,iIndex );
-					FormatDebugData( "PC:","%#06X",m_pCPU->GetPC(),m_iRegisterSelected,iIndex );
-					FormatDebugData( "DT:","%03X",m_pCPU->GetDelayTimer(),m_iRegisterSelected,iIndex );
-					FormatDebugData( "ST:","%03X",m_pCPU->GetSoundTimer(),m_iRegisterSelected,iIndex );
-				}
+				std::string sText = "V" + std::format( "{:X}:",i );
+				FormatDebugData( sText,"%02X",m_pCPU->GetRegisters()[ i ],m_iRegisterSelected,iIndex );
 			}
-			ImGui::EndListBox();
+
+			ImGui::NewLine();
+			FormatDebugData( "I :","%#06X",m_pCPU->GetI(),m_iRegisterSelected,iIndex );
+			FormatDebugData( "SP:","%#06X",m_pCPU->GetSP(),m_iRegisterSelected,iIndex );
+			FormatDebugData( "PC:","%#06X",m_pCPU->GetPC(),m_iRegisterSelected,iIndex );
+			FormatDebugData( "DT:","%03X",m_pCPU->GetDelayTimer(),m_iRegisterSelected,iIndex );
+			FormatDebugData( "ST:","%03X",m_pCPU->GetSoundTimer(),m_iRegisterSelected,iIndex );
 		}
+		ImGui::EndListBox();
 	}
 	ImGui::End();
+
 	if( ImGui::Begin( "Controls",nullptr ) )
 	{
-		if( m_pCPU != nullptr )
+		static Chip8::KeyAccess			oKey;
+		if( ImGui::Button( "Load Rom" ) )
 		{
-			Chip8::KeyAccess oKey;
-			Display::KeyDisplayAccess oKeyDisplay;
-
-			if( ImGui::Button( "Load Rom" ) )
-			{
-				m_pCPU->AskForState( oKey, RunningState::Pause );//The thread should be put in pause with GetOpenFileNameA call anyway
+			m_pCPU->AskForState( oKey, RunningState::Pause );//The thread should be put in pause with GetOpenFileNameA call anyway
 #ifdef _WIN32
-				OPENFILENAMEA ofn;
-				char szFile[ 260 ];
+			OPENFILENAMEA ofn;
+			char szFile[ 260 ];
 
-				// Initialize OPENFILENAME
-				ZeroMemory( &ofn,sizeof( ofn ) );
-				ofn.lStructSize = sizeof( ofn );
-				ofn.lpstrFile = szFile;
-				ofn.lpstrFile[ 0 ] = '\0';
-				ofn.nMaxFile = sizeof( szFile );
-				ofn.lpstrFilter = "All\0*.*\0Text\0*.TXT\0";
-				ofn.nFilterIndex = 1;
-				ofn.lpstrFileTitle = NULL;
-				ofn.nMaxFileTitle = 0;
-				ofn.lpstrInitialDir = NULL;
-				ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+			// Initialize OPENFILENAME
+			ZeroMemory( &ofn,sizeof( ofn ) );
+			ofn.lStructSize = sizeof( ofn );
+			ofn.lpstrFile = szFile;
+			ofn.lpstrFile[ 0 ] = '\0';
+			ofn.nMaxFile = sizeof( szFile );
+			ofn.lpstrFilter = "All\0*.*\0Text\0*.TXT\0";
+			ofn.nFilterIndex = 1;
+			ofn.lpstrFileTitle = NULL;
+			ofn.nMaxFileTitle = 0;
+			ofn.lpstrInitialDir = NULL;
+			ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
 
-				if( GetOpenFileNameA( &ofn ) )
+			if( GetOpenFileNameA( &ofn ) )
+			{
+				if( m_pCPU->GetCurrentRomLoaded() == nullptr || strcmp( szFile, m_pCPU->GetCurrentRomLoaded() ) != 0 )
 				{
-					if( m_pCPU->GetCurrentRomLoaded() == nullptr || strcmp( szFile, m_pCPU->GetCurrentRomLoaded() ) != 0 )
-					{
-						m_aAdress.clear();
-						m_pCPU->GetInstance()->SetROMPathFileToLoad( oKey,szFile );
-						m_pCPU->GetInstance()->AskForState( oKey,RunningState::LoadNewRom );
-					}
+					m_aAdress.clear();
+					m_pCPU->GetInstance()->SetROMPathFileToLoad( oKey,szFile );
+					m_pCPU->GetInstance()->AskForState( oKey,RunningState::LoadNewRom );
 				}
-				else
-				{
-					if( m_pCPU->GetCurrentRomLoaded() != nullptr )
-						m_pCPU->AskForState( oKey,RunningState::Running );
-				}
+			}
+			else
+			{
+				if( m_pCPU->GetCurrentRomLoaded() != nullptr )
+					m_pCPU->AskForState( oKey,RunningState::Running );
+			}
 #else
-				char szFile[ 260 ];
-				FILE *f = popen("zenity --file-selection", "r");
-				char* result = fgets( szFile, 260, f) ;
-				if ( result != nullptr )
+			char szFile[ 260 ];
+			FILE *f = popen("zenity --file-selection", "r");
+			char* result = fgets( szFile, 260, f) ;
+			if ( result != nullptr )
+			{
+				if( m_pCPU->GetCurrentRomLoaded() == nullptr || strcmp( szFile, m_pCPU->GetCurrentRomLoaded() ) != 0 )
 				{
-					if( m_pCPU->GetCurrentRomLoaded() == nullptr || strcmp( szFile, m_pCPU->GetCurrentRomLoaded() ) != 0 )
-					{
-						std::string sPath = std::string( result );
-						size_t size = sPath.size();
-						if ( sPath[size - 1] == '\n' )
-							sPath.resize( size - 1 );
+					std::string sPath = std::string( result );
+					size_t size = sPath.size();
+					if ( sPath[size - 1] == '\n' )
+						sPath.resize( size - 1 );
 
-						m_aAdress.clear();
-						m_pCPU->GetInstance()->SetROMPathFileToLoad( oKey, sPath );
-						m_pCPU->GetInstance()->AskForState( oKey,RunningState::LoadNewRom );
-					}
+					m_aAdress.clear();
+					m_pCPU->GetInstance()->SetROMPathFileToLoad( oKey, sPath );
+					m_pCPU->GetInstance()->AskForState( oKey,RunningState::LoadNewRom );
 				}
-				else
-				{
-					if( m_pCPU->GetCurrentRomLoaded() != nullptr )
-						m_pCPU->AskForState( oKey,RunningState::Running );
-				}
+			}
+			else
+			{
+				if( m_pCPU->GetCurrentRomLoaded() != nullptr )
+					m_pCPU->AskForState( oKey,RunningState::Running );
+			}
 #endif
-			}
-
-			ImGui::Separator();
-
-			if( m_pCPU->IsPause() )
-				ImGui::PushStyleColor( ImGuiCol_Button,ImVec4( 0.5f,0.f,0.f,0.62f ) );
-			else if( m_pCPU->IsStop() )
-				ImGui::PushStyleColor( ImGuiCol_Button,ImVec4( 0.37f,0.0f,0.0f,0.62f ) );
-			else
-				ImGui::PushStyleColor( ImGuiCol_Button,ImVec4( 0.35f,0.40f,0.61f,0.62f ) );
-
-			if( ImGui::Button( "Pause" ) && m_pCPU->GetCurrentRomLoaded() != nullptr && !m_pCPU->IsStop() )
-				m_pCPU->AskForState( oKey,m_pCPU->IsPause() ? RunningState::Running : RunningState::Pause );
-
-			bool bPause = m_pCPU->IsPause();
-			if( bPause )
-				ImGui::PopStyleColor();
-
-			if( ImGui::Button( "Step Next Frame" ) && m_pCPU->GetCurrentRomLoaded() != nullptr && !m_pCPU->IsStop() )
-				m_pCPU->AskForState( oKey,RunningState::StepNextFrame );
-			
-			if( !bPause )
-				ImGui::PopStyleColor();
-			
-			if( m_pCPU->IsStop() )
-				ImGui::PushStyleColor( ImGuiCol_Button,ImVec4( 0.23f,0.76f,0.18f,0.62f ) );
-			else
-				ImGui::PushStyleColor( ImGuiCol_Button,ImVec4( 0.35f,0.40f,0.61f,0.62f ) );
-
-			if( ImGui::Button( "Reset" ) )
-			{
-				m_aAdress.clear();
-				m_pCPU->AskForState( oKey,RunningState::Reset );
-			}
-
-			ImGui::PopStyleColor();
-			ImGui::Separator();
-
-			float fFps = 1 / ( Display::GetValueMicroSRefresh() / 1000000.0f );
-			if( ImGui::SliderFloat( "FPS",&fFps,20,120,NULL ) )
-			{
-				Display::SetValueMicroSRefresh( ( 1 / fFps ) * 1000000.0f );
-				Display::SetRefreshTick( std::chrono::microseconds( Display::GetValueMicroSRefresh() ) );
-			}
-			int iIPF = m_pCPU->GetInstructPerFrame();
-			if( ImGui::SliderInt( "IPF",&iIPF,10,50000,NULL ) )
-				m_pCPU->SetInstructionPerFrame( iIPF );
-
-			ImGui::Separator();
-			ImGui::Checkbox( "Follow PC",&m_bFollowPc );
-			int iAdress = m_pCPU->GetBreakpointAdress();
-			if( ImGui::InputInt( "Breakpoint", &iAdress,2,10,ImGuiInputTextFlags_CharsHexadecimal ) )
-				m_pCPU->SetBreakpoint( iAdress );
 		}
+
+		ImGui::Separator();
+
+		if( m_pCPU->IsPause() )
+			ImGui::PushStyleColor( ImGuiCol_Button,ImVec4( 0.5f,0.f,0.f,0.62f ) );
+		else if( m_pCPU->IsStop() )
+			ImGui::PushStyleColor( ImGuiCol_Button,ImVec4( 0.37f,0.0f,0.0f,0.62f ) );
+		else
+			ImGui::PushStyleColor( ImGuiCol_Button,ImVec4( 0.35f,0.40f,0.61f,0.62f ) );
+
+		if( ImGui::Button( "Pause" ) && m_pCPU->GetCurrentRomLoaded() != nullptr && !m_pCPU->IsStop() )
+			m_pCPU->AskForState( oKey,m_pCPU->IsPause() ? RunningState::Running : RunningState::Pause );
+
+		bool bPause = m_pCPU->IsPause();
+		if( bPause )
+			ImGui::PopStyleColor();
+
+		if( ImGui::Button( "Step Next Frame" ) && m_pCPU->GetCurrentRomLoaded() != nullptr && !m_pCPU->IsStop() )
+			m_pCPU->AskForState( oKey,RunningState::StepNextFrame );
+
+		if( !bPause )
+			ImGui::PopStyleColor();
+
+		if( m_pCPU->IsStop() )
+			ImGui::PushStyleColor( ImGuiCol_Button,ImVec4( 0.23f,0.76f,0.18f,0.62f ) );
+		else
+			ImGui::PushStyleColor( ImGuiCol_Button,ImVec4( 0.35f,0.40f,0.61f,0.62f ) );
+
+		if( ImGui::Button( "Reset" ) )
+		{
+			m_aAdress.clear();
+			m_pCPU->AskForState( oKey,RunningState::Reset );
+		}
+
+		ImGui::PopStyleColor();
+		ImGui::Separator();
+
+		float fFps = 1 / ( Display::GetValueMicroSRefresh() / 1000000.0f );
+		if( ImGui::SliderFloat( "FPS",&fFps,20,120,NULL ) )
+		{
+			Display::SetValueMicroSRefresh( ( 1 / fFps ) * 1000000.0f );
+			Display::SetRefreshTick( std::chrono::microseconds( Display::GetValueMicroSRefresh() ) );
+		}
+		int iIPF = m_pCPU->GetInstructPerFrame();
+		if( ImGui::SliderInt( "IPF",&iIPF,10,50000,NULL ) )
+			m_pCPU->SetInstructionPerFrame( iIPF );
+
+		ImGui::Separator();
+		ImGui::Checkbox( "Follow PC",&m_bFollowPc );
+		int iAdress = m_pCPU->GetBreakpointAdress();
+		if( ImGui::InputInt( "Breakpoint", &iAdress,2,10,ImGuiInputTextFlags_CharsHexadecimal ) )
+			m_pCPU->SetBreakpoint( iAdress );
 	}
 	ImGui::End();
 	if( ImGui::Begin( "Quirks",nullptr ) )
@@ -287,21 +275,13 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 
 	if( ImGui::Begin( "Stack",nullptr ) )
 	{
-		if( m_pCPU != nullptr )
+		if( ImGui::BeginListBox( "#",ImVec2( -FLT_MIN,24 * ImGui::GetTextLineHeightWithSpacing() ) ) )
 		{
-			if( ImGui::BeginListBox( "#",ImVec2( -FLT_MIN,24 * ImGui::GetTextLineHeightWithSpacing() ) ) )
-			{
-				const Data<uint16_t>* it = m_pCPU->GetStack();
-				if( it != nullptr )
-				{
-					std::string sAdress;
-					int iIndex = 0;
-					for( int i = 0; i < 0x10; ++i )
-						FormatDebugData( "","%#06X",it[ i ],m_iStackSelected,iIndex );
-				}
-			}
-			ImGui::EndListBox();
+			int iIndex = 0;
+			for( int i = 0; i < 0x10; ++i )
+				FormatDebugData( "","%#06X",m_pCPU->GetStack()[ i ],m_iStackSelected,iIndex );
 		}
+		ImGui::EndListBox();
 	}
 	ImGui::End();
 
@@ -319,74 +299,55 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 		ImVec2 avail = ImVec2( ImGui::GetContentRegionAvail().x,ImGui::GetContentRegionAvail().y - 14 );
 		ImGui::Image( ( ImTextureID )Display::GetInstance()->GetFBOTexture(),avail,ImVec2( 0.0f,1.0f ),ImVec2( 1.0f,0.0f ) );
 	}
-
 	ImGui::End();
 
-	/*ImGui::SetNextWindowPos( ImVec2( 600,600 ),ImGuiCond_Always,ImVec2( 0,0 ) );
-	ImGui::SetNextWindowSize( ImVec2( 300,400 ),ImGuiCond_Once );
-	if( ImGui::Begin( "Inputs",nullptr,ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
-		ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar ) )
-	{
-	}*/
-
-	if( ImGui::Begin( "Memory",nullptr ) && m_pCPU != nullptr )
+	if( ImGui::Begin( "Memory",nullptr ) )
 	{
 		static int iBytesPerLine = 32;
 		ImGui::SliderInt( "Bytes per line",&iBytesPerLine,2,32 );
-		if( ImGui::BeginListBox( "#",ImVec2( -FLT_MIN,24 * ImGui::GetTextLineHeightWithSpacing() ) ) )
+
+		if( ImGui::BeginListBox( "#",ImVec2( -FLT_MIN,24 * ImGui::GetTextLineHeightWithSpacing() ) ) && m_pCPU->GetMemory() )
 		{
-			int num_items = ( m_pCPU->GetMemory()->end() - m_pCPU->GetMemory()->begin() ) / iBytesPerLine;
 			ImGuiListClipper clipper;
-			clipper.Begin( num_items,ImGui::GetTextLineHeightWithSpacing() );
+			clipper.Begin( ( m_pCPU->GetMaxSizeMemory() / iBytesPerLine ),ImGui::GetTextLineHeightWithSpacing() );
 
 			while( clipper.Step() )
 			{
-				std::string sAdress;
-				int iIndex = 0;
-
 				for( int line = clipper.DisplayStart; line < clipper.DisplayEnd; ++line )
 				{
 					ImGui::PushID( line );
 
+					int iMemoryIndex = ( *m_pCPU->GetMemory()->begin() + ( line * iBytesPerLine ) );
+
 					char buffer[ 64 ];
-					auto oData = ( *m_pCPU->GetMemory()->begin() + ( line * iBytesPerLine ) );
-					snprintf( buffer,sizeof( buffer ),"0x%04X : ",oData );
+					snprintf( buffer,sizeof( buffer ),"0x%04X : ",iMemoryIndex );
 					
-					ImGui::Text( buffer );
+					ImGui::Text( "%s", buffer );
 					ImGui::SameLine();
+
+					std::string sAscii;
 					for( int i = 0; i < iBytesPerLine; ++i )
 					{
 						ImGui::PushID( i );
-
 						if( i == iBytesPerLine / 2 )
 						{
 							ImGui::Text( "|" );
 							ImGui::SameLine();
 						}
 						
-						auto iMemory = oData + i;
 						char byteBuffer[ 4 ];
-						auto oDataBytes = m_pCPU->GetMemory()->begin() + iMemory;
-						snprintf( byteBuffer,sizeof( byteBuffer ),"%02X ", ( uint8_t )*oDataBytes );
+						const Data<uint8_t>& oData = *( m_pCPU->GetMemory()->begin() + ( iMemoryIndex + i ) );
+						if( m_iCycleIndex != m_pCPU->GetCycleId() )
+							oData.SetDataAsDirty();
+
+						ImGui::PushStyleColor( ImGuiCol_Text,oData.IsNULL() ? NULL_DATA_COLOR : oData.HasChanged() ? CHANGE_DATA_COLOR : DEFAULT_DATA_COLOR );
+
+						snprintf( byteBuffer,sizeof( byteBuffer ),"%02X ", static_cast<uint8_t>( oData ) );
 
 						ImGui::Selectable( byteBuffer );
-						
 						ImGui::SameLine();
-						ImGui::PopID();
-					}
 
-					ImGui::Text( "|" );
-					ImGui::SameLine();
-
-					for( int k = 0; k < iBytesPerLine; ++k )
-					{
-						ImGui::PushID( k );
-
-						auto iMemory = oData + k;
-						auto oDataBytes = m_pCPU->GetMemory()->begin() + iMemory;
-
-						std::string sAscii;
-						uint8_t val = ( uint8_t )*oDataBytes;
+						uint8_t val = static_cast<uint8_t>( oData );
 						if( val != 0 )
 						{
 							if( val < 33 || val > 126 )
@@ -395,13 +356,11 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 								sAscii += val;
 						}
 
-						ImGui::Selectable( sAscii.c_str() );
-
-						ImGui::SameLine();
 						ImGui::PopID();
+						ImGui::PopStyleColor();
 					}
 
-					ImGui::NewLine();
+					ImGui::Text( "%s", sAscii.c_str() );
 					ImGui::PopID();
 				}
 			}
@@ -409,68 +368,11 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 			ImGui::EndListBox();
 		}
 	}
-
-	/*if( ImGui::Begin( "Memory",nullptr ) )
-	{
-		if( m_pCPU != nullptr )
-		{
-			if( ImGui::BeginListBox( "#",ImVec2( -FLT_MIN,24 * ImGui::GetTextLineHeightWithSpacing() ) ) )
-			{
-				std::string sAdress;
-				int iIndex = 0;
-				for( int i = 0; i < 0x1000; i += 0x10 )
-				{
-					sAdress.clear();
-
-					ImGui::PushID( i );
-
-					ImGui::Text( std::format( "{:#06X}:",i ).c_str() );
-					ImGui::SameLine();
-
-					std::string sAscii;
-					for( int n = i; n < i + 0x10; ++n )
-					{
-						if( n == i + 8 )
-						{
-							ImGui::Text( "|" );
-							ImGui::SameLine();
-						}
-						auto pMemoryOffset = m_pCPU->GetMemory()->begin() + n;
-						if( pMemoryOffset != m_pCPU->GetMemory()->end() )
-						{
-							FormatDebugData( "","%02X",*( pMemoryOffset ),m_iMemorySelected,iIndex );
-
-							uint8_t val = *( pMemoryOffset );
-							if( val != 0 )
-							{
-								if( val < 33 || val > 126 )
-									sAscii += ".";
-								else
-									sAscii += val;
-							}
-						}
-						ImGui::SameLine();
-					}
-
-					ImGui::Text( "|" );
-					ImGui::SameLine();
-					ImGui::Text( sAscii.c_str() );
-					ImGui::SameLine();
-
-					ImGui::PopID();
-					ImGui::NewLine();
-				}
-			
-			}
-			ImGui::EndListBox();
-		}
-	}*/
 	ImGui::End();
-
 
 	if( ImGui::Begin( "Disassembly",nullptr ) )
 	{
-		if( m_pCPU != nullptr && m_pCPU->GetState() != RunningState::LoadNewRom )
+		if( m_pCPU->GetState() != RunningState::LoadNewRom )
 		{
 			if( ImGui::BeginListBox( "#",ImVec2( -FLT_MIN,35 * ImGui::GetTextLineHeightWithSpacing() ) ) )
 			{
@@ -505,16 +407,17 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 					{
 						ImGui::PushID( n );
 
-						const auto& inst = aDisassemblyInstructions.at( m_aAdress[ n ] );
-						bool isCurrent = inst.m_iAddress == m_pCPU->GetPC();
+						const auto&[m_iAddress, m_sText] = aDisassemblyInstructions.at( m_aAdress[ n ] );
+						bool isCurrent = m_iAddress == m_pCPU->GetPC();
 
 						if( isCurrent )
 							ImGui::PushStyleColor( ImGuiCol_Text,ImVec4( 1,1,0,1 ) );
 
-						ImGui::Selectable( inst.m_sText.c_str(),isCurrent );
+						ImGui::Selectable( m_sText.c_str(),isCurrent );
 
 						if( isCurrent )
 							ImGui::PopStyleColor();
+
 						ImGui::PopID();
 					}
 				}
@@ -525,7 +428,6 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 	}
 	ImGui::End();
 
-	//glBindFramebuffer( GL_FRAMEBUFFER,0 );
 	#endif
 }
 
@@ -548,33 +450,24 @@ void Chip8_Debugger::FormatDebugData( std::string sText,const char* sFormat,cons
 #ifdef DEBUG_INFO
 	static_assert( std::is_same_v<T,Data<uint8_t>> || std::is_same_v<T,Data<uint16_t>>,"Function is being call with an unsupported type" );
 
-#ifdef DEBUG_INFO
-	if( m_pCPU && m_iCycleIndex != m_pCPU->GetCycleId() )
+	if( m_iCycleIndex != m_pCPU->GetCycleId() )
 		oData.SetDataAsDirty();
-#endif
 
 	ImGui::PushID( iIndexPosition );
 	if( !sText.empty() )
 	{
-		ImGui::Text( sText.c_str() );
+		ImGui::Text( "%s", sText.c_str() );
 		ImGui::SameLine();
 	}
 	ImGui::PushStyleColor( ImGuiCol_Text,oData.IsNULL() ? NULL_DATA_COLOR : oData.HasChanged() ? CHANGE_DATA_COLOR : DEFAULT_DATA_COLOR );
 
 	char buffer[ 64 ];
 	if constexpr( std::is_same_v<T,Data<uint8_t>> )
-	{
-		uint8_t val = ( uint8_t )oData;
-		snprintf( buffer,sizeof( buffer ),sFormat,val );
-	}
+		snprintf( buffer,sizeof( buffer ),sFormat,static_cast<uint8_t>(oData) );
 	else if constexpr( std::is_same_v<T,Data<uint16_t>> )
-	{
-		uint16_t val = ( uint16_t )oData;
-		snprintf( buffer,sizeof( buffer ),sFormat,val );
-	}
+		snprintf( buffer,sizeof( buffer ),sFormat,static_cast<uint16_t>(oData) );
 
-	bool is_selected = ( iIndexSelectable == iIndexPosition );
-	if( ImGui::Selectable( buffer,is_selected ) ) { iIndexSelectable = iIndexPosition; }
+	if( ImGui::Selectable( buffer, ( iIndexSelectable == iIndexPosition ) ) ) { iIndexSelectable = iIndexPosition; }
 	ImGui::PopID();
 
 	++iIndexPosition;

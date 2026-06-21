@@ -124,15 +124,15 @@ public:
 	const std::array<Data< uint8_t>,0xFFFF>* GetMemory() const { return &m_aMemory; }
 	Data<uint8_t> GetMemoryAtAddr( const uint16_t iAddr ) const { return m_aMemory[ iAddr ]; }
 
-	const Data< uint16_t>* GetStack() const { return m_aStack; }
-	const Data< uint8_t>* GetRegisters() const { return m_aRegisters; }
+	const Data< uint16_t>*			GetStack() const { return m_aStack; }
+	const Data< uint8_t>*			GetRegisters() const { return m_aRegisters; }
 
-	const Data< uint16_t> GetI() const { return m_iI; }
-	const Data< uint16_t> GetPC() const { return m_iPC; }
+	const Data< uint16_t>			GetI() const { return m_iI; }
+	const Data< uint16_t>			GetPC() const { return m_iPC; }
 
-	const Data< uint8_t> GetSP() const { return m_iSP; }
-	const Data< uint8_t> GetDelayTimer() const { return m_iDelay_timer; }
-	const Data< uint8_t> GetSoundTimer() const { return m_iSound_timer; }
+	const Data< uint8_t>			GetSP() const { return m_iSP; }
+	const Data< uint8_t>			GetDelayTimer() const { return m_iDelay_timer; }
+	const Data< uint8_t>			GetSoundTimer() const { return m_iSound_timer; }
 	long long unsigned				GetCycleId() const { return m_iCycle; }
 
 	bool							IsPause() const { return m_oState == RunningState::Pause; }
@@ -153,6 +153,7 @@ public:
 	static const std::array< std::string,7 >* GetPlatformsSupported() { return &m_sSupportedPlatform; }
 	static Quirk					m_oCurrentQuirk;
 	void							SetIfCurrentRomXoChip( bool bXoChip ) { m_bXoCHIP = bXoChip; }
+	uint16_t						GetMaxSizeMemory() const { return m_bXoCHIP ? 0xFFFF : 0xFFF; }
 
 private:
 
