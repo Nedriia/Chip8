@@ -60,6 +60,7 @@ Chip8::Chip8() :
 	,m_pSoundManagerInstance( nullptr )
 	,m_pDisplayInstance( nullptr )
 	,m_pCurrentOpcode( nullptr )
+	,m_bXoCHIP( false )
 {
 	m_aMainTable[ 0x0 ] = { &Chip8::x0_Dispatch };
 	m_aMainTable[ 0x1 ] = { &Chip8::JMP };
@@ -864,7 +865,7 @@ inline void Chip8::SAVE_RANGE()
 
 	int iStep = 1;
 	if( m_bXoCHIP && iX > iY )
-		iStep = -1;
+			iStep = -1;
 
 	for( int i = iX; i != iY + iStep; i += iStep, ++k )
 		m_aMemory[ GetI() + k ] = m_aRegisters[ i ];
