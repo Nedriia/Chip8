@@ -3,6 +3,7 @@
 #include <chrono>
 #include "Input.h"
 #include "SoundManager.h"
+#include "Chip8_Debugger.h"
 
 int Quit()
 {
@@ -13,7 +14,9 @@ int Quit()
 	SoundManager::GetInstance()->DestroySoundManager();
 	Display::GetInstance()->DestroyWindow( oKeyDisplay );
 	Chip8::GetInstance()->DestroyCpu();
-
+#ifdef DEBUG_INFO
+	Chip8_Debugger::GetInstance()->Destroy();
+#endif
 	return -1;
 }
 
