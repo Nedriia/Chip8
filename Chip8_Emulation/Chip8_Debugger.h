@@ -8,10 +8,12 @@ class Chip8_Debugger
 {
 public:
 	Chip8_Debugger();
+	~Chip8_Debugger();
 
 	void Init( GLFWwindow* mainWindow,const Chip8* pCPU );
 	void Update( const std::chrono::microseconds& time );
 	void Render();
+	void Destroy();
 
 	static Chip8_Debugger* GetInstance()
 	{

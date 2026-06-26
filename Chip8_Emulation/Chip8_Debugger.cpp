@@ -57,6 +57,14 @@ Chip8_Debugger::Chip8_Debugger() :
 	m_bFollowPc( true )
 {}
 
+Chip8_Debugger::~Chip8_Debugger()
+{
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+
+	ImGui::DestroyContext();
+}
+
 void Chip8_Debugger::Init( GLFWwindow* mainWindow,const Chip8* pCPU )
 {
 #ifdef DEBUG_INFO
@@ -289,7 +297,7 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 	{
 		float width = ImGui::GetContentRegionAvail().x;
 		const char* titleLeft = "Display :";
-		
+
 		std::string textPerfDebug = std::format( "{} ms | {} IPF",std::chrono::duration<double,std::milli>( time ).count(),!m_pCPU->IsPause() ? m_pCPU->GetInstructPerFrame() : 0 );
 		ImGui::TextColored( ImVec4( 0.7f,0.7f,0.7f,1.0f ),"%s %s %s",titleLeft,m_pCPU->IsPause() ? "( Pause )" : "( Running )", m_pCPU->GetCurrentRomLoaded() == nullptr ? "None" : m_pCPU->GetCurrentRomLoaded());
 
@@ -321,7 +329,7 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 
 					char buffer[ 64 ];
 					snprintf( buffer,sizeof( buffer ),"0x%04X : ",iMemoryIndex );
-					
+
 					ImGui::Text( "%s", buffer );
 					ImGui::SameLine();
 
@@ -334,7 +342,7 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 							ImGui::Text( "|" );
 							ImGui::SameLine();
 						}
-						
+
 						char byteBuffer[ 4 ];
 						const Data<uint8_t>& oData = *( m_pCPU->GetMemory()->begin() + ( iMemoryIndex + i ) );
 						if( m_iCycleIndex != m_pCPU->GetCycleId() )
@@ -382,7 +390,7 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 					for ( auto it = aDisassemblyInstructions.begin(); it != aDisassemblyInstructions.end(); ++it )
 						m_aAdress.push_back( ( *it ).first );
 				}
-				
+
 				if( m_bFollowPc )
 				{
 					std::vector<uint16_t>::iterator it = std::lower_bound( m_aAdress.begin(),m_aAdress.end(),m_pCPU->GetPC() );
@@ -442,6 +450,11 @@ void Chip8_Debugger::Render()
 
 	ImGui_ImplOpenGL3_RenderDrawData( ImGui::GetDrawData() );
 #endif
+}
+
+void Chip8_Debugger::Destroy()
+{
+	delete m_pSingleton;
 }
 
 template< typename T >
