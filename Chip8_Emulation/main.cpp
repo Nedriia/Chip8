@@ -7,16 +7,18 @@
 
 int Quit()
 {
-	//TODO : create access key for destroy and Init
 	Display::KeyDisplayAccess oKeyDisplay;
 
 	Input::GetInstance()->DestroyInputManager();
 	SoundManager::GetInstance()->DestroySoundManager();
-	Display::GetInstance()->DestroyWindow( oKeyDisplay );
-	Chip8::GetInstance()->DestroyCpu();
+
 #ifdef DEBUG_INFO
 	Chip8_Debugger::GetInstance()->Destroy();
 #endif
+
+	Display::GetInstance()->DestroyWindow( oKeyDisplay );
+	Chip8::GetInstance()->DestroyCpu();
+
 	return -1;
 }
 
@@ -32,8 +34,12 @@ int main( int argc,char* argv[] )
 	Display* m_pDisplayInstance = Display::GetInstance();
 	Input* m_pInputInstance = Input::GetInstance();
 
-	if( m_pDisplayInstance->Init( oKeyDisplay,m_pCpuInstance ) == -1 )
-		return Quit();
+	if( m_pDisplayInstance->Init( oKeyDisplay,m_pCpuInstance ) != 0 )
+	{
+		Quit();
+		return -1;
+	}
+
 	m_pCpuInstance->Init( oKey,sROMToLoad );
 	SoundManager::GetInstance()->Init();
 

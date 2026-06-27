@@ -14,7 +14,6 @@ Input::Input()
 	m_bEnglishLayout( true ),
 	m_bOverride( true )
 {
-	InitInputDefault();
 }
 
 Input::~Input()

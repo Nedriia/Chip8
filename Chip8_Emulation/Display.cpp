@@ -74,9 +74,10 @@ int Display::Init( const KeyDisplayAccess& oKey,const Chip8* pCpu )
 	glfwWindowHint( GLFW_CONTEXT_VERSION_MINOR,3 );
 	glfwWindowHint( GLFW_OPENGL_PROFILE,GLFW_OPENGL_CORE_PROFILE );
 
-	_CreateWindowChip();
-	_InitRenderer();
+	if ( _CreateWindowChip() != 0 )
+		return -1;
 
+	_InitRenderer();
 	_InitPixelsData();
 	_InitFramebuffer();
 
@@ -102,11 +103,9 @@ int Display::_CreateWindowChip()
 	if( m_pWindow == nullptr )
 	{
 		std::cerr << "DISPLAY::FAILED_TO_CREATE_GLFW_WINDOW" << std::endl;
-		glfwTerminate();
 		return -1;
 	}
 	glfwMakeContextCurrent( m_pWindow );
-	//glfwSwapInterval( 1 );
 	glfwSetFramebufferSizeCallback( m_pWindow,Display::framebuffer_size_callback );
 
 	// glad: load all OpenGL function pointers
@@ -285,6 +284,7 @@ void Display::DestroyWindow( const KeyDisplayAccess& oKey )
 
 	m_sShaderProgram.Delete();
 
+	if ( m_pWindow )
 	glfwDestroyWindow( m_pWindow );
 	glfwTerminate();
 
@@ -477,7 +477,7 @@ void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey, const uint8_t xStart
 			uint64_t iPreviousValue = m_pPixels[ iBitMask ][ iCurrentY ][ 0 ];
 			uint64_t iPreviousValue2 = m_pPixels[ iBitMask ][ iCurrentY ][ 1 ];
 
-			//Check in wich block we are, or if both
+			//Check in which block we are, or if both
 			if( iCurrentX < 64 && iCurrentX + iSpriteSize >= 64 )
 			{
 				int xShift = iCurrentX + iSpriteSize;

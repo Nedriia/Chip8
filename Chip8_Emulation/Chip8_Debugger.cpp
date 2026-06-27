@@ -59,10 +59,13 @@ Chip8_Debugger::Chip8_Debugger() :
 
 Chip8_Debugger::~Chip8_Debugger()
 {
+	if ( m_pWindow != nullptr )
+{
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplGlfw_Shutdown();
 
 	ImGui::DestroyContext();
+	}
 }
 
 void Chip8_Debugger::Init( GLFWwindow* mainWindow,const Chip8* pCPU )

@@ -22,6 +22,7 @@ SoundManager::SoundManager()
 	: m_iPitch( 0 )
 	 ,m_fFloatingIndex( 0.0f )
 	 ,m_iAudioStateFlag( AudioState::AUDIO_BUFFER_EMPTY )
+	 ,m_oDevice( nullptr )
 {
 
 }
@@ -33,6 +34,8 @@ SoundManager::~SoundManager()
 
 void SoundManager::DestroySoundManager()
 {
+	if ( ma_device_get_state( &m_oDevice ) != ma_device_state_uninitialized )
+{
 	if( ma_device_is_started( &m_oDevice ) )
 		ma_device_stop( &m_oDevice );
 
@@ -42,6 +45,7 @@ void SoundManager::DestroySoundManager()
 	ma_waveform_uninit( &g_oWaveForm );
 
 	ma_device_uninit( &m_oDevice );
+	}
 
 	delete m_pSingleton;
 }
