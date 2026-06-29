@@ -35,16 +35,16 @@ SoundManager::~SoundManager()
 void SoundManager::DestroySoundManager()
 {
 	if ( ma_device_get_state( &m_oDevice ) != ma_device_state_uninitialized )
-{
-	if( ma_device_is_started( &m_oDevice ) )
-		ma_device_stop( &m_oDevice );
+	{
+		if( ma_device_is_started( &m_oDevice ) )
+			ma_device_stop( &m_oDevice );
 
-	ClearAudioBuffer();
+		ClearAudioBuffer();
 
-	ma_audio_buffer_uninit( &g_oAudioBuffer );
-	ma_waveform_uninit( &g_oWaveForm );
+		ma_audio_buffer_uninit( &g_oAudioBuffer );
+		ma_waveform_uninit( &g_oWaveForm );
 
-	ma_device_uninit( &m_oDevice );
+		ma_device_uninit( &m_oDevice );
 	}
 
 	delete m_pSingleton;
@@ -134,6 +134,7 @@ static void data_callback( ma_device* pDevice,void* pOutput,const void* pInput,m
 
 void SoundManager::Init()
 {
+	DISABLE_SPECIFIC_LEAK_DETECTION();
 	ClearAudioBuffer();
 
 	ma_waveform_config oSquareWaveConfig = ma_waveform_config_init( DEVICE_FORMAT,1,SAMPLE_RATE,ma_waveform_type_square,AMPLITUDE,220 );
@@ -165,6 +166,7 @@ void SoundManager::Init()
 		ma_device_uninit( &m_oDevice );
 		return;
 	}
+	ENABLE_SPECIFIC_LEAK_DETECTION();
 }
 
 void SoundManager::Play_Sound()

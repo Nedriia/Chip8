@@ -8,6 +8,22 @@
 #include "Input.h"
 #include "Display.h"
 
+#ifdef LEAK_DETECTOR
+	#include <vld.h> //Here to avoid leak warnings on atig6pxx.dll when creating a window // wasapi on ma_device_init // window file explorer
+	#define ENABLE_GLOBAL_LEAK_DETECTION() VLDGlobalEnable()
+	#define DISABLE_GLOBAL_LEAK_DETECTION() VLDGlobalDisable()
+
+	#define ENABLE_SPECIFIC_LEAK_DETECTION() VLDEnable()
+	#define DISABLE_SPECIFIC_LEAK_DETECTION() VLDDisable()
+#else
+	#define ENABLE_GLOBAL_LEAK_DETECTION() ((void)0)
+	#define DISABLE_GLOBAL_LEAK_DETECTION() ((void)0)
+
+	#define ENABLE_SPECIFIC_LEAK_DETECTION() ((void)0)
+	#define DISABLE_SPECIFIC_LEAK_DETECTION() ((void)0)
+#endif
+
+
 //#define OVERFLOW_CONTROL for test purpose, will not work as is in xo chip
 
 enum class RunningState

@@ -63,4 +63,20 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
         PATH_DATABASE="${PROJECT_DIR}/chip-8-database/database/"
 )
 
+option( LEAK_DETECTOR_ENABLE "Enable leak detector" OFF )
+if( LEAK_DETECTOR_ENABLE )
+    target_compile_definitions( ${PROJECT_NAME} PRIVATE LEAK_DETECTOR )
+
+    set(VLD_PATH "C:/Program Files (x86)/Visual Leak Detector")
+
+    target_include_directories(${PROJECT_NAME} PRIVATE
+            ${VLD_PATH}/include
+    )
+
+    target_link_libraries(${PROJECT_NAME}
+            PRIVATE
+            "${VLD_PATH}/lib/Win64/vld.lib"
+    )
+endif()
+
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/Roms)

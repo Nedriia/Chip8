@@ -60,11 +60,11 @@ Chip8_Debugger::Chip8_Debugger() :
 Chip8_Debugger::~Chip8_Debugger()
 {
 	if ( m_pWindow != nullptr )
-{
-	ImGui_ImplOpenGL3_Shutdown();
-	ImGui_ImplGlfw_Shutdown();
+	{
+		ImGui_ImplOpenGL3_Shutdown();
+		ImGui_ImplGlfw_Shutdown();
 
-	ImGui::DestroyContext();
+		ImGui::DestroyContext();
 	}
 }
 
@@ -150,6 +150,7 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 		static Chip8::KeyAccess			oKey;
 		if( ImGui::Button( "Load Rom" ) )
 		{
+			ENABLE_GLOBAL_LEAK_DETECTION();
 			m_pCPU->AskForState( oKey, RunningState::Pause );//The thread should be put in pause with GetOpenFileNameA call anyway
 #ifdef _WIN32
 			OPENFILENAMEA ofn;
@@ -182,6 +183,7 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 				if( m_pCPU->GetCurrentRomLoaded() != nullptr )
 					m_pCPU->AskForState( oKey,RunningState::Running );
 			}
+			DISABLE_GLOBAL_LEAK_DETECTION();
 #else
 			char szFile[ 260 ];
 			FILE *f = popen("zenity --file-selection", "r");

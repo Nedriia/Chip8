@@ -99,12 +99,15 @@ int Display::_CreateWindowChip()
 {
 	// glfw window creation
 	// --------------------
+	DISABLE_SPECIFIC_LEAK_DETECTION();
 	m_pWindow = glfwCreateWindow( WINDOW_WIDTH,WINDOW_HEIGHT,"Chip8 Emulator",nullptr,nullptr );
 	if( m_pWindow == nullptr )
 	{
 		std::cerr << "DISPLAY::FAILED_TO_CREATE_GLFW_WINDOW" << std::endl;
 		return -1;
 	}
+	ENABLE_SPECIFIC_LEAK_DETECTION();
+
 	glfwMakeContextCurrent( m_pWindow );
 	glfwSetFramebufferSizeCallback( m_pWindow,Display::framebuffer_size_callback );
 
