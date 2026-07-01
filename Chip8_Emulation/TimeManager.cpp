@@ -17,7 +17,7 @@ inline void cpu_relax() { _mm_pause(); }
 #elif defined(__aarch64__) || defined(_M_ARM64) || defined(__arm__) || defined(_M_ARM)
 inline void cpu_relax() { __asm__ __volatile__("yield"); }
 #else
-inline void cpu_relax() { /* rien, ou std::this_thread::yield() en dernier recours */ }
+inline void cpu_relax() {}
 #endif
 
 void TimeManager::HandleTime( const steady_clock::time_point& start )

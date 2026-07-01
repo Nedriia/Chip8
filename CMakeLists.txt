@@ -62,6 +62,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
         PATH_ROMS="${CMAKE_CURRENT_SOURCE_DIR}/Roms/"
         PATH_SHADERS="${PROJECT_DIR}/assets/"
         PATH_DATABASE="${PROJECT_DIR}/chip-8-database/database/"
+        DISASSM_DIR="${CMAKE_CURRENT_SOURCE_DIR}/Disassembly/"
 )
 
 option( LEAK_DETECTOR_ENABLE "Enable leak detector" OFF )
