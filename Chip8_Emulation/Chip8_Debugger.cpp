@@ -152,7 +152,9 @@ void Chip8_Debugger::Update( const double* time )
 		if( ImGui::Button( "Load Rom" ) )
 		{
 			ENABLE_GLOBAL_LEAK_DETECTION();
-			m_pCPU->AskForState( oKey, RunningState::Pause );//The thread should be put in pause with GetOpenFileNameA call anyway
+			bool bIsPause = !m_pCPU->IsRunning();
+			if ( !bIsPause )
+				m_pCPU->AskForState( oKey, RunningState::Pause );//The thread should be put in pause with GetOpenFileNameA call anyway
 #ifdef _WIN32
 			OPENFILENAMEA ofn;
 			char szFile[ 260 ];
@@ -181,7 +183,7 @@ void Chip8_Debugger::Update( const double* time )
 			}
 			else
 			{
-				if( m_pCPU->GetCurrentRomLoaded() != nullptr )
+				if( m_pCPU->GetCurrentRomLoaded() != nullptr && !bIsPause )
 					m_pCPU->AskForState( oKey,RunningState::Running );
 			}
 			DISABLE_GLOBAL_LEAK_DETECTION();
