@@ -133,7 +133,7 @@ public:
 	}
 
 	void							Init( const KeyAccess& oKey,const char* sROMToLoad );
-	void							EmulateCycle( const KeyAccess& oKey,const std::chrono::steady_clock::time_point& iTime );
+	void							EmulateCycle( const KeyAccess& oKey );
 	void							AskForState( const KeyAccess& oKey,RunningState oState ) const;
 	void							DestroyCpu();
 

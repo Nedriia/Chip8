@@ -246,7 +246,7 @@ void Chip8::_LoadROM( const char* sROMToLoad )
 	}
 }
 
-void Chip8::EmulateCycle( const KeyAccess& key,const std::chrono::steady_clock::time_point& time )
+void Chip8::EmulateCycle( const KeyAccess& key )
 {
 #ifdef DEBUG_INFO
 	if( m_oState == RunningState::Reset || m_oState == RunningState::LoadNewRom )
@@ -256,10 +256,7 @@ void Chip8::EmulateCycle( const KeyAccess& key,const std::chrono::steady_clock::
 	}
 #endif
 	if( m_oState == RunningState::Pause || m_oState == RunningState::Stop )
-	{
-		m_iLastTimeUpdate = time;
 		return;
-	}
 
 	bool bForceNextStep = false;
 #ifdef DEBUG_INFO
@@ -270,43 +267,28 @@ void Chip8::EmulateCycle( const KeyAccess& key,const std::chrono::steady_clock::
 	}
 #endif
 
-	std::chrono::microseconds elapsed = std::chrono::duration_cast< std::chrono::microseconds >( time - m_iLastTimeUpdate );
-#ifdef DEBUG_INFO
-	if( elapsed >= Display::GetRefreshTick() || bForceNextStep )
-#else
-	if( elapsed >= Display::GetRefreshTick() )
-#endif
+	for( int i = 0; i < m_iInstructionsPerFrame; ++i )
 	{
-		for( int i = 0; i < m_iInstructionsPerFrame; ++i )
-		{
-			_FetchDecode_Opcode();
-
-			++m_iCycle;
+		_FetchDecode_Opcode();
+		++m_iCycle;
 
 #ifdef DEBUG_INFO
-			if( m_oState == RunningState::Stop || _IsEndReached() || bForceNextStep )
-				break;
+		if( m_oState == RunningState::Stop || _IsEndReached() || bForceNextStep )
+			break;
 
-			if( m_iPC == m_iAdressBreakpoint )
-			{
-				m_oState = RunningState::Pause;
-				m_iAdressBreakpoint = 0;
-				break;
-			}
-#else
-			if ( _IsEndReached() )
-			{
-				std::cout << "End of current program has been reached";
-				break;
-			}
-#endif
+		if( m_iPC == m_iAdressBreakpoint )
+		{
+			m_oState = RunningState::Pause;
+			m_iAdressBreakpoint = 0;
+			break;
 		}
-
-		_UpdateTimers();
-		m_pSoundManagerInstance->Manage( m_iSound_timer );
-
-		m_iLastTimeUpdate += Display::GetRefreshTick();
+#else
+		if ( _IsEndReached() )
+			break;
+#endif
 	}
+	_UpdateTimers();
+	m_pSoundManagerInstance->Manage( m_iSound_timer );
 }
 
 void Chip8::AskForState( const KeyAccess& key,RunningState oState ) const
@@ -1036,7 +1018,7 @@ inline void Chip8::DRAW()
 {
 	if( Chip8::m_oCurrentQuirk.bDispWaitFlag )
 	{
-		if( !Chip8::m_oCurrentQuirk.bLegacySrolling || ( Chip8::m_oCurrentQuirk.bLegacySrolling && m_pDisplayInstance->GetResolutionMode() == ResolutionMode::LORES ) )
+		/*if( !Chip8::m_oCurrentQuirk.bLegacySrolling || ( Chip8::m_oCurrentQuirk.bLegacySrolling && m_pDisplayInstance->GetResolutionMode() == ResolutionMode::LORES ) )
 		{
 			//VBlank, waiting for next frame
 			if( m_iTimeLastFrame.time_since_epoch().count() == 0 )
@@ -1054,7 +1036,7 @@ inline void Chip8::DRAW()
 				m_iPC -= 2;
 				return;
 			}
-		}
+		}*/
 	}
 
 	/*Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision.

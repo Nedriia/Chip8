@@ -1,5 +1,4 @@
 #pragma once
-
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include "Shader.h"
@@ -43,22 +42,15 @@ public:
 	static void ScrollHorizontal( const KeyDisplayAccess& oKey, const bool bLeft );
 	void DestroyWindow( const KeyDisplayAccess& oKey );
 
-	void Update( const std::chrono::steady_clock::time_point& time,const bool cpuPaused );
+	void Update( const bool cpuPaused );
 
 	const unsigned int& GetFBOTexture() const { return m_iFBOTexture; }
 	GLFWwindow* GetWindow() const { return m_pWindow; }
-	const std::chrono::steady_clock::time_point& GetLastTimeUpdate() const { return m_iLastTimeUpdate; }
 
 	void SetResolution( const int iWidth, const int iHeight );
 
 	static const uint8_t GetWidth() { return m_iDisplayWidth; }
 	static const uint8_t GetHeight() { return m_iDisplayHeight; }
-
-	static const int GetValueMicroSRefresh() { return m_iValueMicroSRefresh; }
-	static const std::chrono::microseconds& GetRefreshTick() { return m_iCurrentTick; }
-
-	static void SetValueMicroSRefresh( const int iNewValue ) { m_iValueMicroSRefresh = iNewValue; }
-	static void SetRefreshTick( const std::chrono::microseconds& iNewValue ) { m_iCurrentTick = iNewValue; }
 
 	static void SetGameTitle( const std::string& sTitle ){ m_sGameTitle = sTitle; }
 	void AssignDisplaySettings( bool bDefaultRes = false, const std::vector<std::string >& sColors = {} );
@@ -101,13 +93,7 @@ protected:
 
 	static uint64_t						m_pPixels[ 2 ][ 64 ][ 2 ]; //bitmask || Width || 32Bit block
 
-	std::chrono::steady_clock::time_point m_iLastTimeUpdate;
-
 	static bool							m_bDirtyFrame;
-
-	static int							m_iValueMicroSRefresh;
-	static std::chrono::microseconds	m_iCurrentTick;
-
 	static uint8_t						m_iDisplayWidth;
 	static uint8_t						m_iDisplayHeight;
 

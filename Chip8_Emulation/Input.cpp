@@ -1,20 +1,12 @@
 #include "Input.h"
-#include <chrono>
-#include "Display.h"
-#include <iostream>
-#include "Chip8.h"
 
 Input* Input::m_pSingleton = nullptr;
 
 Input::Input()
-	:
-	m_aInputs{ 0 },
-	m_iLastTimeUpdate( std::chrono::steady_clock::now() ),
-	m_pDisplayInstance( nullptr ),
+	: m_aInputs{ 0 },
 	m_bEnglishLayout( true ),
 	m_bOverride( true )
-{
-}
+{}
 
 Input::~Input()
 {
@@ -22,31 +14,19 @@ Input::~Input()
 }
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
-void Input::ProcessInput( const std::chrono::steady_clock::time_point& time,bool& quit )
+void Input::ProcessInput( bool& quit )
 {
-	if( m_pDisplayInstance == nullptr )
-	{
-		m_pDisplayInstance = Display::GetInstance();
-		return;
-	}
-
-	GLFWwindow* pWindow = m_pDisplayInstance->GetWindow();
+	GLFWwindow* pWindow = Display::GetInstance()->GetWindow();
 	if( pWindow == nullptr )
 		return;
 
 	if( !glfwWindowShouldClose( pWindow ) )
 	{
-		std::chrono::microseconds elapsed = std::chrono::duration_cast< std::chrono::microseconds >( time - m_iLastTimeUpdate );
-		if( elapsed >= Display::GetRefreshTick() )
-		{
-			if( glfwGetKey( pWindow,GLFW_KEY_ESCAPE ) == GLFW_PRESS )
-				glfwSetWindowShouldClose( pWindow,true );
+		if( glfwGetKey( pWindow,GLFW_KEY_ESCAPE ) == GLFW_PRESS )
+			glfwSetWindowShouldClose( pWindow,true );
 
-			for( uint8_t i = 0; i < 16; ++i )
-				CheckInputState( i,pWindow );
-
-			m_iLastTimeUpdate = time;
-		}
+		for( uint8_t i = 0; i < 16; ++i )
+			CheckInputState( i,pWindow );
 
 		glfwPollEvents();
 	}

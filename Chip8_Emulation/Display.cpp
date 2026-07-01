@@ -2,8 +2,9 @@
 #include "Chip8_Debugger.h"
 #include <iostream>
 #include "Chip8.h"
-#include <thread>
 #include <cstring>
+
+#include "TimeManager.h"
 
 // settings
 const uint16_t WINDOW_WIDTH = 1920;
@@ -17,10 +18,7 @@ Display* Display::m_pSingleton = nullptr;
 unsigned int Display::m_iFBOTexture = 0;
 unsigned int Display::m_iTexture = 0;
 
-int Display::m_iValueMicroSRefresh = 16666;
-std::chrono::microseconds Display::m_iCurrentTick = std::chrono::microseconds( Display::m_iValueMicroSRefresh );
-
-uint8_t Display::m_iDisplayWidth = 0;//TODO : init to 0, so we could check and stop if no resolution is found
+uint8_t Display::m_iDisplayWidth = 0;
 uint8_t Display::m_iDisplayHeight = 0;
 uint8_t Display::m_iBitPlaneDrawIteration = 2;
 
@@ -48,7 +46,6 @@ Display::Display() :
 	m_iVBO( 0 ),
 	m_iEBO( 0 ),
 	m_iFBO( 0 ),
-	m_iLastTimeUpdate( std::chrono::steady_clock::now() ),
 	m_oResolutionMode( ResolutionMode::LORES ),
 	m_oCurrentBitMask( PlaneBitMask::PLANE1 )
 {
@@ -646,34 +643,10 @@ void Display::ScrollHorizontal( const KeyDisplayAccess& oKey, const bool bLeft )
 	}
 }
 
-void Display::Update( const std::chrono::steady_clock::time_point& time,const bool cpuPaused )
+void Display::Update( const bool cpuPaused )
 {
-	// render loop
-	// -----------
-	std::chrono::microseconds elapsed = std::chrono::duration_cast< std::chrono::microseconds >( time - m_iLastTimeUpdate );
-	std::chrono::microseconds startElapsed = elapsed;
-	if( elapsed >= m_iCurrentTick )
+	if( m_bDirtyFrame )
 	{
-#ifdef DEBUG_INFO
-		if( elapsed >= ( m_iCurrentTick * 5 ) )// too much to catch up ( 83 ms )
-		{
-			m_iLastTimeUpdate = time;
-			elapsed = std::chrono::microseconds( 0 );
-			return;
-		}
-
-		while( elapsed >= m_iCurrentTick )
-		{
-#endif
-			m_iLastTimeUpdate += m_iCurrentTick;
-
-#ifdef DEBUG_INFO
-			elapsed = std::chrono::duration_cast< std::chrono::microseconds >( time - m_iLastTimeUpdate );
-		}
-#endif
-
-		if( m_bDirtyFrame )
-		{
 			glClearColor( 0.f,0.f,0.f,1.f );
 			glClear( GL_COLOR_BUFFER_BIT );
 
@@ -692,21 +665,16 @@ void Display::Update( const std::chrono::steady_clock::time_point& time,const bo
 			glfwSwapBuffers( m_pWindow );
 #endif
 			m_bDirtyFrame = false;
-		}
+	}
 
 #ifdef DEBUG_INFO
-		Chip8_Debugger::GetInstance()->Update( startElapsed );
-		Chip8_Debugger::GetInstance()->Render();
-		glfwSwapBuffers( m_pWindow );
+	Chip8_Debugger::GetInstance()->Update( TimeManager::GetTimeLastFrame() );
+	Chip8_Debugger::GetInstance()->Render();
+	glfwSwapBuffers( m_pWindow );
 #endif
 
-		std::string sPerfDebug = std::format( "{} : {} ms ",m_sGameTitle,std::chrono::duration<double,std::milli>( startElapsed ).count() );
-		glfwSetWindowTitle( m_pWindow,sPerfDebug.c_str() );
-	}
-	else
-	{
-		std::this_thread::sleep_for( m_iCurrentTick - elapsed );
-	}
+	std::string sPerfDebug = std::format( "{} : {} ms",m_sGameTitle,*TimeManager::GetTimeLastFrame() );
+	glfwSetWindowTitle( m_pWindow,sPerfDebug.c_str() );
 }
 
 void Display::SetResolution( const int iWidth,const int iHeight )

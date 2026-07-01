@@ -20,6 +20,7 @@ set(IMGUI_SOURCES
         ${IMGUI_DIR}/imgui_widgets.cpp
         ${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
         ${IMGUI_DIR}/backends/imgui_impl_glfw.cpp
+        Chip8_Emulation/TimeManager.cpp
 )
 
 add_executable(${PROJECT_NAME}

@@ -10,6 +10,7 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
+#include "TimeManager.h"
 #define GL_SILENCE_DEPRECATION
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #include <GLES2/gl2.h>
@@ -101,7 +102,7 @@ void Chip8_Debugger::Init( GLFWwindow* mainWindow,const Chip8* pCPU )
 #endif
 }
 
-void Chip8_Debugger::Update( const std::chrono::microseconds& time )
+void Chip8_Debugger::Update( const double* time )
 {
 #ifdef DEBUG_INFO
 	assert( m_pCPU != nullptr );
@@ -246,12 +247,9 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 		ImGui::PopStyleColor();
 		ImGui::Separator();
 
-		float fFps = 1 / ( Display::GetValueMicroSRefresh() / 1000000.0f );
+		float fFps = 1 / ( TimeManager::GetRefreshTick()->count() / 1000000000.0f );
 		if( ImGui::SliderFloat( "FPS",&fFps,20,120,NULL ) )
-		{
-			Display::SetValueMicroSRefresh( ( 1 / fFps ) * 1000000.0f );
-			Display::SetRefreshTick( std::chrono::microseconds( Display::GetValueMicroSRefresh() ) );
-		}
+			TimeManager::SetRefreshTick( 1 / fFps );
 		int iIPF = m_pCPU->GetInstructPerFrame();
 		if( ImGui::SliderInt( "IPF",&iIPF,10,50000,NULL ) )
 			m_pCPU->SetInstructionPerFrame( iIPF );
@@ -303,7 +301,7 @@ void Chip8_Debugger::Update( const std::chrono::microseconds& time )
 		float width = ImGui::GetContentRegionAvail().x;
 		const char* titleLeft = "Display :";
 
-		std::string textPerfDebug = std::format( "{} ms | {} IPF",std::chrono::duration<double,std::milli>( time ).count(),!m_pCPU->IsPause() ? m_pCPU->GetInstructPerFrame() : 0 );
+		std::string textPerfDebug = std::format( "{} ms | {} IPF",( *time ),!m_pCPU->IsPause() ? m_pCPU->GetInstructPerFrame() : 0 );
 		ImGui::TextColored( ImVec4( 0.7f,0.7f,0.7f,1.0f ),"%s %s %s",titleLeft,m_pCPU->IsPause() ? "( Pause )" : "( Running )", m_pCPU->GetCurrentRomLoaded() == nullptr ? "None" : m_pCPU->GetCurrentRomLoaded());
 
 		ImGui::SameLine( width - ImGui::CalcTextSize( textPerfDebug.c_str() ).x );

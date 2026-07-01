@@ -4,6 +4,7 @@
 #include "Input.h"
 #include "SoundManager.h"
 #include "Chip8_Debugger.h"
+#include "TimeManager.h"
 
 int Quit()
 {
@@ -43,19 +44,19 @@ int main( int argc,char* argv[] )
 	m_pCpuInstance->Init( oKey,sROMToLoad );
 	SoundManager::GetInstance()->Init();
 
-	//Loop
 	bool quit = false;
-
 	while( !quit )
 	{
-		std::chrono::steady_clock::time_point time = std::chrono::steady_clock::now();
+		std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
 
-		m_pCpuInstance->EmulateCycle( oKey,time );
-		m_pInputInstance->ProcessInput( time,quit );
-		m_pDisplayInstance->Update( time,m_pCpuInstance->IsPause() );
+		//Emulator main loop
+		m_pCpuInstance->EmulateCycle( oKey );
+		m_pInputInstance->ProcessInput(quit );
+		m_pDisplayInstance->Update( m_pCpuInstance->IsPause() );
+
+		TimeManager::HandleTime( start );
 	}
 
 	Quit();
-
 	return 0;
 }

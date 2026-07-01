@@ -1,6 +1,5 @@
 #pragma once
 #include <cstdint>
-#include <chrono>
 #include "Display.h"
 #include <map>
 
@@ -17,7 +16,7 @@ public:
 		return m_pSingleton;
 	}
 
-	void ProcessInput( const std::chrono::steady_clock::time_point& time,bool& quit );
+	void ProcessInput( bool& quit );
 	void DestroyInputManager();
 	void InitInputFromDatabase( std::map<std::string,int>& aKeys );
 	void InitInputDefault();
@@ -35,8 +34,6 @@ private:
 	std::map< uint8_t, int > m_aKeyMap;
 
 	uint8_t m_aInputs[ 0x10 ];
-	std::chrono::steady_clock::time_point m_iLastTimeUpdate;
-	const Display* m_pDisplayInstance;
 	bool m_bEnglishLayout;
 	bool m_bOverride;
 };
