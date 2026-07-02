@@ -10,6 +10,7 @@ constexpr int  iMaxTickLimit = 5;
 nanoseconds TimeManager::s_iAccumulator{0 };
 nanoseconds TimeManager::s_iCurrentTick{ 16666666ns };
 double TimeManager::s_iTimeLastFrame = 0;
+bool TimeManager::s_bDirtyFrame = false;
 
 #if defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || defined(_M_IX86)
 #include <immintrin.h>
@@ -59,6 +60,7 @@ void TimeManager::HandleTime( const steady_clock::time_point& start )
 	}; //Busy waiting
 
 	s_iTimeLastFrame = 	duration<double, std::milli> ( steady_clock::now() - start ).count();
+	s_bDirtyFrame = false;
 }
 
 void TimeManager::SetRefreshTick( const double& iTick )

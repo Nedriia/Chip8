@@ -2,7 +2,6 @@
 
 #include <random>
 #include <deque>
-#include <chrono>
 #include <array>
 #include "SoundManager.h"
 #include "Input.h"
@@ -44,7 +43,7 @@ namespace MemoryMap
 	constexpr uint16_t MEMORY_SIZE = 0XFFFF;
 }
 
-//#define OVERRIDE_DATABASE_QUIRKS //if def set values wanted below, otherwise there are erased by platforms specs quirks
+#define OVERRIDE_DATABASE_QUIRKS //if def set values wanted below, otherwise there are erased by platforms specs quirks
 struct Quirk
 {
 	Quirk() {};
@@ -242,12 +241,7 @@ private:
 
 	uint8_t m_iCountBeforeStop;
 	uint8_t										m_iPreviousKeyPressed;
-
-	std::chrono::steady_clock::time_point		m_iLastTimeUpdate;
 	const char* m_sCurrentRomLoaded;//Don't set that without SetROMPathFileToLoad function
-
-	std::chrono::steady_clock::time_point		m_iTimeLastFrame;
-
 
 	static Chip8* m_pSingleton;
 	static  int									m_iInstructionsPerFrame;
@@ -359,4 +353,5 @@ private:
 	std::mt19937 m_iRng;
 	static std::array< std::string,7 > m_sSupportedPlatform;
 	bool								m_bXoCHIP;
+	bool								m_bIsWaitingFrame;
 };

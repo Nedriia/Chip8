@@ -1,7 +1,5 @@
 #include "Chip8.h"
 #include <fstream>
-#include <chrono>
-#include <assert.h>
 #include "Display.h"
 #include <iostream>
 #include "Input.h"
@@ -11,6 +9,7 @@
 #include <filesystem>
 
 #include "Init_RomSettings.h"
+#include "TimeManager.h"
 #ifdef DEBUG_INFO
 #include "Disassembler.h"
 #endif
@@ -51,16 +50,15 @@ Chip8::Chip8() :
 #else
 	,m_oState( RunningState::Running )
 #endif
-	,m_iLastTimeUpdate( std::chrono::steady_clock::now() )
 	,m_sCurrentRomLoaded( nullptr )
 	,m_iCycle( 0 )
 	,m_iPreviousKeyPressed( 0xFF )
-	,m_iTimeLastFrame{}
 	,m_pInputInstance( nullptr )
 	,m_pSoundManagerInstance( nullptr )
 	,m_pDisplayInstance( nullptr )
 	,m_pCurrentOpcode( nullptr )
 	,m_bXoCHIP( false )
+	,m_bIsWaitingFrame( false )
 {
 	m_aMainTable[ 0x0 ] = { &Chip8::x0_Dispatch };
 	m_aMainTable[ 0x1 ] = { &Chip8::JMP };
@@ -1018,25 +1016,23 @@ inline void Chip8::DRAW()
 {
 	if( Chip8::m_oCurrentQuirk.bDispWaitFlag )
 	{
-		/*if( !Chip8::m_oCurrentQuirk.bLegacySrolling || ( Chip8::m_oCurrentQuirk.bLegacySrolling && m_pDisplayInstance->GetResolutionMode() == ResolutionMode::LORES ) )
+		if( !Chip8::m_oCurrentQuirk.bLegacySrolling || ( Chip8::m_oCurrentQuirk.bLegacySrolling && m_pDisplayInstance->GetResolutionMode() == ResolutionMode::LORES ) )
 		{
-			//VBlank, waiting for next frame
-			if( m_iTimeLastFrame.time_since_epoch().count() == 0 )
+			if( m_bIsWaitingFrame && TimeManager::IsFrameDirty() == false )
 			{
-				m_iTimeLastFrame = m_iLastTimeUpdate;
-				m_iPC -= 2;
-				return;
-			}
-			if( m_iLastTimeUpdate >= ( m_iTimeLastFrame + Display::GetRefreshTick() ) )
-			{
-				m_iTimeLastFrame = {};
+				m_bIsWaitingFrame = false;
 			}
 			else
 			{
 				m_iPC -= 2;
+				if ( m_bIsWaitingFrame == false )
+				{
+					m_bIsWaitingFrame = true;
+					TimeManager::SetFrameAsDirty();
+				}
 				return;
 			}
-		}*/
+		}
 	}
 
 	/*Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision.

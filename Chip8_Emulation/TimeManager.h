@@ -16,11 +16,13 @@ public:
 	static nanoseconds* GetRefreshTick() { return &s_iCurrentTick; }
 
 	static void SetRefreshTick( const double& iTick );
-
+	static bool IsFrameDirty() { return s_bDirtyFrame; }
+	static void SetFrameAsDirty() { s_bDirtyFrame = true; }
 private:
 	static nanoseconds  s_iAccumulator;
 	static nanoseconds	s_iCurrentTick;
 	static double		s_iTimeLastFrame;
+	static bool			s_bDirtyFrame;
 };
 
 
