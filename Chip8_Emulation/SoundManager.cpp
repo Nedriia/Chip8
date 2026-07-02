@@ -63,8 +63,8 @@ void SoundManager::LoadPatternInSoundBuffer( const uint8_t* aAudioPattern )
 	{
 		for( int k = 7; k >= 0; --k )
 		{
-			float fValue = ( aAudioPattern[ i ] >> k ) & 1;
-			m_aAudioData[ iIndex ] = fValue == 0.0f ? -AMPLITUDE : std::clamp( fValue, 0.0f, AMPLITUDE );
+			bool bBit = ( aAudioPattern[ i ] >> k ) & 1;
+			m_aAudioData[ iIndex ] = bBit ? AMPLITUDE : -AMPLITUDE;
 			++iIndex;
 		}
 	}
@@ -92,8 +92,7 @@ void SoundManager::OnReset()
 
 static void data_callback( ma_device* pDevice,void* pOutput,const void* pInput,ma_uint32 frameCount )
 {
-	bool bPause = !Chip8::GetInstance()->IsRunning();
-	if( !bPause )
+	if( Chip8::GetInstance()->IsRunning() )
 	{
 		SoundManager* pInstance = SoundManager::GetInstance();
 		if( pInstance->GetState() == AudioState::AUDIO_BUFFER_FILLED )
@@ -116,17 +115,11 @@ static void data_callback( ma_device* pDevice,void* pOutput,const void* pInput,m
 				if( g_bPlaySound == false )
 					pInstance->SetState( AudioState::AUDIO_BUFFER_EMPTY );
 		}
+		else if ( g_bPlaySound )
+			ma_waveform_read_pcm_frames( &g_oWaveForm,pOutput,frameCount,NULL );
 		else
-		{
-			if( g_bPlaySound )
-				ma_waveform_read_pcm_frames( &g_oWaveForm,pOutput,frameCount,NULL );
-		}
+			ma_silence_pcm_frames( pOutput,frameCount,DEVICE_FORMAT,1 );
 	}
-	else if( bPause || !g_bPlaySound )
-	{
-		ma_silence_pcm_frames( pOutput,frameCount,DEVICE_FORMAT,1 );
-	}
-
 	( void )pInput;
 }
 
