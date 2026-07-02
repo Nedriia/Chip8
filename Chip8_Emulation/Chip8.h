@@ -43,7 +43,7 @@ namespace MemoryMap
 	constexpr uint16_t MEMORY_SIZE = 0XFFFF;
 }
 
-#define OVERRIDE_DATABASE_QUIRKS //if def set values wanted below, otherwise there are erased by platforms specs quirks
+//#define OVERRIDE_DATABASE_QUIRKS //if def set values wanted below, otherwise there are erased by platforms specs quirks
 struct Quirk
 {
 	Quirk() {};
@@ -142,12 +142,12 @@ public:
 	const Data< uint16_t>*			GetStack() const { return m_aStack; }
 	const Data< uint8_t>*			GetRegisters() const { return m_aRegisters; }
 
-	const Data< uint16_t>			GetI() const { return m_iI; }
-	const Data< uint16_t>			GetPC() const { return m_iPC; }
+	Data< uint16_t>					GetI() const { return m_iI; }
+	Data< uint16_t>					GetPC() const { return m_iPC; }
 
-	const Data< uint8_t>			GetSP() const { return m_iSP; }
-	const Data< uint8_t>			GetDelayTimer() const { return m_iDelay_timer; }
-	const Data< uint8_t>			GetSoundTimer() const { return m_iSound_timer; }
+	Data< uint8_t>					GetSP() const { return m_iSP; }
+	Data< uint8_t>					GetDelayTimer() const { return m_iDelay_timer; }
+	Data< uint8_t>					GetSoundTimer() const { return m_iSound_timer; }
 	long long unsigned				GetCycleId() const { return m_iCycle; }
 
 	bool							IsPause() const { return m_oState == RunningState::Pause; }
@@ -155,7 +155,7 @@ public:
 	bool							IsRunning() const { return m_oState == RunningState::Running; }
 #ifdef DEBUG_INFO
 	RunningState					GetState() const { return m_oState; }
-	uint16_t						GetBreakpointAdress() const { return m_iAdressBreakpoint; }
+	static uint16_t					GetBreakpointAdress() { return m_iAdressBreakpoint; }
 	static void						SetBreakpoint( uint16_t iAdress ) { m_iAdressBreakpoint = iAdress; }
 #endif
 
@@ -290,13 +290,13 @@ private:
 	inline void LOADFLAGS_VX();
 	inline void SAVE_RANGE();
 	inline void LOAD_RANGE();
-	inline void HIRES();
-	inline void LORES();
-	inline void SCROLL_DOWN();
-	inline void SCROLL_UP();
-	inline void SCROLL_LEFT();
-	inline void SCROLL_RIGHT();
-	inline void QUIT();
+	inline const void HIRES();
+	inline const void LORES();
+	inline const void SCROLL_DOWN();
+	inline const void SCROLL_UP();
+	inline const void SCROLL_LEFT();
+	inline const void SCROLL_RIGHT();
+	inline const void QUIT();
 
 	inline void ADD_VX_NN();
 	inline void ADD_VX_VY();
@@ -321,11 +321,11 @@ private:
 	inline void AUDIO();
 	inline void AUDIO_PITCH();
 
-	inline const uint8_t GetX();
-	inline const uint8_t GetY();
-	inline const uint16_t GetNNN();
-	inline const uint8_t GetNN();
-	inline const uint8_t GetN();
+	inline uint8_t GetX() const;
+	inline uint8_t GetY() const;
+	inline uint16_t GetNNN() const;
+	inline uint8_t GetNN() const;
+	inline uint8_t GetN() const;
 
 	inline void SkipNextBlock();
 

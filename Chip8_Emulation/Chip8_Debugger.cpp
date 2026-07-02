@@ -393,7 +393,7 @@ void Chip8_Debugger::Update( const double* time )
 				if( m_aAdress.empty() )
 				{
 					for ( auto it = aDisassemblyInstructions.begin(); it != aDisassemblyInstructions.end(); ++it )
-						m_aAdress.push_back( ( *it ).first );
+						m_aAdress.push_back( it->first );
 				}
 
 				if( m_bFollowPc )

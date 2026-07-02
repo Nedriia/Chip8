@@ -4,7 +4,6 @@
 #include <iostream>
 #include "Input.h"
 #include "SoundManager.h"
-#include <string.h>
 #include <cstring>
 #include <filesystem>
 
@@ -44,15 +43,15 @@ void Chip8::SetROMPathFileToLoad( const KeyAccess& oKey,const std::string& sSrc 
 Chip8::Chip8() :
 	m_iCurrentOpcode( 0 )
 	,m_iLastOpcode( 0 )
-	,m_iCountBeforeStop( 0 )
+	,m_iCycle( 0 )
 #ifdef DEBUG_INFO
 	,m_oState( RunningState::Pause )
 #else
 	,m_oState( RunningState::Running )
 #endif
-	,m_sCurrentRomLoaded( nullptr )
-	,m_iCycle( 0 )
+	,m_iCountBeforeStop( 0 )
 	,m_iPreviousKeyPressed( 0xFF )
+	,m_sCurrentRomLoaded( nullptr )
 	,m_pInputInstance( nullptr )
 	,m_pSoundManagerInstance( nullptr )
 	,m_pDisplayInstance( nullptr )
@@ -193,33 +192,37 @@ void Chip8::_LoadROM( const char* sROMToLoad )
 	if( !romPath.has_parent_path() )
 		romPath = std::string( PATH_ROMS ) + sROMToLoad;
 
+
 	std::ifstream file( romPath,std::ios::binary | std::ios::in | std::ios::ate );
 	if( file.is_open() )
 	{
 		std::streamsize size = file.tellg();
-		if( size <= 0 || size > MEMORY_SIZE - START_ROM_MEMORY_ADDRESS )
+		char* memblock = nullptr;
+		std::streamsize bytesRead = 0;
+		try
 		{
-			throw std::runtime_error( "Size ROM invalid" );
-			return;
+			if( size <= 0 || size > MEMORY_SIZE - START_ROM_MEMORY_ADDRESS )
+				throw std::runtime_error( "SIZE_INVALID" );
+
+			memblock = new char[ size ];
+			file.seekg( 0,std::ios::beg );
+			file.read( memblock,size );
+			file.close();
+
+			bytesRead = file.gcount();
+			if( bytesRead != size )
+				throw std::runtime_error( "READ_SIZE_NOT_CONFORM" );
 		}
-
-		char* memblock = new char[ size ];
-		file.seekg( 0,std::ios::beg );
-		file.read( memblock,size );
-		file.close();
-
-		std::streamsize bytesRead = file.gcount();
-		if( bytesRead != size )
+		catch ( std::runtime_error e )
 		{
-			throw std::runtime_error( "Size read not conform" );
 			delete[] memblock;
+			std::cout << "ERROR::LOADING_ROM_" << e.what() << std::endl;
+			m_oState = RunningState::Pause;
 			return;
 		}
 
 		for( uint16_t i = 0; i < bytesRead; ++i )
-		{
 			m_aMemory[ START_ROM_MEMORY_ADDRESS + i ] = static_cast< uint8_t >( memblock[ i ] );
-		}
 
 		Init_RomSettings oRomSettings;
 		oRomSettings.LookForDatabaseInfos( memblock,size );
@@ -227,7 +230,6 @@ void Chip8::_LoadROM( const char* sROMToLoad )
 #ifdef DEBUG_INFO
 		Disassembler::Disassemble_ROM( memblock,sROMToLoad,size );
 #endif // DEBUG_INFO
-
 
 		delete[] memblock;
 
@@ -333,8 +335,7 @@ void Chip8::_FetchDecode_Opcode()
 	m_iPC += 2;
 
 	//Serve only as comparaison
-	uint16_t opcodeNibble = m_iCurrentOpcode & 0xF000;
-	switch( opcodeNibble )
+	switch( m_iCurrentOpcode & 0xF000 )
 	{
 	case 0x0000:
 	{
@@ -865,7 +866,7 @@ inline void Chip8::LOAD_RANGE()
 		m_aRegisters[ i ] = m_aMemory[ GetI() + k ];
 }
 
-inline void Chip8::HIRES()
+inline const void Chip8::HIRES()
 {
 	m_pDisplayInstance->SetResolutionMode( ResolutionMode::HIRES );
 
@@ -873,7 +874,7 @@ inline void Chip8::HIRES()
 	Display::ClearScreen( oKeyDisplay, true );
 }
 
-inline void Chip8::LORES()
+inline const void Chip8::LORES()
 {
 	m_pDisplayInstance->SetResolutionMode( ResolutionMode::LORES );
 
@@ -881,31 +882,31 @@ inline void Chip8::LORES()
 	Display::ClearScreen( oKeyDisplay, true);
 }
 
-inline void Chip8::SCROLL_DOWN()
+inline const void Chip8::SCROLL_DOWN()
 {
 	Display::KeyDisplayAccess oKeyDisplay;
 	Display::ScrollVertical( oKeyDisplay,GetN(), true );
 }
 
-inline void Chip8::SCROLL_UP()
+inline const void Chip8::SCROLL_UP()
 {
 	Display::KeyDisplayAccess oKeyDisplay;
 	Display::ScrollVertical( oKeyDisplay,GetN(), false );
 }
 
-inline void Chip8::SCROLL_LEFT()
+inline const void Chip8::SCROLL_LEFT()
 {
 	Display::KeyDisplayAccess oKeyDisplay;
 	Display::ScrollHorizontal( oKeyDisplay,true );
 }
 
-inline void Chip8::SCROLL_RIGHT()
+inline const void Chip8::SCROLL_RIGHT()
 {
 	Display::KeyDisplayAccess oKeyDisplay;
 	Display::ScrollHorizontal( oKeyDisplay,false );
 }
 
-inline void Chip8::QUIT()
+inline const void Chip8::QUIT()
 {
 	m_oState = RunningState::Stop;
 }
@@ -1088,7 +1089,7 @@ inline void Chip8::AUDIO_PITCH()
 	m_pSoundManagerInstance->CalculateAndSetNewPitch( m_aRegisters[ GetX() ]);
 }
 
-inline const uint8_t Chip8::GetX()
+inline uint8_t Chip8::GetX() const
 {
 #ifndef USE_SWITCH_BRANCH
 	return m_pCurrentOpcode->X;
@@ -1097,7 +1098,7 @@ inline const uint8_t Chip8::GetX()
 #endif
 }
 
-inline const uint8_t Chip8::GetY()
+inline uint8_t Chip8::GetY() const
 {
 #ifndef USE_SWITCH_BRANCH
 	return m_pCurrentOpcode->Y;
@@ -1106,7 +1107,7 @@ inline const uint8_t Chip8::GetY()
 #endif
 }
 
-inline const uint16_t Chip8::GetNNN()
+inline uint16_t Chip8::GetNNN() const
 {
 #ifndef USE_SWITCH_BRANCH
 	return m_pCurrentOpcode->NNN;
@@ -1115,7 +1116,7 @@ inline const uint16_t Chip8::GetNNN()
 #endif
 }
 
-inline const uint8_t Chip8::GetNN()
+inline uint8_t Chip8::GetNN() const
 {
 #ifndef USE_SWITCH_BRANCH
 	return m_pCurrentOpcode->NN;
@@ -1124,7 +1125,7 @@ inline const uint8_t Chip8::GetNN()
 #endif
 }
 
-inline const uint8_t Chip8::GetN()
+inline uint8_t Chip8::GetN() const
 {
 #ifndef USE_SWITCH_BRANCH
 	return m_pCurrentOpcode->N;
