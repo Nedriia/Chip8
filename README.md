@@ -1,8 +1,8 @@
 <div align="center">
 
 # Chip-8 
-*An emulator for the **CHIP-8**, **SUPER-CHIP**, and **XO-CHIP** platforms, developed in C++.*
-*  **This project is cross-platform and supports both Windows and Linux.**
+*An emulator for the **CHIP-8**, **SUPER-CHIP**, and **XO-CHIP** platforms, developed in C++.*  
+**This project is cross-platform and supports both Windows and Linux.**
 
 </div>
 
