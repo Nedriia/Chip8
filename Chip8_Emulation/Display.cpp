@@ -285,7 +285,7 @@ void Display::DestroyWindow( const KeyDisplayAccess& oKey )
 	m_sShaderProgram.Delete();
 
 	if ( m_pWindow )
-	glfwDestroyWindow( m_pWindow );
+		glfwDestroyWindow( m_pWindow );
 	glfwTerminate();
 
 	m_pWindow = nullptr;
@@ -299,8 +299,7 @@ void Display::ClearScreen( const KeyDisplayAccess& oKey, const bool bReset /*= f
 		memset( m_pPixels,0,sizeof( m_pPixels ) );
 	else
 	{
-		int iMask = oBitMask - 1;
-		oBitMask = ( PlaneBitMask )iMask;
+		int iMask = oBitMask > 0 ? oBitMask - 1 : 0;
 		memset( m_pPixels[ iMask ],0,sizeof( m_pPixels[ iMask ] ) );
 	}
 	m_bDirtyFrame = true;
@@ -308,6 +307,9 @@ void Display::ClearScreen( const KeyDisplayAccess& oKey, const bool bReset /*= f
 
 void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey, const uint8_t xStartingPos, const uint8_t yStartingPos,uint8_t N,uint8_t& iVFFlag,bool bWrapping )
 {
+	if( GetInstance()->m_oCurrentBitMask == PlaneBitMask::NONE )
+		return;
+
 	uint8_t iBitMask = GetInstance()->m_oCurrentBitMask - 1;
 	if( GetInstance()->m_oCurrentBitMask == PlaneBitMask::BOTH )
 	{
@@ -316,8 +318,6 @@ void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey, const uint8_t xStart
 		
 		iBitMask = m_iBitPlaneDrawIteration;
 	}
-	else if( GetInstance()->m_oCurrentBitMask == PlaneBitMask::NONE )
-		return;
 
 	Chip8* pInstance = Chip8::GetInstance();
 
@@ -338,7 +338,7 @@ void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey, const uint8_t xStart
 				if( iCurrentY >= m_iDisplayHeight )
 					return;
 			}
-			else if( bWrapping )
+			else
 				iCurrentY &= ( m_iDisplayHeight - 1 );
 
 			uint16_t iMemoryValue = *( pInstance->GetMemory()->begin() + pInstance->GetI() + ( iYOffset * 2 ) ) << 8 |
@@ -435,7 +435,7 @@ void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey, const uint8_t xStart
 			if( iCurrentY >= m_iDisplayHeight )
 				return;
 		}
-		else if( bWrapping )
+		else
 			iCurrentY &= ( m_iDisplayHeight - 1 );
 
 		uint16_t iMemoryValue = 0;
@@ -538,6 +538,9 @@ void Display::DrawPixelAtPos( const KeyDisplayAccess& oKey, const uint8_t xStart
 
 void Display::ScrollVertical( const KeyDisplayAccess& oKey,uint8_t N, const bool bDown )
 {
+	if( GetInstance()->m_oCurrentBitMask == PlaneBitMask::NONE )
+		return;
+
 	uint8_t iBitMask = GetInstance()->m_oCurrentBitMask - 1;
 	if( GetInstance()->m_oCurrentBitMask == PlaneBitMask::BOTH )
 	{
@@ -546,8 +549,6 @@ void Display::ScrollVertical( const KeyDisplayAccess& oKey,uint8_t N, const bool
 
 		iBitMask = m_iBitPlaneDrawIteration;
 	}
-	else if( GetInstance()->m_oCurrentBitMask == PlaneBitMask::NONE )
-		return;
 
 	if( bDown )
 	{
@@ -599,6 +600,9 @@ void Display::ScrollVertical( const KeyDisplayAccess& oKey,uint8_t N, const bool
 
 void Display::ScrollHorizontal( const KeyDisplayAccess& oKey, const bool bLeft )
 {
+	if( GetInstance()->m_oCurrentBitMask == PlaneBitMask::NONE )
+		return;
+
 	uint8_t iBitMask = GetInstance()->m_oCurrentBitMask - 1;
 	if( GetInstance()->m_oCurrentBitMask == PlaneBitMask::BOTH )
 	{
@@ -607,8 +611,6 @@ void Display::ScrollHorizontal( const KeyDisplayAccess& oKey, const bool bLeft )
 
 		iBitMask = m_iBitPlaneDrawIteration;
 	}
-	else if( GetInstance()->m_oCurrentBitMask == PlaneBitMask::NONE )
-		return;
 
 	uint8_t iScrollValue = Chip8::m_oCurrentQuirk.bLegacySrolling ? 2 : 4;
 	for( int k = 0; k < m_iDisplayHeight; ++k )
@@ -647,24 +649,24 @@ void Display::Update( const bool cpuPaused )
 {
 	if( m_bDirtyFrame )
 	{
-			glClearColor( 0.f,0.f,0.f,1.f );
-			glClear( GL_COLOR_BUFFER_BIT );
+		glClearColor( 0.f,0.f,0.f,1.f );
+		glClear( GL_COLOR_BUFFER_BIT );
 
 #ifdef DEBUG_INFO
-			glBindFramebuffer( GL_FRAMEBUFFER,m_iFBO );
+		glBindFramebuffer( GL_FRAMEBUFFER,m_iFBO );
 #endif
-			glTexSubImage3D( GL_TEXTURE_2D_ARRAY,0,0,0,0,4,Display::GetHeight(),2,GL_RED_INTEGER,GL_UNSIGNED_INT,m_pPixels );
+		glTexSubImage3D( GL_TEXTURE_2D_ARRAY,0,0,0,0,4,Display::GetHeight(),2,GL_RED_INTEGER,GL_UNSIGNED_INT,m_pPixels );
 
-			m_sShaderProgram.Use();
+		m_sShaderProgram.Use();
 
-			glDrawElements( GL_TRIANGLES,6,GL_UNSIGNED_INT,0 );
+		glDrawElements( GL_TRIANGLES,6,GL_UNSIGNED_INT,0 );
 
 #ifdef DEBUG_INFO
-			glBindFramebuffer( GL_FRAMEBUFFER,0 );
+		glBindFramebuffer( GL_FRAMEBUFFER,0 );
 #else
-			glfwSwapBuffers( m_pWindow );
+		glfwSwapBuffers( m_pWindow );
 #endif
-			m_bDirtyFrame = false;
+		m_bDirtyFrame = false;
 	}
 
 #ifdef DEBUG_INFO
