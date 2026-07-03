@@ -7,18 +7,27 @@
 
 | | | |
 | :---: | :---: | :---: |
-| ![Screen 1](Captures/T8nks.png) | ![Screen 2](Captures/SuperNeatBoy.png) | ![Screen 3](Captures/KeshaWasBird.png) |
+| ![Screen 1](Captures/SuperNeatBoy.png) | ![Screen 2](Captures/T8nks.png) | ![Screen 3](Captures/KeshaWasBird.png) |
 | ![Screen 4](Captures/Nyan.png) | ![Screen 5](Captures/EveningToDie.png) | ![Screen 6](Captures/danm8ku.png) |
 
 ## Key Features
 
 Passes the complete [Timendus test suite](https://github.com/Timendus/chip8-test-suite)
 * **Full Instruction Set Support:** Exhaustive implementation of all opcodes for **CHIP-8**, **SUPER-CHIP (S-CHIP)**, and **XO-CHIP**.
+* **Configurable Quirks**: Highly adaptable CPU behavior to ensure maximum compatibility with the wide variety of legacy ROMs.
+* **Database Integration:** ( https://github.com/chip-8/chip-8-database )    
+Connects to the CHIP-8 Database to automatically adjust:
+   - Tickrate: Optimized timing for each specific game.
+   - Display: Accurate resolution and color palettes.
+   - Input Mapping: Custom control schemes per ROM.
+* **Flexible Display Modes**:
+DEBUG_INFO flag: Switch between built-in debugger view and full screen.
 * **Faithful Audio:** Accurate audio emulation integrated via the [miniaudio](https://miniaud.io/) library.
 * **Built-in Debugger:** Advanced debug interface for real-time analysis of the emulator state:
-    * **Disassembler:** Real-time visualization of the executing machine code.
-    * **RAM Monitor:** Live inspection of the system memory.
-    * **Registers:** Monitoring of CPU register states at every cycle.
+    * Disassembler: Real-time visualization of the executing machine code.
+    * RAM Monitor: Live inspection of the system memory.
+    * Registers: Monitoring of CPU register states at every cycle.
+    * Breakpoint Edition.
 * **Rendering:** **OpenGL** (via **GLAD** ) and window/input management via **GLFW**.
 
 ## Technical Stack
@@ -36,7 +45,7 @@ Passes the complete [Timendus test suite](https://github.com/Timendus/chip8-test
 ### Building
 1. Clone the repository:
    ```bash
-   git clone [https://github.com/your-username/your-project.git](https://github.com/your-username/your-project.git)
+   git clone https://github.com/Nedriia/Chip8.git
    git submodule update --init --recursive
    cd your-project
 2. Build:
