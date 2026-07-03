@@ -7,8 +7,8 @@
 
 | | | |
 | :---: | :---: | :---: |
-| ![Screen 1](Captures/IBM_Logo.png) | ![Screen 2](SuperNeatBoy.png) | ![Screen 3](Captures/KeshaWasBird.png) |
-| ![Screen 4](Nyan.png) | ![Screen 5](Captures/T8nks.png) | ![Screen 6](Captures/T8nks.png) |
+| ![Screen 1](Captures/T8nks.png) | ![Screen 2](Captures/SuperNeatBoy.png) | ![Screen 3](Captures/KeshaWasBird.png) |
+| ![Screen 4](Captures/Nyan.png) | ![Screen 5](Captures/EveningToDie.png) | ![Screen 6](Captures/danm8ku.png) |
 
 ## Key Features
 
