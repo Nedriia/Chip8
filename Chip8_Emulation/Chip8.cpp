@@ -9,9 +9,7 @@
 
 #include "Init_RomSettings.h"
 #include "TimeManager.h"
-#ifdef DEBUG_INFO
 #include "Disassembler.h"
-#endif
 
 #define DEFAULT_PARENT_ROM_FOLDER "../Roms/"
 #define JMPCHECK_BEFORE_ENDING 4
@@ -227,9 +225,7 @@ void Chip8::_LoadROM( const char* sROMToLoad )
 		Init_RomSettings oRomSettings;
 		oRomSettings.LookForDatabaseInfos( memblock,size );
 
-#ifdef DEBUG_INFO
 		Disassembler::Disassemble_ROM( memblock,sROMToLoad,size );
-#endif // DEBUG_INFO
 
 		delete[] memblock;
 
