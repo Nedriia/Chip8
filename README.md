@@ -41,6 +41,7 @@ DEBUG_INFO flag: Switch between built-in debugger view and full screen.
 ### Prerequisites
 * A C++ compiler supporting C++20 or higher.
 * [CMake](https://cmake.org/).
+* VLD ( If you wish to use Visual Leak Detector ( VLD ) to track memory leaks, you can enable it by passing the -LEAK_DETECTOR_ENABLE=ON flag during the CMake configuration step. The CMakeLists.txt is configured to handle the integration automatically )
 
 ### Building
 1. Clone the repository:
@@ -52,5 +53,3 @@ DEBUG_INFO flag: Switch between built-in debugger view and full screen.
    ```bash
    cd build
    make
-
-Contributions are welcome! If you have any suggestions, improvements, or bug reports, feel free to open an "Issue" or submit a "Pull Request". Any feedback is highly appreciated!
