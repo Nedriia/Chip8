@@ -4,7 +4,7 @@
 using std::chrono::operator""ns;
 using namespace std::chrono;
 
-constexpr auto iEarlyWakeUp = 5555555ns; //Time to wake up early and busy wait the next frame
+constexpr auto iEarlyWakeUp = 22222222ns; //Time to wake up early and busy wait the next frame
 constexpr int  iMaxTickLimit = 5;
 
 nanoseconds TimeManager::s_iAccumulator{0 };
