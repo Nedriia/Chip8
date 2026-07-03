@@ -46,11 +46,11 @@ DEBUG_INFO flag: Switch between built-in debugger view and full screen.
 1. Clone the repository:
    ```bash
    git clone https://github.com/Nedriia/Chip8.git
+   cd Chip8
    git submodule update --init --recursive
-   cd your-project
 2. Build:
    ```bash
-   cd chip8/
+   cd build
    make
 
 Contributions are welcome! If you have any suggestions, improvements, or bug reports, feel free to open an "Issue" or submit a "Pull Request". Any feedback is highly appreciated!
