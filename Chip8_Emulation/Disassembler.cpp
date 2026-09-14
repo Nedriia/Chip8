@@ -12,7 +12,7 @@ static bool m_bCurrentRomDissasemblyExist = false;
 
 using namespace MemoryMap;
 
-void Disassembler::Disassemble_ROM( const char* memblock, const char* sROMToLoad, const size_t size )
+void Disassembler::Disassemble_ROM( const char* sROMToLoad, const size_t size )
 {
 	m_aDisassembly.clear();
 

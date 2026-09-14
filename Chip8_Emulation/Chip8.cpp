@@ -225,7 +225,7 @@ void Chip8::_LoadROM( const char* sROMToLoad )
 		Init_RomSettings oRomSettings;
 		oRomSettings.LookForDatabaseInfos( memblock,size );
 
-		Disassembler::Disassemble_ROM( memblock,sROMToLoad,size );
+		Disassembler::Disassemble_ROM( sROMToLoad,size );
 
 		delete[] memblock;
 

@@ -11,7 +11,7 @@ class Disassembler
 public:
 	Disassembler(){};
 
-	static void Disassemble_ROM( const char* memblock, const char* sROMToLoad,const size_t size );
+	static void Disassemble_ROM( const char* sROMToLoad,const size_t size );
 
 private:
 	static void _WriteInstruction( std::string sText,const int iIndex,const uint16_t iOpcode,std::fstream& file,const uint16_t iAdress = 0,const uint8_t iX = 0,const uint8_t iY = 0,const uint8_t NN = 0 );
