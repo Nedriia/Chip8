@@ -17,6 +17,3 @@
 [submodule "Chip8_Emulation/glfw"]
 	path = Chip8_Emulation/glfw
 	url = https://github.com/glfw/glfw.git
-[submodule "HexEditor"]
-	path = HexEditor
-	url = https://github.com/Nedriia/HexEditor
