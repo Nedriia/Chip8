@@ -40,12 +40,15 @@
 
 #include <string>
 #include <iostream>
+#include "HexEditor/src/HexEditor_ImGUI.h"
 
 #define NULL_DATA_COLOR IM_COL32( 128,128,128,255 )
 #define CHANGE_DATA_COLOR IM_COL32( 255,0,0,255 )
 #define DEFAULT_DATA_COLOR IM_COL32( 255,255,255,180 )
 
-Chip8_Debugger* Chip8_Debugger::m_pSingleton = nullptr;
+Chip8_Debugger*							Chip8_Debugger::m_pSingleton = nullptr;
+std::unique_ptr<HexEditor_ImGUI>		Chip8_Debugger::m_oHexEditor;
+
 static std::vector<uint16_t> m_aAdress = {};
 
 Chip8_Debugger::Chip8_Debugger() :
@@ -99,6 +102,9 @@ void Chip8_Debugger::Init( GLFWwindow* mainWindow,const Chip8* pCPU )
 		m_pCPU = pCPU;
 
 	ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+
+	m_oHexEditor = std::make_unique<HexEditor_ImGUI>();
+	m_oHexEditor->Init( mainWindow );
 #endif
 }
 

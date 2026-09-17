@@ -1,7 +1,7 @@
 #pragma once
 #include "string"
 #include <sstream>
-#include <chrono>
+#include "HexEditor/src/HexEditor_ImGUI.h"
 
 class Chip8;
 class Chip8_Debugger
@@ -23,20 +23,22 @@ public:
 		return m_pSingleton;
 	}
 	const Chip8* GetCPU() const {return m_pCPU; }
+	std::unique_ptr<HexEditor_ImGUI>& GetHexEditor() const { return m_oHexEditor; }
 
 private:
 	template< typename T >
 	void FormatDebugData( std::string sText,const char* sFormat, const T& oData, int& iIndexSelectable, int& iIndexPosition );
 
-	static Chip8_Debugger*		m_pSingleton;
+	static Chip8_Debugger*					m_pSingleton;
+	static std::unique_ptr<HexEditor_ImGUI>	m_oHexEditor;
 
-	GLFWwindow*					m_pWindow;
-	const Chip8*				m_pCPU;
-	int							m_iCycleIndex;
+	GLFWwindow*							m_pWindow;
+	const Chip8*						m_pCPU;
+	int									m_iCycleIndex;
 
-	int							m_iRegisterSelected;
-	int							m_iMemorySelected;
-	int							m_iStackSelected;
+	int									m_iRegisterSelected;
+	int									m_iMemorySelected;
+	int									m_iStackSelected;
 
-	bool						m_bFollowPc;
+	bool								m_bFollowPc;
 };
