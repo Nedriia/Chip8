@@ -11,7 +11,6 @@ public:
 	~Chip8_Debugger();
 
 	void Init( GLFWwindow* mainWindow,const Chip8* pCPU );
-	void StartFrame();
 	void Update( const double* time );
 	void Render();
 	void Destroy();
@@ -22,7 +21,6 @@ public:
 			m_pSingleton = new Chip8_Debugger;
 		return m_pSingleton;
 	}
-	const Chip8* GetCPU() const {return m_pCPU; }
 
 private:
 	template< typename T >

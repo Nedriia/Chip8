@@ -4,8 +4,6 @@
 #include "Shader.h"
 #include <chrono>
 
-#include "HexEditor/src/HexEditor_ImGUI.h"
-
 #define DEBUG_INFO
 
 enum ResolutionMode
@@ -105,6 +103,4 @@ protected:
 	ResolutionMode						m_oResolutionMode;
 	PlaneBitMask						m_oCurrentBitMask;
 	static uint8_t						m_iBitPlaneDrawIteration;
-	static HexEditor_ImGUI oEditor;
-
 };
