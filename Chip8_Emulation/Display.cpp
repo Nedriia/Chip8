@@ -24,6 +24,7 @@ uint8_t Display::m_iBitPlaneDrawIteration = 2;
 
 std::string Display::m_sGameTitle = "";
 
+HexEditor_ImGUI Display::oEditor;
 
 #define WIDTH_DEFAULT_ON_ERROR 64
 #define HEIGHT_DEFAULT_ON_ERROR 32
@@ -673,9 +674,11 @@ void Display::Update( const bool cpuPaused )
 #ifdef DEBUG_INFO
 	Chip8_Debugger::GetInstance()->Update( TimeManager::GetTimeLastFrame() );
 
+	static Buffer oBuffer;
+
 	if ( Chip8_Debugger::GetInstance()->GetCPU()->GetCurrentRomLoaded() != nullptr)
-		Chip8_Debugger::GetInstance()->GetHexEditor()->LoadFile(  Chip8_Debugger::GetInstance()->GetCPU()->GetCurrentRomLoaded() );
-	Chip8_Debugger::GetInstance()->GetHexEditor()->Render();
+		oBuffer.LoadFromFile(  Chip8_Debugger::GetInstance()->GetCPU()->GetCurrentRomLoaded() );
+	oEditor.Render( m_pWindow, oBuffer );
 
 	Chip8_Debugger::GetInstance()->Render();
 	glfwSwapBuffers( m_pWindow );
