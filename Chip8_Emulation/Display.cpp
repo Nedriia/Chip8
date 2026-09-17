@@ -671,7 +671,6 @@ void Display::Update( const bool cpuPaused )
 	}
 
 #ifdef DEBUG_INFO
-	Chip8_Debugger::GetInstance()->StartFrame();
 	Chip8_Debugger::GetInstance()->Update( TimeManager::GetTimeLastFrame() );
 
 	if ( Chip8_Debugger::GetInstance()->GetCPU()->GetCurrentRomLoaded() != nullptr)

@@ -11,7 +11,6 @@ public:
 	~Chip8_Debugger();
 
 	void Init( GLFWwindow* mainWindow,const Chip8* pCPU );
-	void StartFrame();
 	void Update( const double* time );
 	void Render();
 	void Destroy();
