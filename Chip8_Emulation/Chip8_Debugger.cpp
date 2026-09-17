@@ -108,16 +108,8 @@ void Chip8_Debugger::Init( GLFWwindow* mainWindow,const Chip8* pCPU )
 #endif
 }
 
-void Chip8_Debugger::Update( const double* time )
+void Chip8_Debugger::StartFrame()
 {
-#ifdef DEBUG_INFO
-	assert( m_pCPU != nullptr );
-
-	// Poll and handle events (inputs, window resize, etc.)
-	// You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
-	// - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
-	// - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
-	// Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
 	glfwPollEvents();
 	if( glfwGetWindowAttrib( m_pWindow,GLFW_ICONIFIED ) != 0 )
 	{
@@ -129,6 +121,18 @@ void Chip8_Debugger::Update( const double* time )
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
 	ImGui::DockSpaceOverViewport();
+}
+
+void Chip8_Debugger::Update( const double* time )
+{
+#ifdef DEBUG_INFO
+	assert( m_pCPU != nullptr );
+
+	// Poll and handle events (inputs, window resize, etc.)
+	// You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
+	// - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
+	// - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
+	// Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
 
 	if( ImGui::Begin( "CPU",nullptr ) )
 	{
@@ -317,75 +321,6 @@ void Chip8_Debugger::Update( const double* time )
 
 		ImVec2 avail = ImVec2( ImGui::GetContentRegionAvail().x,ImGui::GetContentRegionAvail().y - 14 );
 		ImGui::Image( ( ImTextureID )Display::GetInstance()->GetFBOTexture(),avail,ImVec2( 0.0f,1.0f ),ImVec2( 1.0f,0.0f ) );
-	}
-	ImGui::End();
-
-	if( ImGui::Begin( "Memory",nullptr ) )
-	{
-		static int iBytesPerLine = 32;
-		ImGui::SliderInt( "Bytes per line",&iBytesPerLine,2,32 );
-
-		if( ImGui::BeginListBox( "#",ImVec2( -FLT_MIN,24 * ImGui::GetTextLineHeightWithSpacing() ) ) && m_pCPU->GetMemory() )
-		{
-			ImGuiListClipper clipper;
-			clipper.Begin( ( m_pCPU->GetMaxSizeMemory() / iBytesPerLine ),ImGui::GetTextLineHeightWithSpacing() );
-
-			while( clipper.Step() )
-			{
-				for( int line = clipper.DisplayStart; line < clipper.DisplayEnd; ++line )
-				{
-					ImGui::PushID( line );
-
-					int iMemoryIndex = ( *m_pCPU->GetMemory()->begin() + ( line * iBytesPerLine ) );
-
-					char buffer[ 64 ];
-					snprintf( buffer,sizeof( buffer ),"0x%04X : ",iMemoryIndex );
-
-					ImGui::Text( "%s", buffer );
-					ImGui::SameLine();
-
-					std::string sAscii;
-					for( int i = 0; i < iBytesPerLine; ++i )
-					{
-						ImGui::PushID( i );
-						if( i == iBytesPerLine / 2 )
-						{
-							ImGui::Text( "|" );
-							ImGui::SameLine();
-						}
-
-						char byteBuffer[ 4 ];
-						const Data<uint8_t>& oData = *( m_pCPU->GetMemory()->begin() + ( iMemoryIndex + i ) );
-						if( m_iCycleIndex != m_pCPU->GetCycleId() )
-							oData.SetDataAsDirty();
-
-						ImGui::PushStyleColor( ImGuiCol_Text,oData.IsNULL() ? NULL_DATA_COLOR : oData.HasChanged() ? CHANGE_DATA_COLOR : DEFAULT_DATA_COLOR );
-
-						snprintf( byteBuffer,sizeof( byteBuffer ),"%02X ", static_cast<uint8_t>( oData ) );
-
-						ImGui::Selectable( byteBuffer );
-						ImGui::SameLine();
-
-						uint8_t val = static_cast<uint8_t>( oData );
-						if( val != 0 )
-						{
-							if( val < 33 || val > 126 )
-								sAscii += ".";
-							else
-								sAscii += val;
-						}
-
-						ImGui::PopID();
-						ImGui::PopStyleColor();
-					}
-
-					ImGui::Text( "%s", sAscii.c_str() );
-					ImGui::PopID();
-				}
-			}
-			clipper.End();
-			ImGui::EndListBox();
-		}
 	}
 	ImGui::End();
 

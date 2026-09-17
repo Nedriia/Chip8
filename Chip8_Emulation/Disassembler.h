@@ -5,7 +5,6 @@
 #include <map>
 #include <cstdint>
 
-class Chip8;
 class Disassembler
 {
 public:
