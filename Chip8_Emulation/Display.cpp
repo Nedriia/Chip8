@@ -6,6 +6,10 @@
 
 #include "TimeManager.h"
 
+#include "HexEditor/src/Buffer.h"
+#include "HexEditor/src/HexEditor.h"
+#include "HexEditor/src/HexEditor_ImGUI.h"
+
 // settings
 const uint16_t WINDOW_WIDTH = 1920;
 const uint16_t WINDOW_HEIGHT = 1080;
@@ -23,6 +27,8 @@ uint8_t Display::m_iDisplayHeight = 0;
 uint8_t Display::m_iBitPlaneDrawIteration = 2;
 
 std::string Display::m_sGameTitle = "";
+
+HexEditor_ImGUI Display::oEditor;
 
 #define WIDTH_DEFAULT_ON_ERROR 64
 #define HEIGHT_DEFAULT_ON_ERROR 32
@@ -82,6 +88,7 @@ int Display::Init( const KeyDisplayAccess& oKey,const Chip8* pCpu )
 	Chip8_Debugger::GetInstance()->Init( m_pWindow,pCpu );
 #endif
 
+	oEditor.Init( m_pWindow );
 	return 0;
 }
 
@@ -670,7 +677,15 @@ void Display::Update( const bool cpuPaused )
 	}
 
 #ifdef DEBUG_INFO
+	Chip8_Debugger::GetInstance()->StartFrame();
 	Chip8_Debugger::GetInstance()->Update( TimeManager::GetTimeLastFrame() );
+
+	static Buffer oBuffer;
+
+	if ( Chip8_Debugger::GetInstance()->GetCPU()->GetCurrentRomLoaded() != nullptr)
+		oBuffer.LoadFromFile(  Chip8_Debugger::GetInstance()->GetCPU()->GetCurrentRomLoaded() );
+	oEditor.Render( m_pWindow, oBuffer );
+
 	Chip8_Debugger::GetInstance()->Render();
 	glfwSwapBuffers( m_pWindow );
 #endif

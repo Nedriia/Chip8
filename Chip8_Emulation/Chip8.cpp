@@ -10,6 +10,7 @@
 #include "Init_RomSettings.h"
 #include "TimeManager.h"
 #include "Disassembler.h"
+#include "HexEditor/src/Buffer.h"
 
 #define DEFAULT_PARENT_ROM_FOLDER "../Roms/"
 #define JMPCHECK_BEFORE_ENDING 4
