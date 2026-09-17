@@ -23,6 +23,12 @@ set(IMGUI_SOURCES
         Chip8_Emulation/TimeManager.cpp
 )
 
+set( HEXEDITOR_SOURCES
+        ${PROJECT_DIR}/HexEditor/src/Buffer.cpp
+        ${PROJECT_DIR}/HexEditor/src/HexEditor.cpp
+        ${PROJECT_DIR}/HexEditor/src/HexEditor_ImGUI.cpp
+)
+
 add_executable(${PROJECT_NAME}
         ${PROJECT_DIR}/main.cpp
         ${PROJECT_DIR}/Input.cpp
@@ -34,6 +40,7 @@ add_executable(${PROJECT_NAME}
         ${PROJECT_DIR}/Init_RomSettings.cpp
         ${PROJECT_DIR}/Shader.cpp
         ${IMGUI_SOURCES}
+        ${HEXEDITOR_SOURCES}
 
         ${PROJECT_DIR}/glad.c
 )
