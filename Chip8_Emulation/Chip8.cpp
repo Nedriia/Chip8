@@ -10,7 +10,6 @@
 #include "Init_RomSettings.h"
 #include "TimeManager.h"
 #include "Disassembler.h"
-#include "HexEditor/src/Buffer.h"
 
 #define DEFAULT_PARENT_ROM_FOLDER "../Roms/"
 #define JMPCHECK_BEFORE_ENDING 4
@@ -18,6 +17,7 @@
 
 int Chip8::m_iInstructionsPerFrame = 20000;
 #ifdef DEBUG_INFO
+#include "Chip8_Debugger.h"
 uint16_t Chip8::m_iAdressBreakpoint = 0;
 #endif
 
@@ -222,6 +222,11 @@ void Chip8::_LoadROM( const char* sROMToLoad )
 
 		for( uint16_t i = 0; i < bytesRead; ++i )
 			m_aMemory[ START_ROM_MEMORY_ADDRESS + i ] = static_cast< uint8_t >( memblock[ i ] );
+
+#ifdef DEBUG_INFO
+		auto &oEditor = Chip8_Debugger::GetInstance()->GetHexEditor();
+		oEditor->LoadBufferFromMemory( m_aMemory );
+#endif
 
 		Init_RomSettings oRomSettings;
 		oRomSettings.LookForDatabaseInfos( memblock,size );
