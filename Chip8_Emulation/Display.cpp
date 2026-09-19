@@ -672,7 +672,7 @@ void Display::Update( const bool cpuPaused )
 #ifdef DEBUG_INFO
 	Chip8_Debugger::GetInstance()->StartFrame();
 	Chip8_Debugger::GetInstance()->Update( TimeManager::GetTimeLastFrame() );
-	Chip8_Debugger::GetInstance()->GetHexEditor()->Render();
+	Chip8_Debugger::GetInstance()->GetHexEditor()->Update();
 	Chip8_Debugger::GetInstance()->Render();
 
 	glfwSwapBuffers( m_pWindow );
