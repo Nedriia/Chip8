@@ -4,6 +4,7 @@
 #include "HexEditor/src/HexEditor_ImGUI.h"
 
 class Chip8;
+class ImGuiContext;
 class Chip8_Debugger
 {
 public:

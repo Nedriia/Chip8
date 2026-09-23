@@ -75,8 +75,6 @@ Chip8_Debugger::~Chip8_Debugger()
 void Chip8_Debugger::Init( GLFWwindow* mainWindow,const Chip8* pCPU )
 {
 #ifdef DEBUG_INFO
-	float main_scale = ImGui_ImplGlfw_GetContentScaleForMonitor( glfwGetPrimaryMonitor() ); // Valid on GLFW 3.3+ only
-
 	m_pWindow = mainWindow;
 	// Setup Dear ImGui context
 	IMGUI_CHECKVERSION();
@@ -88,10 +86,10 @@ void Chip8_Debugger::Init( GLFWwindow* mainWindow,const Chip8* pCPU )
 
 	ImGuiStyle& style = ImGui::GetStyle();
 	float fMain_scale = 1.0f;
-	style.FontSizeBase = 15.0f;
+	style.FontSizeBase = 25.0f;
 
-	style.ScaleAllSizes( fMain_scale );        // Bake a fixed style scale. (until we have a solution for dynamic style scaling, changing this requires resetting Style + calling this again)
-	style.FontScaleDpi = fMain_scale;        // Set initial font scale. (using io.ConfigDpiScaleFonts=true makes this unnecessary. We leave both here for documentation purpose)
+	style.ScaleAllSizes( fMain_scale );			// Bake a fixed style scale. (until we have a solution for dynamic style scaling, changing this requires resetting Style + calling this again)
+	style.FontScaleDpi = fMain_scale;			// Set initial font scale. (using io.ConfigDpiScaleFonts=true makes this unnecessary. We leave both here for documentation purpose)
 
 	// Setup Platform/Renderer backends
 	ImGui_ImplGlfw_InitForOpenGL( mainWindow,true );

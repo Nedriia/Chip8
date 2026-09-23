@@ -247,8 +247,8 @@ void Chip8::_LoadROM( const char* sROMToLoad )
 		m_oState = RunningState::Pause;
 	}
 }
-
 void Chip8::EmulateCycle( const KeyAccess& key )
+
 {
 #ifdef DEBUG_INFO
 	if( m_oState == RunningState::Reset || m_oState == RunningState::LoadNewRom )
